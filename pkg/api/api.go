@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/level63/cli/pkg/config"
 )
@@ -74,7 +75,14 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 
 	// Set the appropriate headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiReq.Config.ProjectApiKey)
+	req.Header.Set("User-Agent", "level63-cli")
+
+	// for these endpoints, we need the account API key
+	if strings.HasPrefix(apiReq.Path, "/api/projects") || strings.HasPrefix(apiReq.Path, "/api/storages") {
+		req.Header.Set("Authorization", "Bearer "+apiReq.Config.AccountApiKey)
+	} else {
+		req.Header.Set("Authorization", "Bearer "+apiReq.Config.ProjectApiKey)
+	}
 
 	// Make the HTTP request
 	client := &http.Client{}
