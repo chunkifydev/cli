@@ -9,7 +9,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cfg = config.Config{
+var serviceKey = "level63-cli"
+
+var cfg = &config.Config{
 	AccountApiKey: os.Getenv("LEVEL63_ACCOUNT_API_KEY"),
 	ProjectApiKey: os.Getenv("LEVEL63_API_KEY"),
 }
@@ -26,8 +28,8 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
+	rootCmd.PersistentPreRun = checkAccountSetup
+	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
@@ -38,6 +40,7 @@ func init() {
 	rootCmd.Flags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api-pr34.level63-staging.dev/pr34", "The API endpoint")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	rootCmd.AddCommand(sources.NewCommand(&cfg).Command)
-	rootCmd.AddCommand(jobs.NewCommand(&cfg).Command)
+	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
+	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
+	rootCmd.AddCommand(newSetupCmd())
 }
