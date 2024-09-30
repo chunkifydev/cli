@@ -68,6 +68,14 @@ func Bool(b bool) string {
 	return styles.Error.Render("no")
 }
 
+func BoolDefaultColor(b bool) string {
+	if b {
+		return styles.DefaultText.Render("yes")
+	}
+
+	return styles.DefaultText.Render("no")
+}
+
 func TimeDiff(start, end time.Time) string {
 	if start.IsZero() || end.IsZero() {
 		return ""

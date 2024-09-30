@@ -65,7 +65,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Name", "Provider", "Bucket", "Region", "Private", "Test").
+		Headers("Provider", "Name", "Bucket", "Region", "Private", "Test").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -100,11 +100,11 @@ func storagesListToRows(storages []api.Storage) [][]string {
 		}
 
 		rows[i] = []string{
-			storage.Name,
 			storage.Provider,
+			styles.Important.Render(storage.Name),
 			storage.Bucket,
 			storage.Region,
-			formatter.Bool(!storage.Public),
+			formatter.BoolDefaultColor(!storage.Public),
 			styles.DefaultText.Render(test),
 		}
 	}
