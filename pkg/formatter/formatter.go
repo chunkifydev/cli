@@ -2,6 +2,7 @@ package formatter
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,16 @@ func JobStatus(status string) string {
 	default:
 		return styles.Working.Render(status)
 	}
+}
+
+func HttpCode(status int) string {
+	statusStr := fmt.Sprintf("%d %s", status, http.StatusText(status))
+
+	if status < 400 {
+		return styles.Important.Render(statusStr)
+	}
+
+	return styles.Error.Render(statusStr)
 }
 
 func Bool(b bool) string {

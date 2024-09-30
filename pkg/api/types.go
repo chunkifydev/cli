@@ -82,3 +82,42 @@ type Storage struct {
 	Public   bool   `json:"public"`
 	Reserved bool   `json:"reserved"`
 }
+
+type Webhook struct {
+	Id        string `json:"id"`
+	Url       string `json:"url"`
+	ProjectId string `json:"project_id"`
+	Enabled   bool   `json:"enabled"`
+}
+
+type JobWebhook struct {
+	Id                 string    `json:"id"`
+	JobId              string    `json:"job_id"`
+	WebhookId          string    `json:"webhook_id"`
+	CreatedAt          time.Time `json:"created_at"`
+	Attempts           int       `json:"attempts"`
+	Payload            string    `json:"payload"`
+	ResponseStatusCode int       `json:"response_status_code"`
+
+	Webhook Webhook `json:"webhook"`
+}
+
+type Function struct {
+	Id          string    `json:"id"`
+	Description string    `json:"description"`
+	ProjectId   string    `json:"project_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	Enabled     bool      `json:"enabled"`
+}
+
+type JobFunction struct {
+	Id                 string    `json:"id"`
+	JobId              string    `json:"job_id"`
+	FunctionId         string    `json:"function_id"`
+	CreatedAt          time.Time `json:"created_at"`
+	Attempts           int       `json:"attempts"`
+	Payload            string    `json:"payload"`
+	ResponseStatusCode int       `json:"response_status_code"`
+
+	Function Function `json:"function"`
+}
