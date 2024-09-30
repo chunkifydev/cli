@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package jobs
 
 import (
@@ -19,12 +16,12 @@ type CreateCmd struct {
 	Template   templateParams   `json:"template"`
 	Transcoder transcoderParams `json:"transcoder"`
 
-	cpu       int64  `json:"-"`
-	config    string `json:"-"`
-	metadata  string `json:"-"`
-	poll      bool   `json:"-"`
-	sourceUrl string `json:"-"`
-	Data      api.Job
+	cpu         int64  `json:"-"`
+	config      string `json:"-"`
+	metadata    string `json:"-"`
+	interactive bool   `json:"-"`
+	sourceUrl   string `json:"-"`
+	Data        api.Job
 }
 
 type templateParams struct {
@@ -69,9 +66,9 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	jobList := &ListCmd{CreatedSort: "asc", SourceId: r.SourceId, interactive: r.poll}
+	jobList := &ListCmd{CreatedSort: "asc", SourceId: r.SourceId, interactive: r.interactive}
 	jobList.Execute()
-	if r.poll {
+	if r.interactive {
 		StartPolling(jobList)
 	} else {
 		jobList.View()
@@ -115,7 +112,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Storage.Name, "storage", "", "The storage name (default: your default storage)")
 	cmd.Flags().StringVar(&req.Storage.Path, "path", "", "The destination path on your storage")
 
-	cmd.Flags().BoolVar(&req.poll, "poll", true, "Refresh the list in real time")
+	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", true, "Refresh the list in real time")
 
 	cmd.Flags().StringVar(&req.sourceUrl, "source-url", "", "Create the job with the given source url")
 
