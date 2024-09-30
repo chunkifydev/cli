@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/level63/cli/pkg/config"
+	"github.com/level63/cli/pkg/styles"
 )
 
 type QueryParams map[string]string
@@ -47,6 +48,11 @@ func apiUrl(baseUrl, path string) string {
 }
 
 func ApiRequest[T any](apiReq Request) (T, error) {
+	if apiReq.Config.Debug {
+		fmt.Print(styles.Debug.Render(apiReq.String()))
+		fmt.Println(styles.Divider(strings.Repeat(" ", 60)))
+	}
+
 	var zero T
 	body := &bytes.Buffer{}
 

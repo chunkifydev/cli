@@ -5,7 +5,6 @@ import (
 
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +18,6 @@ func (r *GetCmd) Execute() error {
 		Config: cmd.Config,
 		Path:   fmt.Sprintf("/api/sources/%s", r.Id),
 		Method: "GET",
-	}
-
-	if cmd.Config.Debug {
-		fmt.Println(styles.Debug.Render(apiReq.String()))
 	}
 
 	source, err := api.ApiRequest[api.Source](apiReq)

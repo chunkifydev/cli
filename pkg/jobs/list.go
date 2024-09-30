@@ -90,11 +90,6 @@ func (r *ListCmd) Execute() error {
 		QueryParams: r.toQueryMap(),
 	}
 
-	if cmd.Config.Debug {
-		fmt.Print(styles.Debug.Render(apiReq.String()))
-		fmt.Println(styles.Divider(strings.Repeat(" ", 60)))
-	}
-
 	jobs, err := api.ApiRequest[[]api.Job](apiReq)
 	if err != nil {
 		return err
@@ -178,7 +173,7 @@ func jobsListToRows(jobs []api.Job) [][]string {
 		rows[i] = []string{
 			job.CreatedAt.Format(time.RFC822),
 			styles.Id.Render(job.Id),
-			formatter.Status(job.Status),
+			formatter.JobStatus(job.Status),
 			fmt.Sprintf("%.f%%", job.Progress),
 			fmt.Sprintf("%s/%s", job.Template.Name, job.Template.Version),
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),

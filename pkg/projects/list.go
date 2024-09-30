@@ -1,4 +1,4 @@
-package jobs
+package projects
 
 import (
 	"encoding/json"
@@ -14,30 +14,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type FilesListCmd struct {
-	Id      string `json:"id"`
-	presign bool
-	Data    []api.File
+type ListCmd struct {
+	disabled bool
+	Data     []api.Project
 }
 
-func (r *FilesListCmd) Execute() error {
+func (r *ListCmd) Execute() error {
 	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/jobs/%s/files", r.Id),
-		Method: "GET",
+		Config:      cmd.Config,
+		Path:        "/api/projects",
+		Method:      "GET",
+		QueryParams: api.QueryParams{"paused": fmt.Sprintf("%t", r.disabled)},
 	}
 
-	files, err := api.ApiRequest[[]api.File](apiReq)
+	projects, err := api.ApiRequest[[]api.Project](apiReq)
 	if err != nil {
 		return err
 	}
 
-	r.Data = files
+	r.Data = projects
 
 	return nil
 }
 
-func (r *FilesListCmd) View() {
+func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
 		if err != nil {
@@ -49,39 +49,25 @@ func (r *FilesListCmd) View() {
 	}
 
 	if len(r.Data) == 0 {
-		fmt.Println(styles.DefaultText.Render("No file found."))
+		fmt.Println(styles.DefaultText.Render("No project found."))
 		return
 	}
 
-	if r.presign {
-		for _, file := range r.Data {
-			fmt.Printf("%s (%s):\n%s\n\n",
-				styles.Important.Render(file.Path),
-				formatter.Size(file.Size),
-				styles.Debug.Render(file.Url),
-			)
-			if file.Url == "" {
-				fmt.Println(styles.Error.Render("Presigned URL not found."))
-			}
-		}
-		return
-	}
-
-	fmt.Println(r.filesTable())
+	fmt.Println(r.projectsTable())
 	if len(r.Data) > 1 {
 		fmt.Println(styles.Debug.MarginTop(1).Render(fmt.Sprintf("Total: %d\n", len(r.Data))))
 	}
 }
 
-func (r *FilesListCmd) filesTable() *table.Table {
-	rightCols := []int{4}
-	centerCols := []int{1}
+func (r *ListCmd) projectsTable() *table.Table {
+	rightCols := []int{}
+	centerCols := []int{4}
 
 	table := table.New().
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Storage", "Path", "Mime-Type", "Size").
+		Headers("Date", "Id", "Name", "Storage", "Active").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -98,48 +84,46 @@ func (r *FilesListCmd) filesTable() *table.Table {
 			case slices.Contains(centerCols, col):
 				return styles.Center.Padding(0, 1)
 			default:
+				//return styles.DefaultText
 				return styles.TableSpacing
 			}
 		}).
-		Rows(filesListToRows(r.Data)...)
+		Rows(projectsListToRows(r.Data)...)
 
 	return table
 }
 
-func filesListToRows(files []api.File) [][]string {
-	rows := make([][]string, len(files))
-	for i, file := range files {
+func projectsListToRows(projects []api.Project) [][]string {
+	rows := make([][]string, len(projects))
+	for i, project := range projects {
 		rows[i] = []string{
-			file.CreatedAt.Format(time.RFC822),
-			file.Storage,
-			styles.Important.Render(file.Path),
-			file.MimeType,
-			formatter.Size(file.Size),
+			project.CreatedAt.Format(time.RFC822),
+			styles.Id.Render(project.Id),
+			project.Name,
+			project.Storage,
+			formatter.Bool(!project.Paused),
 		}
 	}
 	return rows
 }
 
-func newFilesListCmd() *cobra.Command {
-	req := FilesListCmd{}
+func newListCmd() *cobra.Command {
+	req := ListCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "files job-id",
-		Short: "list all files of a job",
-		Long:  `list all files of a job`,
-		Args:  cobra.ExactArgs(1),
+		Use:   "list",
+		Short: "list all projects",
+		Long:  `list all projects`,
 		Run: func(_ *cobra.Command, args []string) {
-			req.Id = args[0]
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
 			}
-
 			req.View()
 		},
 	}
 
-	cmd.Flags().BoolVarP(&req.presign, "presign", "p", false, "Return the presigned URL of the files")
+	cmd.Flags().BoolVar(&req.disabled, "disabled", false, "List disabled projects")
 
 	return cmd
 }

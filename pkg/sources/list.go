@@ -186,11 +186,6 @@ func (r *ListCmd) Execute() error {
 		QueryParams: r.toQueryMap(),
 	}
 
-	if cmd.Config.Debug {
-		fmt.Print(styles.Debug.Render(apiReq.String()))
-		fmt.Println(styles.Divider(strings.Repeat(" ", 60)))
-	}
-
 	sources, err := api.ApiRequest[[]api.Source](apiReq)
 	if err != nil {
 		return err

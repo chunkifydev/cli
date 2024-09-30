@@ -49,7 +49,7 @@ func Bitrate(size int64) string {
 	return fmt.Sprintf("%.fMB/s", float64(size)/1024/1024)
 }
 
-func Status(status string) string {
+func JobStatus(status string) string {
 	switch status {
 	case "finished":
 		return styles.Important.Render(status)
@@ -58,6 +58,14 @@ func Status(status string) string {
 	default:
 		return styles.Working.Render(status)
 	}
+}
+
+func Bool(b bool) string {
+	if b {
+		return styles.Important.Render("yes")
+	}
+
+	return styles.Error.Render("no")
 }
 
 func TimeDiff(start, end time.Time) string {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -22,10 +21,6 @@ func (r *GetCmd) Execute() error {
 		Config: cmd.Config,
 		Path:   fmt.Sprintf("/api/jobs/%s", r.Id),
 		Method: "GET",
-	}
-
-	if cmd.Config.Debug {
-		fmt.Println(styles.Debug.Render(apiReq.String()))
 	}
 
 	job, err := api.ApiRequest[api.Job](apiReq)
