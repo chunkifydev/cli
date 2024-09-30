@@ -112,7 +112,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Storage.Name, "storage", "", "The storage name (default: your default storage)")
 	cmd.Flags().StringVar(&req.Storage.Path, "path", "", "The destination path on your storage")
 
-	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", true, "Refresh the list in real time")
+	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the list in real time")
 
 	cmd.Flags().StringVar(&req.sourceUrl, "source-url", "", "Create the job with the given source url")
 
