@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/level63/cli/pkg/config"
+	"github.com/level63/cli/pkg/formatter"
 	"github.com/level63/cli/pkg/styles"
 )
 
@@ -49,8 +50,7 @@ func apiUrl(baseUrl, path string) string {
 
 func ApiRequest[T any](apiReq Request) (T, error) {
 	if apiReq.Config.Debug {
-		fmt.Print(styles.Debug.Render(apiReq.String()))
-		fmt.Println(styles.Divider(strings.Repeat(" ", 60)))
+		fmt.Println(styles.Debug.Render(apiReq.String()))
 	}
 
 	var zero T
@@ -98,22 +98,31 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return zero, fmt.Errorf("could not read response body: %w", err)
+	}
+
+	if apiReq.Config.Debug {
+		fmt.Println(formatter.HttpCode(resp.StatusCode))
+		for h, v := range resp.Header {
+			if strings.HasPrefix(h, "X-Amz") {
+				continue
+			}
+			fmt.Println(styles.Debug.Render(fmt.Sprintf("%s: %s", h, v[0])))
+		}
+	}
+
 	if resp.StatusCode >= http.StatusBadRequest {
-		fullBody, err := io.ReadAll(resp.Body)
-		if err != nil || len(fullBody) == 0 {
+		if len(respBody) == 0 {
 			return zero, fmt.Errorf("response status code %d", resp.StatusCode)
 		}
 
 		var errorResponse ApiError
-		if err := json.Unmarshal(fullBody, &errorResponse); err != nil {
+		if err := json.Unmarshal(respBody, &errorResponse); err != nil {
 			return zero, fmt.Errorf("response status code %d", resp.StatusCode)
 		}
 		return zero, fmt.Errorf("%s (%d)", errorResponse.Error.Message, errorResponse.Error.Code)
-	}
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return zero, fmt.Errorf("could not read response body: %w", err)
 	}
 
 	var apiResponse Response[T]
