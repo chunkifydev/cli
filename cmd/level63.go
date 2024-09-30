@@ -7,6 +7,7 @@ import (
 	"github.com/level63/cli/pkg/jobs"
 	"github.com/level63/cli/pkg/projects"
 	"github.com/level63/cli/pkg/sources"
+	"github.com/level63/cli/pkg/storages"
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +42,7 @@ func init() {
 	rootCmd.Flags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api-pr34.level63-staging.dev/pr34", "The API endpoint")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
+	rootCmd.AddCommand(storages.NewCommand(cfg).Command)
 	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
 	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)

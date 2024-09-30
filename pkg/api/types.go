@@ -73,3 +73,12 @@ type Project struct {
 	Paused    bool      `json:"paused"`
 	Storage   string    `json:"storage"`
 }
+
+type Storage struct {
+	Provider string `json:"provider"`
+	Bucket   string `json:"bucket"`
+	Name     string `json:"name"`
+	Region   string `json:"region"`
+	Public   bool   `json:"public"`
+	Reserved bool   `json:"reserved"`
+}
