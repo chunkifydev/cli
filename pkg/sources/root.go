@@ -19,7 +19,9 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use: "sources",
+			Use:   "sources",
+			Short: "Create and get information about source media",
+			Long:  "Create and get information about source media",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())

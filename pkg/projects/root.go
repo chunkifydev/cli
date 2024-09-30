@@ -19,7 +19,9 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use: "projects",
+			Use:   "projects",
+			Short: "Manage your Level63 projects",
+			Long:  "Manage your Level63 projects",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())

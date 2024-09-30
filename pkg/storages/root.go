@@ -19,7 +19,9 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use: "storages",
+			Use:   "storages",
+			Short: "Manage your storages",
+			Long:  "Manage your storages",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())
