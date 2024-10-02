@@ -39,7 +39,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().BoolVar(&cfg.Debug, "debug", false, "Print debug info")
-	rootCmd.Flags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api-pr34.level63-staging.dev/pr34", "The API endpoint")
+	rootCmd.Flags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api-pr37.level63-staging.dev/pr37", "The API endpoint")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	rootCmd.AddCommand(storages.NewCommand(cfg).Command)

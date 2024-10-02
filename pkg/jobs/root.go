@@ -31,6 +31,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newWebhooksListCmd())
 	cmd.Command.AddCommand(newFunctionsListCmd())
 	cmd.Command.AddCommand(newRestartCmd())
+	cmd.Command.AddCommand(newLogsListCmd())
 
 	return cmd
 }

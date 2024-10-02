@@ -61,6 +61,33 @@ func JobStatus(status string) string {
 	}
 }
 
+func LogLevel(level string) string {
+	switch level {
+	case "DEBUG":
+		return styles.Debug.Render(level)
+	case "WARN":
+		return styles.Warning.Render(level)
+	case "ERROR":
+		return styles.Error.Render(level)
+	default:
+		return styles.Important.Render(level)
+	}
+}
+
+func LogService(service string) string {
+	if strings.HasPrefix(service, "transcoder") {
+		parts := strings.Split(service, "#")
+		if len(parts) != 2 {
+			service = styles.DefaultText.Render(service)
+		} else {
+			service = styles.DefaultText.Render(parts[0]) +
+				styles.Debug.Render("#"+parts[1])
+		}
+	}
+
+	return service
+}
+
 func HttpCode(status int) string {
 	statusStr := fmt.Sprintf("%d %s", status, http.StatusText(status))
 

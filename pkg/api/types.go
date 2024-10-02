@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 type Source struct {
 	Id             string         `json:"id"`
@@ -120,4 +123,82 @@ type JobFunction struct {
 	ResponseStatusCode int       `json:"response_status_code"`
 
 	Function Function `json:"function"`
+}
+
+type Log struct {
+	Time     time.Time  `json:"time"`
+	Level    string     `json:"level"`
+	Msg      string     `json:"msg"`
+	Service  string     `json:"service"`
+	LogAttrs S3LogAttrs `json:"-"`
+}
+
+type S3LogAttrs map[string]any
+
+// Custom UnmarshalJSON to capture dynamic fields
+func (l *Log) UnmarshalJSON(data []byte) error {
+	type Alias Log // Create an alias to avoid recursive calls
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Unmarshal dynamic fields separately
+	var rawMap map[string]any
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		return err
+	}
+
+	// Remove known fields to leave only dynamic ones
+	delete(rawMap, "time")
+	delete(rawMap, "level")
+	delete(rawMap, "msg")
+	delete(rawMap, "service")
+
+	l.LogAttrs = rawMap
+	return nil
+}
+
+func (l *Log) MarshalJSON() ([]byte, error) {
+	// Fixed fields
+	type Alias Log
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(l),
+	}
+
+	// Marshal fixed fields
+	fixedFields, err := json.Marshal(aux)
+	if err != nil {
+		return nil, err
+	}
+
+	// Marshal dynamic fields
+	dynamicFields, err := json.Marshal(l.LogAttrs)
+	if err != nil {
+		return nil, err
+	}
+
+	// Merge fixed and dynamic fields into one map
+	var fixedMap map[string]any
+	if err := json.Unmarshal(fixedFields, &fixedMap); err != nil {
+		return nil, err
+	}
+	var dynamicMap map[string]any
+	if err := json.Unmarshal(dynamicFields, &dynamicMap); err != nil {
+		return nil, err
+	}
+
+	// Combine maps
+	for key, value := range dynamicMap {
+		fixedMap[key] = value
+	}
+
+	// Return combined JSON
+	return json.Marshal(fixedMap)
 }

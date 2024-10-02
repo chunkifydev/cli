@@ -17,6 +17,7 @@ var (
 	Error        = Base.Foreground(ErrorColor)
 	Important    = Base.Foreground(GreenColor)
 	Working      = Base.Foreground(WorkingColor)
+	Warning      = Base.Foreground(WarningColor)
 
 	BorderColor  = lipgloss.Color("#353535")
 	TextColor    = lipgloss.Color("#d2d2d2")
@@ -24,6 +25,7 @@ var (
 	ErrorColor   = lipgloss.Color("#f58c93")
 	WorkingColor = lipgloss.Color("#ffe89b")
 	GreenColor   = lipgloss.Color("#73F59F")
+	WarningColor = lipgloss.Color("#73F59F")
 
 	Divider = Base.
 		BorderStyle(lipgloss.NormalBorder()).

@@ -11,21 +11,13 @@ import (
 	"github.com/level63/cli/pkg/styles"
 )
 
-type model struct {
+type jobModel struct {
 	cmd       *ListCmd
 	ch        chan []api.Job
 	jobsTable *table.Table
 }
 
 type tickMsg time.Time
-
-func initialModel(cmd *ListCmd, ch chan []api.Job) model {
-	return model{
-		cmd:       cmd,
-		ch:        ch,
-		jobsTable: cmd.jobsTable(),
-	}
-}
 
 func listenToJobChan(ch chan []api.Job) tea.Cmd {
 	return func() tea.Msg {
@@ -34,11 +26,11 @@ func listenToJobChan(ch chan []api.Job) tea.Cmd {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m jobModel) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), listenToJobChan(m.ch))
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m jobModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -61,7 +53,7 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func (m model) View() string {
+func (m jobModel) View() string {
 	s := m.jobsTable.String()
 	s += "\n\n"
 	s += styles.Debug.Render("Press q to quit.\n")
@@ -84,7 +76,14 @@ func polling(r *ListCmd, ch chan []api.Job) {
 func StartPolling(r *ListCmd) {
 	ch := make(chan []api.Job)
 	go polling(r, ch)
-	p := tea.NewProgram(initialModel(r, ch))
+
+	m := jobModel{
+		cmd:       r,
+		ch:        ch,
+		jobsTable: r.jobsTable(),
+	}
+
+	p := tea.NewProgram(m)
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)

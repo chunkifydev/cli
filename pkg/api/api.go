@@ -111,6 +111,7 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 			}
 			fmt.Println(styles.Debug.Render(fmt.Sprintf("%s: %s", h, v[0])))
 		}
+		fmt.Println(string(respBody))
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
