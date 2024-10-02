@@ -19,13 +19,13 @@ var (
 	Working      = Base.Foreground(WorkingColor)
 	Warning      = Base.Foreground(WarningColor)
 
-	BorderColor  = lipgloss.Color("#353535")
-	TextColor    = lipgloss.Color("#d2d2d2")
-	GrayColor    = lipgloss.Color("#949494")
-	ErrorColor   = lipgloss.Color("#f58c93")
-	WorkingColor = lipgloss.Color("#ffe89b")
-	GreenColor   = lipgloss.Color("#73F59F")
-	WarningColor = lipgloss.Color("#73F59F")
+	BorderColor  = lipgloss.AdaptiveColor{Light: "#dddddd", Dark: "#353535"}
+	TextColor    = lipgloss.AdaptiveColor{Light: "#2b2b2b", Dark: "#d2d2d2"}
+	GrayColor    = lipgloss.AdaptiveColor{Light: "#373636", Dark: "#949494"}
+	ErrorColor   = lipgloss.AdaptiveColor{Light: "#c63f48", Dark: "#f58c93"}
+	WorkingColor = lipgloss.AdaptiveColor{Light: "#d7b237", Dark: "#ffe89b"}
+	GreenColor   = lipgloss.AdaptiveColor{Light: "#309352", Dark: "#37b965"}
+	WarningColor = lipgloss.AdaptiveColor{Light: "#d7b237", Dark: "#ffe89b"}
 
 	Divider = Base.
 		BorderStyle(lipgloss.NormalBorder()).
