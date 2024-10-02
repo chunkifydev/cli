@@ -5,6 +5,7 @@ import (
 
 	"github.com/level63/cli/pkg/config"
 	"github.com/level63/cli/pkg/jobs"
+	"github.com/level63/cli/pkg/logs"
 	"github.com/level63/cli/pkg/projects"
 	"github.com/level63/cli/pkg/sources"
 	"github.com/level63/cli/pkg/storages"
@@ -46,5 +47,6 @@ func init() {
 	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
 	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
+	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newSetupCmd())
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/level63/cli/pkg/styles"
 )
 
-type jobModel struct {
+type model struct {
 	cmd       *ListCmd
 	ch        chan []api.Job
 	jobsTable *table.Table
@@ -26,11 +26,11 @@ func listenToJobChan(ch chan []api.Job) tea.Cmd {
 	}
 }
 
-func (m jobModel) Init() tea.Cmd {
+func (m model) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), listenToJobChan(m.ch))
 }
 
-func (m jobModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -53,7 +53,7 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func (m jobModel) View() string {
+func (m model) View() string {
 	s := m.jobsTable.String()
 	s += "\n\n"
 	s += styles.Debug.Render("Press q to quit.\n")
@@ -77,7 +77,7 @@ func StartPolling(r *ListCmd) {
 	ch := make(chan []api.Job)
 	go polling(r, ch)
 
-	m := jobModel{
+	m := model{
 		cmd:       r,
 		ch:        ch,
 		jobsTable: r.jobsTable(),

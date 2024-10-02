@@ -1,4 +1,4 @@
-package jobs
+package logs
 
 import (
 	"fmt"
@@ -11,8 +11,10 @@ import (
 	"github.com/level63/cli/pkg/styles"
 )
 
-type logModel struct {
-	cmd       *LogsListCmd
+type tickMsg time.Time
+
+type model struct {
+	cmd       *ListCmd
 	ch        chan []api.Log
 	logsTable *table.Table
 }
@@ -24,11 +26,17 @@ func listenToLogsChan(ch chan []api.Log) tea.Cmd {
 	}
 }
 
-func (m logModel) Init() tea.Cmd {
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (m model) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), listenToLogsChan(m.ch))
 }
 
-func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -45,14 +53,14 @@ func (m logModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m logModel) View() string {
+func (m model) View() string {
 	s := m.logsTable.String()
 	s += "\n\n"
 	s += styles.Debug.Render("Logs will appear as soon as they are available.\nPress q to quit.\n")
 	return s
 }
 
-func logsPolling(r *LogsListCmd, ch chan []api.Log) {
+func logsPolling(r *ListCmd, ch chan []api.Log) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
@@ -65,11 +73,11 @@ func logsPolling(r *LogsListCmd, ch chan []api.Log) {
 	}
 }
 
-func StartTailing(r *LogsListCmd) {
+func StartTailing(r *ListCmd) {
 	ch := make(chan []api.Log)
 	go logsPolling(r, ch)
 
-	m := logModel{
+	m := model{
 		cmd:       r,
 		ch:        ch,
 		logsTable: r.logsTable(),

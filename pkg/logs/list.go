@@ -1,4 +1,4 @@
-package jobs
+package logs
 
 import (
 	"encoding/json"
@@ -16,8 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type LogsListCmd struct {
-	Id         string `json:"id"`
+type ListCmd struct {
+	Id         string
 	Service    string
 	Levels     []string
 	NoProgress bool
@@ -25,7 +25,7 @@ type LogsListCmd struct {
 	Data       []api.Log
 }
 
-func (r *LogsListCmd) Execute() error {
+func (r *ListCmd) Execute() error {
 	apiReq := api.Request{
 		Config:      cmd.Config,
 		Path:        fmt.Sprintf("/api/jobs/%s/logs", r.Id),
@@ -51,7 +51,7 @@ func (r *LogsListCmd) Execute() error {
 	return nil
 }
 
-func (r *LogsListCmd) View() {
+func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
 		if err != nil {
@@ -65,7 +65,7 @@ func (r *LogsListCmd) View() {
 	fmt.Println(r.logsTable())
 }
 
-func (r *LogsListCmd) logsTable() *table.Table {
+func (r *ListCmd) logsTable() *table.Table {
 	rows := logsListToRows(r.Data, r.Service, r.Levels, r.NoProgress)
 
 	rightCols := []int{0}
@@ -140,7 +140,7 @@ func logsListToRows(logs []api.Log, filterService string, filterLevels []string,
 			attrs = append(attrs, fmt.Sprintf("%s=%v", k, v))
 		}
 
-		attrsStr := strings.Join(attrs, ", ")
+		attrsStr := strings.Join(attrs, " ")
 		if len(attrsStr) > 100 {
 			attrsStr = attrsStr[:100] + "..."
 		}
@@ -175,11 +175,11 @@ func logsListToRows(logs []api.Log, filterService string, filterLevels []string,
 	return rows
 }
 
-func newLogsListCmd() *cobra.Command {
-	req := LogsListCmd{}
+func newListCmd() *cobra.Command {
+	req := ListCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "logs job-id",
+		Use:   "list job-id",
 		Short: "list all logs of a job",
 		Long:  `list all logs of a job`,
 		Args:  cobra.ExactArgs(1),

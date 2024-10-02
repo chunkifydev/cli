@@ -1,4 +1,4 @@
-package jobs
+package logs
 
 import (
 	"fmt"
@@ -19,18 +19,12 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use:   "jobs",
-			Short: "Manage your jobs",
-			Long:  "Manage your jobs",
+			Use:   "logs",
+			Short: "Retrieve logs",
+			Long:  "Retrieve logs",
 		}}
 
-	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newGetCmd())
 	cmd.Command.AddCommand(newListCmd())
-	cmd.Command.AddCommand(newFilesListCmd())
-	cmd.Command.AddCommand(newWebhooksListCmd())
-	cmd.Command.AddCommand(newFunctionsListCmd())
-	cmd.Command.AddCommand(newRestartCmd())
 
 	return cmd
 }
