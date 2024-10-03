@@ -63,6 +63,10 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 		}
 
 		body = bytes.NewBuffer(json)
+
+		if apiReq.Config.Debug {
+			fmt.Println(styles.Debug.Render(string(json) + "\n"))
+		}
 	}
 
 	req, err := http.NewRequest(apiReq.Method, apiUrl(apiReq.Config.ApiEndpoint, apiReq.Path), body)

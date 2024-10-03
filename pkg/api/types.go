@@ -93,6 +93,11 @@ type Webhook struct {
 	Enabled   bool   `json:"enabled"`
 }
 
+type WebhookWithSecretKey struct {
+	Webhook
+	SecretKey string `json:"secret_key"`
+}
+
 type JobWebhook struct {
 	Id                 string    `json:"id"`
 	JobId              string    `json:"job_id"`

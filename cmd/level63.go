@@ -9,6 +9,7 @@ import (
 	"github.com/level63/cli/pkg/projects"
 	"github.com/level63/cli/pkg/sources"
 	"github.com/level63/cli/pkg/storages"
+	"github.com/level63/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 )
 
@@ -48,5 +49,6 @@ func init() {
 	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
+	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newSetupCmd())
 }
