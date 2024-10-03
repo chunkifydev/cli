@@ -16,12 +16,12 @@ type CreateCmd struct {
 	Template   templateParams   `json:"template"`
 	Transcoder transcoderParams `json:"transcoder"`
 
-	cpu         int64  `json:"-"`
-	config      string `json:"-"`
-	metadata    string `json:"-"`
-	interactive bool   `json:"-"`
-	sourceUrl   string `json:"-"`
-	Data        api.Job
+	cpu         int64   `json:"-"`
+	config      string  `json:"-"`
+	metadata    string  `json:"-"`
+	interactive bool    `json:"-"`
+	sourceUrl   string  `json:"-"`
+	Data        api.Job `json:"-"`
 }
 
 type templateParams struct {

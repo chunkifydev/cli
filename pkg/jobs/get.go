@@ -33,7 +33,7 @@ func (r *GetCmd) Execute() error {
 }
 
 func (r *GetCmd) View() {
-	jobList := &ListCmd{Data: []api.Job{r.Data}, interactive: r.interactive}
+	jobList := &ListCmd{Id: r.Data.Id, Data: []api.Job{r.Data}, interactive: r.interactive}
 	if !cmd.Config.JSON && r.interactive {
 		StartPolling(jobList)
 	} else {

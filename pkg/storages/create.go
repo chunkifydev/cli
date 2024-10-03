@@ -16,7 +16,7 @@ type CreateCmd struct {
 	Location        string `json:"location"`
 	Public          bool   `json:"public"`
 
-	Data api.Storage
+	Data api.Storage `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {

@@ -17,12 +17,13 @@ import (
 )
 
 type ListCmd struct {
-	Id         string
-	Service    string
-	Levels     []string
-	NoProgress bool
-	Tail       bool
-	Data       []api.Log
+	Id          string
+	Service     string
+	Levels      []string
+	NoProgress  bool
+	Tail        bool
+	FfmpegDebug bool
+	Data        []api.Log
 }
 
 func (r *ListCmd) Execute() error {
@@ -62,11 +63,32 @@ func (r *ListCmd) View() {
 		return
 	}
 
+	if r.FfmpegDebug {
+		for _, log := range r.Data {
+			if log.Msg == "ffmpeg output" {
+				if stderr, ok := log.LogAttrs["stderr"].(string); ok {
+					printFfmpegDebug(stderr)
+					return
+				}
+			}
+		}
+	}
+
 	fmt.Println(r.logsTable())
 }
 
+func printFfmpegDebug(stderr string) {
+	for _, l := range strings.Split(stderr, "\n") {
+		if strings.Contains(l, "Error") || strings.Contains(l, "Invalid") || strings.Contains(l, "Unable") || strings.Contains(l, "Undefined") {
+			fmt.Println(styles.Error.Render(l))
+		} else {
+			fmt.Println(styles.Debug.Render(l))
+		}
+	}
+}
+
 func (r *ListCmd) logsTable() *table.Table {
-	rows := logsListToRows(r.Data, r.Service, r.Levels, r.NoProgress)
+	rows := logsListToRows(r)
 
 	rightCols := []int{0}
 	centerCols := []int{2}
@@ -101,30 +123,30 @@ func (r *ListCmd) logsTable() *table.Table {
 	return table
 }
 
-func logsListToRows(logs []api.Log, filterService string, filterLevels []string, noProgress bool) [][]string {
+func logsListToRows(r *ListCmd) [][]string {
 	rows := [][]string{}
 	var duration float64
 	var firstTime time.Time
 
-	for _, log := range logs {
-		if noProgress && log.Msg == "Progress" {
+	for _, log := range r.Data {
+		if r.NoProgress && log.Msg == "Progress" {
 			continue
 		}
 
-		if filterService != "" {
-			if filterService == "transcoder" && !strings.HasPrefix(log.Service, "transcoder") {
+		if r.Service != "" {
+			if r.Service == "transcoder" && !strings.HasPrefix(log.Service, "transcoder") {
 				continue
-			} else if strings.HasPrefix(filterService, "transcoder#") && log.Service != filterService {
+			} else if strings.HasPrefix(r.Service, "transcoder#") && log.Service != r.Service {
 				continue
 			}
 
-			if filterService != "transcoder" && filterService != log.Service {
+			if r.Service != "transcoder" && r.Service != log.Service {
 				continue
 			}
 		}
 
-		if len(filterLevels) > 0 {
-			if !slices.Contains(filterLevels, log.Level) {
+		if len(r.Levels) > 0 {
+			if !slices.Contains(r.Levels, log.Level) {
 				continue
 			}
 		}
@@ -140,9 +162,18 @@ func logsListToRows(logs []api.Log, filterService string, filterLevels []string,
 			attrs = append(attrs, fmt.Sprintf("%s=%v", k, v))
 		}
 
-		attrsStr := strings.Join(attrs, " ")
-		if len(attrsStr) > 100 {
-			attrsStr = attrsStr[:100] + "..."
+		var attrsStr string
+
+		if log.Level == "DEBUG" && log.Msg == "ffmpeg output" {
+			log.Msg = "Check ffmpeg output by running: "
+			attrsStr = styles.Hint.Render(fmt.Sprintf("`level63 logs list %s --ffmpeg-debug`", r.Id))
+		} else {
+			attrsStr = strings.Join(attrs, " ")
+			if len(attrsStr) > 100 {
+				attrsStr = attrsStr[:100] + "..."
+			}
+
+			attrsStr = styles.Debug.Render(attrsStr)
 		}
 
 		if firstTime.IsZero() {
@@ -166,7 +197,7 @@ func logsListToRows(logs []api.Log, filterService string, filterLevels []string,
 			formatter.LogService(log.Service),
 			formatter.LogLevel(log.Level),
 			styles.DefaultText.Render(
-				fmt.Sprintf("%s %s", log.Msg, styles.Debug.Render(attrsStr)),
+				fmt.Sprintf("%s %s", log.Msg, attrsStr),
 			),
 		})
 
@@ -202,6 +233,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
 	cmd.Flags().BoolVar(&req.NoProgress, "no-progress", false, "Do not show progress logs")
 	cmd.Flags().BoolVar(&req.Tail, "tail", false, "Tail logs")
+	cmd.Flags().BoolVar(&req.FfmpegDebug, "ffmpeg-debug", false, "Show ffmpeg stderr for debugging")
 
 	return cmd
 }

@@ -47,7 +47,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.cmd.Data = msg
 		return m, listenToLogsChan(m.ch)
 	case tickMsg:
-		m.logsTable.Data(table.NewStringData(logsListToRows(m.cmd.Data, m.cmd.Service, m.cmd.Levels, m.cmd.NoProgress)...))
+		m.logsTable.Data(table.NewStringData(logsListToRows(m.cmd)...))
 		return m, tickCmd()
 	}
 	return m, nil

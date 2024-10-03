@@ -63,9 +63,7 @@ func JobStatus(status string) string {
 
 func LogLevel(level string) string {
 	switch level {
-	case "DEBUG":
-		return styles.Debug.Render(level)
-	case "WARN":
+	case "WARN", "DEBUG":
 		return styles.Warning.Render(level)
 	case "ERROR":
 		return styles.Error.Render(level)

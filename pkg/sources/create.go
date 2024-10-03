@@ -11,7 +11,7 @@ type CreateCmd struct {
 	Url      string         `json:"url"`
 	metadata string         `json:"-"`
 	Metadata map[string]any `json:"metadata,omitempty"`
-	Data     api.Source
+	Data     api.Source     `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {

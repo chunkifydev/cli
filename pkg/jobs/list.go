@@ -19,6 +19,7 @@ import (
 )
 
 type ListCmd struct {
+	Id              string
 	Offset          int64
 	Limit           int64
 	CreatedGte      string
@@ -36,6 +37,10 @@ type ListCmd struct {
 
 func (r *ListCmd) toQueryMap() map[string]string {
 	queryMap := map[string]string{}
+
+	if r.Id != "" {
+		queryMap["id"] = r.Id
+	}
 
 	if r.Offset != -1 {
 		queryMap["offset"] = fmt.Sprintf("%d", r.Offset)

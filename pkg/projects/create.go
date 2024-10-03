@@ -6,9 +6,9 @@ import (
 )
 
 type CreateCmd struct {
-	Name    string `json:"name"`
-	Storage string `json:"storage"`
-	Data    api.Project
+	Name    string      `json:"name"`
+	Storage string      `json:"storage"`
+	Data    api.Project `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
