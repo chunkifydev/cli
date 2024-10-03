@@ -68,10 +68,12 @@ func (r *ListCmd) View() {
 			if log.Msg == "ffmpeg output" {
 				if stderr, ok := log.LogAttrs["stderr"].(string); ok {
 					printFfmpegDebug(stderr)
+					fmt.Println()
 					return
 				}
 			}
 		}
+		return
 	}
 
 	fmt.Println(r.logsTable())
