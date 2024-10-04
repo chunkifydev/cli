@@ -56,7 +56,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	s := m.logsTable.String()
 	s += "\n\n"
-	s += styles.Debug.Render("Logs will appear as soon as they are available.\nPress q to quit.\n")
+	s += styles.Debug.Render("Logs will appear as soon as they are available.\n[Q] Exit\n")
 	return s
 }
 

@@ -56,7 +56,7 @@ func tickCmd() tea.Cmd {
 func (m model) View() string {
 	s := m.jobsTable.String()
 	s += "\n\n"
-	s += styles.Debug.Render("Press q to quit.\n")
+	s += styles.Debug.Render("[Q] Exit\n")
 	return s
 }
 
