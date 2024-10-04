@@ -1,30 +1,29 @@
 package notifications
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
-	"os/signal"
 	"slices"
+	"strings"
 	"sync"
-	"syscall"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/level63/cli/pkg/api"
+	"github.com/level63/cli/pkg/formatter"
 	"github.com/level63/cli/pkg/styles"
 	"github.com/level63/cli/pkg/webhooks"
-	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 )
 
-var mut sync.Mutex
-var lastProxiedTime = time.Now()
-var lastProxiedNotification *api.Notification
-var count = 0
+var (
+	mut                     sync.Mutex
+	lastProxiedNotification *api.Notification
+	logs                    []string
+	startTime               time.Time
+)
 
 type ProxyCmd struct {
 	localUrl   string
@@ -35,6 +34,76 @@ type ProxyCmd struct {
 	Data []api.Notification
 }
 
+type model struct {
+	cmd *ProxyCmd
+	ch  chan []api.Notification
+}
+
+type tickMsg time.Time
+
+func listenToNotificationsChan(ch chan []api.Notification) tea.Cmd {
+	return func() tea.Msg {
+		notifs := <-ch
+		return notifs
+	}
+}
+
+func (m model) Init() tea.Cmd {
+	return tea.Batch(tickCmd(), listenToNotificationsChan(m.ch))
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "r":
+			if lastProxiedNotification != nil {
+				m.cmd.httpProxy(*lastProxiedNotification)
+			}
+			return m, tickCmd()
+		}
+	case []api.Notification:
+		if len(msg) > 0 {
+			for _, notif := range msg {
+				go m.cmd.httpProxy(notif)
+			}
+		}
+		m.cmd.Data = msg
+		return m, listenToNotificationsChan(m.ch)
+	case tickMsg:
+		if err := m.cmd.Execute(); err != nil {
+			printError(err)
+			return m, tickCmd()
+		}
+
+		if len(m.cmd.Data) > 0 {
+			m.ch <- m.cmd.Data
+		}
+
+		return m, tickCmd()
+	}
+	return m, nil
+}
+
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second*5, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (m model) View() string {
+	s := ""
+	for _, log := range logs {
+		s += log
+	}
+	s += "\n\n"
+	s += styles.Debug.Render("[R] Replay the last notification\n[Q] Exit\n")
+
+	return s
+}
+
 func (r *ProxyCmd) toQueryMap() map[string]string {
 	queryMap := map[string]string{}
 
@@ -42,7 +111,11 @@ func (r *ProxyCmd) toQueryMap() map[string]string {
 		queryMap["webhook_id"] = r.WebhookId
 	}
 
-	queryMap["created.gte"] = lastProxiedTime.Add(1 * time.Second).Format(time.RFC3339)
+	if lastProxiedNotification != nil {
+		queryMap["created.gte"] = lastProxiedNotification.CreatedAt.Add(1 * time.Second).Format(time.RFC3339)
+	} else {
+		queryMap["created.gte"] = startTime.Format(time.RFC3339)
+	}
 
 	return queryMap
 }
@@ -77,90 +150,19 @@ func (r *ProxyCmd) Execute() error {
 	return nil
 }
 
-func (r *ProxyCmd) View() {
-	if cmd.Config.JSON {
-		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
-		if err != nil {
-			printError(err)
-			return
-		}
-		fmt.Println(string(dataBytes))
-		return
-	}
-
-	if len(r.Data) == 0 {
-		fmt.Println(styles.DefaultText.Render("No notification found."))
-		return
-	}
-}
-
-func StartPolling(r *ProxyCmd) {
-	keyPress := make(chan string, 1)
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			fmt.Println("test " + scanner.Text())
-			keyPress <- scanner.Text()
-		}
-		if scanner.Err() != nil {
-			fmt.Println("error scanner", scanner.Err())
-		}
-	}()
-
-	t := time.NewTicker(time.Second * 5)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-t.C:
-			if err := r.Execute(); err != nil {
-				printError(err)
-				return
-			}
-
-			if len(r.Data) > 0 {
-				for _, notif := range r.Data {
-					go r.httpProxy(notif)
-				}
-			}
-		case sig := <-sigs:
-			slog.Info(sig.String())
-			return
-		case key := <-keyPress:
-			slog.Info("key pressed", "key", key)
-			if key == "q" {
-				return
-			}
-			if key == "r" {
-				if lastProxiedNotification != nil {
-					r.httpProxy(*lastProxiedNotification)
-				}
-			}
-		}
-	}
-}
-
 func (r *ProxyCmd) httpProxy(notif api.Notification) {
-	if lastProxiedTime.After(notif.CreatedAt) {
-		slog.Debug("Already proxied", "notificationId", notif.Id)
+	if lastProxiedNotification != nil && lastProxiedNotification.CreatedAt.After(notif.CreatedAt) {
 		return
 	}
 
 	mut.Lock()
-	count++
-	lastProxiedTime = notif.CreatedAt
 	lastProxiedNotification = &notif
 	mut.Unlock()
-
-	slog.Info("Proxying request", "notificationId", notif.Id, "count", count)
 
 	buf := bytes.NewBufferString(notif.Payload)
 	req, err := http.NewRequest("POST", r.localUrl, buf)
 	if err != nil {
-		slog.Error("Error creating http request", "error", err)
+		log(styles.Error.Render(fmt.Sprintf("Error creating http request: %s", err)))
 		return
 	}
 
@@ -171,19 +173,18 @@ func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error("Request error", "error", err)
+		log(styles.Error.Render(fmt.Sprintf("Request error: %s", err)))
 		return
 	}
 
-	slog.Info("Response status code", "code", resp.StatusCode)
-	slog.Info("Press r to replay")
+	log(fmt.Sprintf("[%s] Proxied notification %s\n", formatter.HttpCode(resp.StatusCode), notif.Id))
 }
 
 func createLocaldevWebhook() (api.Webhook, error) {
-	slog.Info("Setting up localdev webhook...")
+	log(fmt.Sprintln("Setting up localdev webhook..."))
 	cmd := &webhooks.CreateCmd{Url: "http://localdev", Events: "*", Enabled: true}
 	if err := cmd.Execute(); err != nil {
-		slog.Error("Couldn't create localdev webhook for proxying", "error", err)
+		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return api.Webhook{}, err
 	}
 
@@ -191,16 +192,17 @@ func createLocaldevWebhook() (api.Webhook, error) {
 }
 
 func deleteLocalDevWebhook(webhookId string) error {
-	slog.Info("Cleaning up localdev webhook...")
 	cmd := webhooks.DeleteCmd{Id: webhookId}
 	if err := cmd.Execute(); err != nil {
-		slog.Error("Couldn't delete localdev webhook. You need to manually delete it.", "webhookId", webhookId, "error", err)
+		fmt.Printf("Couldn't delete localdev webhook. You need to manually delete it. webhookId: %s, error: %s\n", webhookId, err)
 		return err
 	}
 
-	slog.Info("Done")
-
 	return nil
+}
+
+func log(l string) {
+	logs = append(logs, l)
 }
 
 func newProxyCmd() *cobra.Command {
@@ -212,6 +214,8 @@ func newProxyCmd() *cobra.Command {
 		Long:  `Proxy notifications to local HTTP URL`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
+			startTime = time.Now()
+			log("level63 proxy\n\n")
 			req.localUrl = args[0]
 
 			webhook, err := createLocaldevWebhook()
@@ -223,30 +227,24 @@ func newProxyCmd() *cobra.Command {
 
 			req.WebhookId = webhook.Id
 
-			slog.Info("Start proxying to", "url", req.localUrl)
-			StartPolling(&req)
+			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s\n", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
+
+			ch := make(chan []api.Notification)
+			m := model{
+				cmd: &req,
+				ch:  ch,
+			}
+
+			p := tea.NewProgram(m)
+			if _, err := p.Run(); err != nil {
+				fmt.Printf("Alas, there's been an error: %v", err)
+				os.Exit(1)
+			}
+
 		},
 	}
 
 	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed")
 
 	return cmd
-}
-
-func init() {
-	w := os.Stderr
-	slog.SetDefault(slog.New(
-		tint.NewHandler(w, &tint.Options{
-			Level:      slog.LevelDebug,
-			TimeFormat: time.RFC3339,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if err, ok := a.Value.Any().(error); ok {
-					aErr := tint.Err(err)
-					aErr.Key = a.Key
-					return aErr
-				}
-				return a
-			},
-		}),
-	))
 }
