@@ -6,10 +6,10 @@ import (
 )
 
 type CreateCmd struct {
-	Url     string `json:"url"`
-	Enabled bool   `json:"enabled"`
-	Events  string `json:"events,omitempty"`
-	Data    api.Webhook
+	Url     string      `json:"url"`
+	Enabled bool        `json:"enabled"`
+	Events  string      `json:"events,omitempty"`
+	Data    api.Webhook `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
@@ -46,7 +46,7 @@ func newCreateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&req.Url, "url", "", "The webhook URL (required)")
 	cmd.Flags().BoolVar(&req.Enabled, "enabled", true, "Enable the webhook")
-	cmd.Flags().StringVar(&req.Events, "events", "", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
+	cmd.Flags().StringVar(&req.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

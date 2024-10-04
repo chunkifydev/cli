@@ -87,11 +87,11 @@ type Storage struct {
 }
 
 type Webhook struct {
-	Id        string `json:"id"`
-	Url       string `json:"url"`
-	ProjectId string `json:"project_id"`
-	Enabled   bool   `json:"enabled"`
-	Events    string `json:"events"`
+	Id        string   `json:"id"`
+	Url       string   `json:"url"`
+	ProjectId string   `json:"project_id"`
+	Enabled   bool     `json:"enabled"`
+	Events    []string `json:"events"`
 }
 
 type WebhookWithSecretKey struct {
@@ -105,7 +105,7 @@ type Function struct {
 	ProjectId   string    `json:"project_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	Enabled     bool      `json:"enabled"`
-	Events      string    `json:"events"`
+	Events      []string  `json:"events"`
 }
 
 type Notification struct {

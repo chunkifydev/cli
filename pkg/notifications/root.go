@@ -25,6 +25,7 @@ func NewCommand(config *config.Config) *Command {
 		}}
 
 	cmd.Command.AddCommand(newListCmd())
+	cmd.Command.AddCommand(newProxyCmd())
 	return cmd
 }
 

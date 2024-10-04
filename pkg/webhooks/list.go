@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -58,7 +59,7 @@ func (r *ListCmd) View() {
 
 func (r *ListCmd) webhooksTable() *table.Table {
 	rightCols := []int{}
-	centerCols := []int{4}
+	centerCols := []int{2, 3}
 
 	table := table.New().
 		BorderRow(true).
@@ -96,7 +97,7 @@ func webhooksListToRows(webhooks []api.Webhook) [][]string {
 		rows[i] = []string{
 			styles.Id.Render(webhook.Id),
 			webhook.Url,
-			webhook.Events,
+			strings.Join(webhook.Events, ","),
 			formatter.Bool(webhook.Enabled),
 		}
 	}
