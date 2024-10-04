@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -16,18 +17,18 @@ import (
 	"github.com/level63/cli/pkg/api"
 	"github.com/level63/cli/pkg/styles"
 	"github.com/level63/cli/pkg/webhooks"
+	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
 )
 
 var mut sync.Mutex
 var lastProxiedTime = time.Now()
+var lastProxiedNotification *api.Notification
 var count = 0
 
 type ProxyCmd struct {
 	localUrl   string
 	WebhookId  string
-	FunctionId string
-	Type       string
 	Events     []string
 	CreatedGte time.Time
 
@@ -39,10 +40,6 @@ func (r *ProxyCmd) toQueryMap() map[string]string {
 
 	if r.WebhookId != "" {
 		queryMap["webhook_id"] = r.WebhookId
-	}
-
-	if r.Type != "" {
-		queryMap["type"] = r.Type
 	}
 
 	queryMap["created.gte"] = lastProxiedTime.Add(1 * time.Second).Format(time.RFC3339)
@@ -98,8 +95,20 @@ func (r *ProxyCmd) View() {
 }
 
 func StartPolling(r *ProxyCmd) {
+	keyPress := make(chan string, 1)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			fmt.Println("test " + scanner.Text())
+			keyPress <- scanner.Text()
+		}
+		if scanner.Err() != nil {
+			fmt.Println("error scanner", scanner.Err())
+		}
+	}()
 
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
@@ -114,17 +123,27 @@ func StartPolling(r *ProxyCmd) {
 
 			if len(r.Data) > 0 {
 				for _, notif := range r.Data {
-					go r.httpPoxy(notif)
+					go r.httpProxy(notif)
 				}
 			}
 		case sig := <-sigs:
 			slog.Info(sig.String())
 			return
+		case key := <-keyPress:
+			slog.Info("key pressed", "key", key)
+			if key == "q" {
+				return
+			}
+			if key == "r" {
+				if lastProxiedNotification != nil {
+					r.httpProxy(*lastProxiedNotification)
+				}
+			}
 		}
 	}
 }
 
-func (r *ProxyCmd) httpPoxy(notif api.Notification) {
+func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	if lastProxiedTime.After(notif.CreatedAt) {
 		slog.Debug("Already proxied", "notificationId", notif.Id)
 		return
@@ -133,6 +152,7 @@ func (r *ProxyCmd) httpPoxy(notif api.Notification) {
 	mut.Lock()
 	count++
 	lastProxiedTime = notif.CreatedAt
+	lastProxiedNotification = &notif
 	mut.Unlock()
 
 	slog.Info("Proxying request", "notificationId", notif.Id, "count", count)
@@ -156,6 +176,7 @@ func (r *ProxyCmd) httpPoxy(notif api.Notification) {
 	}
 
 	slog.Info("Response status code", "code", resp.StatusCode)
+	slog.Info("Press r to replay")
 }
 
 func createLocaldevWebhook() (api.Webhook, error) {
@@ -207,8 +228,25 @@ func newProxyCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Type, "type", "", "Proxy all notifications with the given type. Type can be webhook or function")
 	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed")
 
 	return cmd
+}
+
+func init() {
+	w := os.Stderr
+	slog.SetDefault(slog.New(
+		tint.NewHandler(w, &tint.Options{
+			Level:      slog.LevelDebug,
+			TimeFormat: time.RFC3339,
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				if err, ok := a.Value.Any().(error); ok {
+					aErr := tint.Err(err)
+					aErr.Key = a.Key
+					return aErr
+				}
+				return a
+			},
+		}),
+	))
 }
