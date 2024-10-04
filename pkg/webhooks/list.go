@@ -64,7 +64,7 @@ func (r *ListCmd) webhooksTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Id", "Url", "Active").
+		Headers("Id", "Url", "Events", "Active").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -96,6 +96,7 @@ func webhooksListToRows(webhooks []api.Webhook) [][]string {
 		rows[i] = []string{
 			styles.Id.Render(webhook.Id),
 			webhook.Url,
+			webhook.Events,
 			formatter.Bool(webhook.Enabled),
 		}
 	}

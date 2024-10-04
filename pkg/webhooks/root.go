@@ -30,6 +30,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newDeleteCmd())
 	cmd.Command.AddCommand(newGetCmd())
 	cmd.Command.AddCommand(newListCmd())
+
 	return cmd
 }
 

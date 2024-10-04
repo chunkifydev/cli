@@ -91,23 +91,12 @@ type Webhook struct {
 	Url       string `json:"url"`
 	ProjectId string `json:"project_id"`
 	Enabled   bool   `json:"enabled"`
+	Events    string `json:"events"`
 }
 
 type WebhookWithSecretKey struct {
 	Webhook
 	SecretKey string `json:"secret_key"`
-}
-
-type JobWebhook struct {
-	Id                 string    `json:"id"`
-	JobId              string    `json:"job_id"`
-	WebhookId          string    `json:"webhook_id"`
-	CreatedAt          time.Time `json:"created_at"`
-	Attempts           int       `json:"attempts"`
-	Payload            string    `json:"payload"`
-	ResponseStatusCode int       `json:"response_status_code"`
-
-	Webhook Webhook `json:"webhook"`
 }
 
 type Function struct {
@@ -116,18 +105,18 @@ type Function struct {
 	ProjectId   string    `json:"project_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	Enabled     bool      `json:"enabled"`
+	Events      string    `json:"events"`
 }
 
-type JobFunction struct {
+type Notification struct {
 	Id                 string    `json:"id"`
 	JobId              string    `json:"job_id"`
-	FunctionId         string    `json:"function_id"`
+	Type               string    `json:"type"`
 	CreatedAt          time.Time `json:"created_at"`
 	Attempts           int       `json:"attempts"`
 	Payload            string    `json:"payload"`
 	ResponseStatusCode int       `json:"response_status_code"`
-
-	Function Function `json:"function"`
+	Event              string    `json:"event"`
 }
 
 type Log struct {

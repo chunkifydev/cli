@@ -1,4 +1,4 @@
-package jobs
+package notifications
 
 import (
 	"fmt"
@@ -19,17 +19,12 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use:   "jobs",
-			Short: "Manage your jobs",
-			Long:  "Manage your jobs",
+			Use:   "notifications",
+			Short: "Manage your notifications",
+			Long:  "Manage your notifications",
 		}}
 
-	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newGetCmd())
 	cmd.Command.AddCommand(newListCmd())
-	cmd.Command.AddCommand(newFilesListCmd())
-	cmd.Command.AddCommand(newRestartCmd())
-
 	return cmd
 }
 
