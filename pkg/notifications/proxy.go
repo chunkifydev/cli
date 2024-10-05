@@ -77,7 +77,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "v":
 			if lastProxiedNotification != nil {
 				prettyJson := prettyRenderJSONPayload(lastProxiedNotification.Payload)
-				log(styles.Debug.Render(prettyJson) + "\n\n")
+				log(styles.Debug.Render(prettyJson) + "\n")
 			}
 			return m, tickCmd()
 		}
@@ -111,11 +111,7 @@ func tickCmd() tea.Cmd {
 }
 
 func (m model) View() string {
-	s := ""
-	for _, log := range logs {
-		s += log
-	}
-
+	s := strings.Join(logs, "\n")
 	s += "\n\n"
 	s += styles.Debug.Render("[T] Send a test notification\n[V] View last notification payload\n[R] Replay the last notification\n[Q] Exit\n")
 
@@ -180,7 +176,7 @@ func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	buf := bytes.NewBufferString(notif.Payload)
 	req, err := http.NewRequest("POST", r.localUrl, buf)
 	if err != nil {
-		log("Error creating http request:" + err.Error() + "\n")
+		log("Error creating http request:" + err.Error())
 		return
 	}
 
@@ -194,11 +190,11 @@ func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log("Request error: " + err.Error() + "\n")
+		log("Request error: " + err.Error())
 		return
 	}
 
-	log(fmt.Sprintf("[%s] Proxied notification %s (signature: %s)\n", formatter.HttpCode(resp.StatusCode), notif.Id, signature))
+	log(fmt.Sprintf("[%s] Proxied notification %s (signature: %s)", formatter.HttpCode(resp.StatusCode), notif.Id, signature))
 }
 
 func generateSignature(payloadString string, secretKey string) string {
@@ -259,7 +255,7 @@ func generateTestNotification() api.Notification {
 				{
 					Id:        uuid.NewString(),
 					JobId:     jobId,
-					Storage:   "localdev",
+					Storage:   "aws",
 					Path:      "/tmp/test.mp4",
 					Size:      1024,
 					MimeType:  "video/mp4",
@@ -303,7 +299,7 @@ func newProxyCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			startTime = time.Now()
-			log("level63 proxy\n\n")
+			log("level63 proxy\n")
 			req.localUrl = args[0]
 
 			webhook, err := createLocaldevWebhook()
@@ -317,9 +313,9 @@ func newProxyCmd() *cobra.Command {
 			if req.secretKey == "" {
 				req.secretKey = webhook.SecretKey
 			}
-			log(fmt.Sprintf("Secret key: %s\n\n", req.secretKey))
+			log(fmt.Sprintf("Secret key: %s\n", req.secretKey))
 
-			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s\n", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
+			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
 
 			ch := make(chan []api.Notification)
 			m := model{
