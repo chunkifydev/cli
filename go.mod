@@ -40,6 +40,7 @@ require (
 
 require (
 	github.com/charmbracelet/lipgloss v0.13.0
+	github.com/google/uuid v1.6.0
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/lmittmann/tint v1.0.5
 	github.com/spf13/pflag v1.0.5 // indirect

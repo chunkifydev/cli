@@ -6,14 +6,14 @@ import (
 )
 
 type CreateCmd struct {
-	Url     string      `json:"url"`
-	Enabled bool        `json:"enabled"`
-	Events  string      `json:"events,omitempty"`
-	Data    api.Webhook `json:"-"`
+	Url     string                   `json:"url"`
+	Enabled bool                     `json:"enabled"`
+	Events  string                   `json:"events,omitempty"`
+	Data    api.WebhookWithSecretKey `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-	webhook, err := api.ApiRequest[api.Webhook](api.Request{Config: cmd.Config, Path: "/api/webhooks", Method: "POST", Body: r})
+	webhook, err := api.ApiRequest[api.WebhookWithSecretKey](api.Request{Config: cmd.Config, Path: "/api/webhooks", Method: "POST", Body: r})
 	if err != nil {
 		return err
 	}
@@ -24,7 +24,7 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	webhooksList := ListCmd{Data: []api.Webhook{r.Data}}
+	webhooksList := ListCmd{Data: []api.Webhook{r.Data.Webhook}}
 	webhooksList.View()
 }
 

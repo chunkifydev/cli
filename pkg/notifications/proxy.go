@@ -2,6 +2,10 @@ package notifications
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +15,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/google/uuid"
 	"github.com/level63/cli/pkg/api"
 	"github.com/level63/cli/pkg/formatter"
 	"github.com/level63/cli/pkg/styles"
@@ -27,6 +32,7 @@ var (
 
 type ProxyCmd struct {
 	localUrl   string
+	secretKey  string
 	WebhookId  string
 	Events     []string
 	CreatedGte time.Time
@@ -61,6 +67,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			if lastProxiedNotification != nil {
 				m.cmd.httpProxy(*lastProxiedNotification)
+			}
+			return m, tickCmd()
+		case "t":
+			testNotif := generateTestNotification()
+			m.cmd.Data = []api.Notification{testNotif}
+			m.cmd.httpProxy(testNotif)
+			return m, tickCmd()
+		case "v":
+			if lastProxiedNotification != nil {
+				prettyJson := prettyRenderJSONPayload(lastProxiedNotification.Payload)
+				log(styles.Debug.Render(prettyJson) + "\n\n")
 			}
 			return m, tickCmd()
 		}
@@ -98,8 +115,9 @@ func (m model) View() string {
 	for _, log := range logs {
 		s += log
 	}
+
 	s += "\n\n"
-	s += styles.Debug.Render("[R] Replay the last notification\n[Q] Exit\n")
+	s += styles.Debug.Render("[T] Send a test notification\n[V] View last notification payload\n[R] Replay the last notification\n[Q] Exit\n")
 
 	return s
 }
@@ -162,30 +180,56 @@ func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	buf := bytes.NewBufferString(notif.Payload)
 	req, err := http.NewRequest("POST", r.localUrl, buf)
 	if err != nil {
-		log(styles.Error.Render(fmt.Sprintf("Error creating http request: %s", err)))
+		log("Error creating http request:" + err.Error() + "\n")
 		return
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "level63-cli/proxy")
 
+	signature := generateSignature(notif.Payload, r.secretKey)
+	req.Header.Set("X-Level63-Signature", signature)
+
 	// Make the HTTP request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log(styles.Error.Render(fmt.Sprintf("Request error: %s", err)))
+		log("Request error: " + err.Error() + "\n")
 		return
 	}
 
-	log(fmt.Sprintf("[%s] Proxied notification %s\n", formatter.HttpCode(resp.StatusCode), notif.Id))
+	log(fmt.Sprintf("[%s] Proxied notification %s (signature: %s)\n", formatter.HttpCode(resp.StatusCode), notif.Id, signature))
 }
 
-func createLocaldevWebhook() (api.Webhook, error) {
+func generateSignature(payloadString string, secretKey string) string {
+	h := hmac.New(sha256.New, []byte(secretKey))
+	h.Write([]byte(payloadString))
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func prettyRenderJSONPayload(payload string) string {
+	var payloadStruct api.WebhookPayload
+
+	if err := json.Unmarshal([]byte(payload), &payloadStruct); err != nil {
+		log("Couldn't not pretty render JSON payload")
+		return ""
+	}
+
+	prettryBytes, err := json.MarshalIndent(payloadStruct, "", "    ")
+	if err != nil {
+		log("Couldn't not pretty render JSON payload")
+		return ""
+	}
+
+	return string(prettryBytes)
+}
+
+func createLocaldevWebhook() (api.WebhookWithSecretKey, error) {
 	log(fmt.Sprintln("Setting up localdev webhook..."))
 	cmd := &webhooks.CreateCmd{Url: "http://localdev", Events: "*", Enabled: true}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
-		return api.Webhook{}, err
+		return api.WebhookWithSecretKey{}, err
 	}
 
 	return cmd.Data, nil
@@ -199,6 +243,50 @@ func deleteLocalDevWebhook(webhookId string) error {
 	}
 
 	return nil
+}
+
+func generateTestNotification() api.Notification {
+	jobId := uuid.NewString()
+	payload := api.WebhookPayload{
+		Event: "job.completed",
+		Date:  time.Now(),
+		Data: api.WebhookPayloadData{
+			JobId:    jobId,
+			Metadata: map[string]any{"VideoId": uuid.NewString()},
+			SourceId: uuid.NewString(),
+			Error:    nil,
+			Files: []api.File{
+				{
+					Id:        uuid.NewString(),
+					JobId:     jobId,
+					Storage:   "localdev",
+					Path:      "/tmp/test.mp4",
+					Size:      1024,
+					MimeType:  "video/mp4",
+					CreatedAt: time.Now(),
+					Url:       "http://localhost:8080/tmp/test.mp4",
+				},
+			},
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log("Couldn't not marshal json")
+		return api.Notification{}
+	}
+
+	notif := api.Notification{
+		Id:                 uuid.NewString(),
+		JobId:              jobId,
+		Type:               "webhook",
+		CreatedAt:          time.Now(),
+		Attempts:           1,
+		Payload:            string(payloadBytes),
+		ResponseStatusCode: 200,
+		Event:              "job.completed",
+	}
+
+	return notif
 }
 
 func log(l string) {
@@ -226,6 +314,10 @@ func newProxyCmd() *cobra.Command {
 			defer deleteLocalDevWebhook(webhook.Id)
 
 			req.WebhookId = webhook.Id
+			if req.secretKey == "" {
+				req.secretKey = webhook.SecretKey
+			}
+			log(fmt.Sprintf("Secret key: %s\n\n", req.secretKey))
 
 			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s\n", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
 
@@ -245,6 +337,7 @@ func newProxyCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed")
+	cmd.Flags().StringVar(&req.secretKey, "secret-key", "", "Use the given secret key to sign the notifications. If not provided, a random secret key will be used")
 
 	return cmd
 }

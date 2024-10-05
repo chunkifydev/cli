@@ -119,6 +119,20 @@ type Notification struct {
 	Event              string    `json:"event"`
 }
 
+type WebhookPayload struct {
+	Event string             `json:"event"`
+	Date  time.Time          `json:"date"`
+	Data  WebhookPayloadData `json:"data"`
+}
+
+type WebhookPayloadData struct {
+	JobId    string  `json:"job_id"`
+	Metadata any     `json:"metadata"`
+	SourceId string  `json:"source_id"`
+	Error    *string `json:"error"`
+	Files    []File  `json:"files"`
+}
+
 type Log struct {
 	Time     time.Time  `json:"time"`
 	Level    string     `json:"level"`
