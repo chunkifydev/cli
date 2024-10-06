@@ -193,6 +193,10 @@ func logsListToRows(r *ListCmd) [][]string {
 			log.Msg = "✅ " + log.Msg
 		}
 
+		if strings.HasPrefix(log.Msg, "Starting transcoder#") {
+			log.Msg = "🚀 " + log.Msg
+		}
+
 		rows = append(rows, []string{
 			fmt.Sprintf("%d", len(rows)+1),
 			styles.Debug.Render(log.Time.Format(time.RFC3339)) + " " + durationStr,
