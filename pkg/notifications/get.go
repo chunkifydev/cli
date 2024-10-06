@@ -43,6 +43,11 @@ func (r *GetCmd) View() {
 		return
 	}
 
+	if r.payload {
+		fmt.Println(r.Data.Payload)
+		return
+	}
+
 	notificationsList := &ListCmd{Id: r.Data.Id, Data: []api.Notification{r.Data}}
 	notificationsList.View()
 }

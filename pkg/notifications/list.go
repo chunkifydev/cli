@@ -108,13 +108,7 @@ func (r *ListCmd) View() {
 
 	if r.payload {
 		for _, notif := range r.Data {
-			fmt.Printf("[%s] %s %s (%s)\n\n%s\n\n",
-				styles.DefaultText.Render(notif.CreatedAt.Format(time.RFC3339)),
-				notif.Id,
-				notif.Type,
-				formatter.HttpCode(notif.ResponseStatusCode),
-				styles.Debug.Render(notif.Payload),
-			)
+			fmt.Println(notif.Payload + "\n")
 		}
 		return
 	}
