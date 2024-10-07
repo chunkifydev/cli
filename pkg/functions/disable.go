@@ -1,4 +1,4 @@
-package webhooks
+package functions
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ func (r *DisableCmd) Execute() error {
 	_, err := api.ApiRequest[api.EmptyResponse](
 		api.Request{
 			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/webhooks/%s", r.Id),
+			Path:   fmt.Sprintf("/api/functions/%s", r.Id),
 			Method: "PATCH",
 			Body:   r,
 		})
@@ -28,16 +28,16 @@ func (r *DisableCmd) Execute() error {
 }
 
 func (r *DisableCmd) View() {
-	fmt.Println("Webhook is disabled")
+	fmt.Println("Function is disabled")
 }
 
 func newDisableCmd() *cobra.Command {
 	req := DisableCmd{Enabled: false}
 
 	cmd := &cobra.Command{
-		Use:   "disable webhook-id",
-		Short: "Disable a webhook",
-		Long:  `Disable a webhook`,
+		Use:   "disable function-id",
+		Short: "Disable a function",
+		Long:  `Disable a function`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			req.Id = args[0]

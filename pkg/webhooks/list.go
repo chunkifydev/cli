@@ -82,7 +82,6 @@ func (r *ListCmd) webhooksTable() *table.Table {
 			case slices.Contains(centerCols, col):
 				return styles.Center.Padding(0, 1)
 			default:
-				//return styles.DefaultText
 				return styles.TableSpacing
 			}
 		}).

@@ -1,10 +1,10 @@
-package projects
+package functions
 
 import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"time"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -15,24 +15,22 @@ import (
 )
 
 type ListCmd struct {
-	disabled bool
-	Data     []api.Project
+	Data []api.Function
 }
 
 func (r *ListCmd) Execute() error {
 	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/projects",
-		Method:      "GET",
-		QueryParams: api.QueryParams{"paused": fmt.Sprintf("%t", r.disabled)},
+		Config: cmd.Config,
+		Path:   "/api/functions",
+		Method: "GET",
 	}
 
-	projects, err := api.ApiRequest[[]api.Project](apiReq)
+	functions, err := api.ApiRequest[[]api.Function](apiReq)
 	if err != nil {
 		return err
 	}
 
-	r.Data = projects
+	r.Data = functions
 
 	return nil
 }
@@ -49,25 +47,25 @@ func (r *ListCmd) View() {
 	}
 
 	if len(r.Data) == 0 {
-		fmt.Println(styles.DefaultText.Render("No project found."))
+		fmt.Println(styles.DefaultText.Render("No function found."))
 		return
 	}
 
-	fmt.Println(r.projectsTable())
+	fmt.Println(r.functionsTable())
 	if len(r.Data) > 1 {
 		fmt.Println(styles.Debug.MarginTop(1).Render(fmt.Sprintf("Total: %d\n", len(r.Data))))
 	}
 }
 
-func (r *ListCmd) projectsTable() *table.Table {
+func (r *ListCmd) functionsTable() *table.Table {
 	rightCols := []int{}
-	centerCols := []int{4}
+	centerCols := []int{2, 3}
 
 	table := table.New().
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Name", "Storage", "Active").
+		Headers("Id", "Name", "Events", "Active").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -87,20 +85,19 @@ func (r *ListCmd) projectsTable() *table.Table {
 				return styles.TableSpacing
 			}
 		}).
-		Rows(projectsListToRows(r.Data)...)
+		Rows(functionsListToRows(r.Data)...)
 
 	return table
 }
 
-func projectsListToRows(projects []api.Project) [][]string {
-	rows := make([][]string, len(projects))
-	for i, project := range projects {
+func functionsListToRows(functions []api.Function) [][]string {
+	rows := make([][]string, len(functions))
+	for i, function := range functions {
 		rows[i] = []string{
-			project.CreatedAt.Format(time.RFC822),
-			styles.Id.Render(project.Id),
-			project.Name,
-			project.Storage,
-			formatter.Bool(!project.Paused),
+			styles.Id.Render(function.Id),
+			function.Description,
+			strings.Join(function.Events, ","),
+			formatter.Bool(function.Enabled),
 		}
 	}
 	return rows
@@ -111,8 +108,8 @@ func newListCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "list all projects",
-		Long:  `list all projects`,
+		Short: "list all functions",
+		Long:  `list all functions`,
 		Run: func(_ *cobra.Command, args []string) {
 			if err := req.Execute(); err != nil {
 				printError(err)
@@ -121,8 +118,6 @@ func newListCmd() *cobra.Command {
 			req.View()
 		},
 	}
-
-	cmd.Flags().BoolVar(&req.disabled, "disabled", false, "List disabled projects")
 
 	return cmd
 }

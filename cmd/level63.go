@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/level63/cli/pkg/config"
+	"github.com/level63/cli/pkg/functions"
 	"github.com/level63/cli/pkg/jobs"
 	"github.com/level63/cli/pkg/logs"
 	"github.com/level63/cli/pkg/notifications"
@@ -51,6 +52,7 @@ func init() {
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
+	rootCmd.AddCommand(functions.NewCommand(cfg).Command)
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newSetupCmd())
 }

@@ -108,6 +108,11 @@ type Function struct {
 	Events      []string  `json:"events"`
 }
 
+type FunctionInvoked struct {
+	StatusCode int    `json:"status_code"`
+	Body       string `json:"body"`
+}
+
 type Notification struct {
 	Id                 string    `json:"id"`
 	JobId              string    `json:"job_id"`

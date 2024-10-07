@@ -1,4 +1,4 @@
-package webhooks
+package functions
 
 import (
 	"fmt"
@@ -7,19 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type DisableCmd struct {
-	Id      string `json:"-"`
-	Enabled bool   `json:"enabled"`
+type DeleteCmd struct {
+	Id string
 }
 
-func (r *DisableCmd) Execute() error {
+func (r *DeleteCmd) Execute() error {
 	_, err := api.ApiRequest[api.EmptyResponse](
 		api.Request{
 			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/webhooks/%s", r.Id),
-			Method: "PATCH",
+			Path:   fmt.Sprintf("/api/functions/%s", r.Id),
+			Method: "DELETE",
 			Body:   r,
 		})
+
 	if err != nil {
 		return err
 	}
@@ -27,17 +27,17 @@ func (r *DisableCmd) Execute() error {
 	return nil
 }
 
-func (r *DisableCmd) View() {
-	fmt.Println("Webhook is disabled")
+func (r *DeleteCmd) View() {
+	fmt.Println("Function deleted")
 }
 
-func newDisableCmd() *cobra.Command {
-	req := DisableCmd{Enabled: false}
+func newDeleteCmd() *cobra.Command {
+	req := DeleteCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "disable webhook-id",
-		Short: "Disable a webhook",
-		Long:  `Disable a webhook`,
+		Use:   "delete function-id",
+		Short: "Delete a function",
+		Long:  `Delete a function`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			req.Id = args[0]
