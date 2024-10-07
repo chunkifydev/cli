@@ -95,7 +95,7 @@ func functionsListToRows(functions []api.Function) [][]string {
 	for i, function := range functions {
 		rows[i] = []string{
 			styles.Id.Render(function.Id),
-			function.Description,
+			function.Name,
 			strings.Join(function.Events, ","),
 			formatter.Bool(function.Enabled),
 		}

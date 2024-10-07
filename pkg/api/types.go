@@ -100,12 +100,12 @@ type WebhookWithSecretKey struct {
 }
 
 type Function struct {
-	Id          string    `json:"id"`
-	Description string    `json:"description"`
-	ProjectId   string    `json:"project_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	Enabled     bool      `json:"enabled"`
-	Events      []string  `json:"events"`
+	Id        string    `json:"id"`
+	Name      string    `json:"name"`
+	ProjectId string    `json:"project_id"`
+	CreatedAt time.Time `json:"created_at"`
+	Enabled   bool      `json:"enabled"`
+	Events    []string  `json:"events"`
 }
 
 type FunctionInvoked struct {
