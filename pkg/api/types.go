@@ -134,14 +134,14 @@ type WebhookPayloadData struct {
 }
 
 type Log struct {
-	Time     time.Time  `json:"time"`
-	Level    string     `json:"level"`
-	Msg      string     `json:"msg"`
-	Service  string     `json:"service"`
-	LogAttrs S3LogAttrs `json:"-"`
+	Time     time.Time `json:"time"`
+	Level    string    `json:"level"`
+	Msg      string    `json:"msg"`
+	Service  string    `json:"service"`
+	LogAttrs LogAttrs  `json:"-"`
 }
 
-type S3LogAttrs map[string]any
+type LogAttrs map[string]any
 
 // Custom UnmarshalJSON to capture dynamic fields
 func (l *Log) UnmarshalJSON(data []byte) error {

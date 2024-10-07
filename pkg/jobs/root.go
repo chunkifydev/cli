@@ -29,6 +29,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newListCmd())
 	cmd.Command.AddCommand(newFilesListCmd())
 	cmd.Command.AddCommand(newRestartCmd())
+	cmd.Command.AddCommand(newTranscoderProgressCmd())
 
 	return cmd
 }

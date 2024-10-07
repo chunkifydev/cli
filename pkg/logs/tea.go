@@ -19,7 +19,7 @@ type model struct {
 	logsTable *table.Table
 }
 
-func listenToLogsChan(ch chan []api.Log) tea.Cmd {
+func ListenToLogsChan(ch chan []api.Log) tea.Cmd {
 	return func() tea.Msg {
 		jobs := <-ch
 		return jobs
@@ -33,7 +33,7 @@ func tickCmd() tea.Cmd {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(tickCmd(), listenToLogsChan(m.ch))
+	return tea.Batch(tickCmd(), ListenToLogsChan(m.ch))
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -45,7 +45,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case []api.Log:
 		m.cmd.Data = msg
-		return m, listenToLogsChan(m.ch)
+		return m, ListenToLogsChan(m.ch)
 	case tickMsg:
 		m.logsTable.Data(table.NewStringData(logsListToRows(m.cmd)...))
 		return m, tickCmd()
@@ -60,7 +60,7 @@ func (m model) View() string {
 	return s
 }
 
-func logsPolling(r *ListCmd, ch chan []api.Log) {
+func LogsPolling(r *ListCmd, ch chan []api.Log) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
@@ -75,7 +75,7 @@ func logsPolling(r *ListCmd, ch chan []api.Log) {
 
 func StartTailing(r *ListCmd) {
 	ch := make(chan []api.Log)
-	go logsPolling(r, ch)
+	go LogsPolling(r, ch)
 
 	m := model{
 		cmd:       r,
