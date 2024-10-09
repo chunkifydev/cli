@@ -3,6 +3,7 @@ package sources
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -50,132 +51,132 @@ type ListCmd struct {
 	Data        []api.Source
 }
 
-func (r *ListCmd) toQueryMap() map[string]string {
-	queryMap := map[string]string{}
+func (r *ListCmd) toQueryMap() url.Values {
+	query := url.Values{}
 
 	if r.Offset != -1 {
-		queryMap["offset"] = fmt.Sprintf("%d", r.Offset)
+		query.Add("offset", fmt.Sprintf("%d", r.Offset))
 	}
 	if r.Limit != -1 {
-		queryMap["limit"] = fmt.Sprintf("%d", r.Limit)
+		query.Add("limit", fmt.Sprintf("%d", r.Limit))
 	}
 	if r.DurationEq != "" {
 		dur, err := time.ParseDuration(r.DurationEq)
 		if err == nil {
-			queryMap["duration.eq"] = fmt.Sprintf("%f", dur.Seconds())
+			query.Add("duration.eq", fmt.Sprintf("%f", dur.Seconds()))
 		}
 	}
 	if r.DurationGte != "" {
 		dur, err := time.ParseDuration(r.DurationGte)
 		if err == nil {
-			queryMap["duration.gte"] = fmt.Sprintf("%f", dur.Seconds())
+			query.Add("duration.gte", fmt.Sprintf("%f", dur.Seconds()))
 		}
 	}
 	if r.DurationGt != "" {
 		dur, err := time.ParseDuration(r.DurationGt)
 		if err == nil {
-			queryMap["duration.gt"] = fmt.Sprintf("%f", dur.Seconds())
+			query.Add("duration.gt", fmt.Sprintf("%f", dur.Seconds()))
 		}
 	}
 	if r.DurationLte != "" {
 		dur, err := time.ParseDuration(r.DurationLte)
 		if err == nil {
-			queryMap["duration.lte"] = fmt.Sprintf("%f", dur.Seconds())
+			query.Add("duration.lte", fmt.Sprintf("%f", dur.Seconds()))
 		}
 	}
 	if r.DurationLt != "" {
 		dur, err := time.ParseDuration(r.DurationLt)
 		if err == nil {
-			queryMap["duration.lt"] = fmt.Sprintf("%f", dur.Seconds())
+			query.Add("duration.lt", fmt.Sprintf("%f", dur.Seconds()))
 		}
 	}
 	if r.CreatedGte != "" {
-		queryMap["created.gte"] = r.CreatedGte
+		query.Add("created.gte", r.CreatedGte)
 	}
 	if r.CreatedLte != "" {
-		queryMap["created.lte"] = r.CreatedLte
+		query.Add("created.lte", r.CreatedLte)
 	}
 	if r.WidthEq != -1 {
-		queryMap["width.eq"] = fmt.Sprintf("%d", r.WidthEq)
+		query.Add("width.eq", fmt.Sprintf("%d", r.WidthEq))
 	}
 	if r.WidthGte != -1 {
-		queryMap["width.gte"] = fmt.Sprintf("%d", r.WidthGte)
+		query.Add("width.gte", fmt.Sprintf("%d", r.WidthGte))
 	}
 	if r.WidthGt != -1 {
-		queryMap["width.gt"] = fmt.Sprintf("%d", r.WidthGt)
+		query.Add("width.gt", fmt.Sprintf("%d", r.WidthGt))
 	}
 	if r.WidthLte != -1 {
-		queryMap["width.lte"] = fmt.Sprintf("%d", r.WidthLte)
+		query.Add("width.lte", fmt.Sprintf("%d", r.WidthLte))
 	}
 	if r.WidthLt != -1 {
-		queryMap["width.lt"] = fmt.Sprintf("%d", r.WidthLt)
+		query.Add("width.lt", fmt.Sprintf("%d", r.WidthLt))
 	}
 	if r.HeightEq != -1 {
-		queryMap["height.eq"] = fmt.Sprintf("%d", r.HeightEq)
+		query.Add("height.eq", fmt.Sprintf("%d", r.HeightEq))
 	}
 	if r.HeightGte != -1 {
-		queryMap["height.gte"] = fmt.Sprintf("%d", r.HeightGte)
+		query.Add("height.gte", fmt.Sprintf("%d", r.HeightGte))
 	}
 	if r.HeightGt != -1 {
-		queryMap["height.gt"] = fmt.Sprintf("%d", r.HeightGt)
+		query.Add("height.gt", fmt.Sprintf("%d", r.HeightGt))
 	}
 	if r.HeightLte != -1 {
-		queryMap["height.lte"] = fmt.Sprintf("%d", r.HeightLte)
+		query.Add("height.lte", fmt.Sprintf("%d", r.HeightLte))
 	}
 	if r.HeightLt != -1 {
-		queryMap["height.lt"] = fmt.Sprintf("%d", r.HeightLt)
+		query.Add("height.lt", fmt.Sprintf("%d", r.HeightLt))
 	}
 	if r.SizeEq != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeEq)
 		if err == nil {
-			queryMap["size.eq"] = fmt.Sprintf("%d", bytes)
+			query.Add("size.eq", fmt.Sprintf("%d", bytes))
 		}
 	}
 	if r.SizeGte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGte)
 		if err == nil {
-			queryMap["size.gte"] = fmt.Sprintf("%d", bytes)
+			query.Add("size.gte", fmt.Sprintf("%d", bytes))
 		}
 	}
 	if r.SizeGt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGt)
 		if err == nil {
-			queryMap["size.gt"] = fmt.Sprintf("%d", bytes)
+			query.Add("size.gt", fmt.Sprintf("%d", bytes))
 		}
 	}
 	if r.SizeLte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLte)
 		if err == nil {
-			queryMap["size.lte"] = fmt.Sprintf("%d", bytes)
+			query.Add("size.lte", fmt.Sprintf("%d", bytes))
 		}
 	}
 	if r.SizeLt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLt)
 		if err == nil {
-			queryMap["size.lt"] = fmt.Sprintf("%d", bytes)
+			query.Add("size.lt", fmt.Sprintf("%d", bytes))
 		}
 	}
 	if r.AudioCodec != "" {
-		queryMap["audio_codec"] = r.AudioCodec
+		query.Add("audio_codec", r.AudioCodec)
 	}
 	if r.VideoCodec != "" {
-		queryMap["video_codec"] = r.VideoCodec
+		query.Add("video_codec", r.VideoCodec)
 	}
 	if r.Device != "" {
-		queryMap["device"] = r.Device
+		query.Add("device", r.Device)
 	}
 	if r.CreatedSort != "" {
-		queryMap["created.sort"] = r.CreatedSort
+		query.Add("created.sort", r.CreatedSort)
 	}
 	if len(r.Metadata) > 0 {
 		md := []string{}
 		for _, metadata := range r.Metadata {
 			md = append(md, strings.Replace(metadata, "=", ":", -1))
 		}
-		queryMap["metadata"] = strings.Join(md, ",")
+		query.Add("metadata", strings.Join(md, ","))
 	}
 
-	return queryMap
+	return query
 }
 
 func (r *ListCmd) Execute() error {

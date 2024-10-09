@@ -14,13 +14,11 @@ import (
 	"github.com/level63/cli/pkg/styles"
 )
 
-type QueryParams map[string]string
-
 type Request struct {
 	Config      *config.Config
 	Path        string
 	Method      string
-	QueryParams QueryParams
+	QueryParams url.Values
 	Body        any
 }
 
@@ -75,12 +73,7 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 	}
 
 	if len(apiReq.QueryParams) > 0 {
-		q := url.Values{}
-		for k, v := range apiReq.QueryParams {
-			q.Add(k, v)
-		}
-
-		req.URL.RawQuery = q.Encode()
+		req.URL.RawQuery = apiReq.QueryParams.Encode()
 	}
 
 	// Set the appropriate headers

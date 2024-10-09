@@ -3,6 +3,7 @@ package projects
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"time"
 
@@ -20,11 +21,14 @@ type ListCmd struct {
 }
 
 func (r *ListCmd) Execute() error {
+	query := url.Values{}
+	query.Add("paused", fmt.Sprintf("%t", r.disabled))
+
 	apiReq := api.Request{
 		Config:      cmd.Config,
 		Path:        "/api/projects",
 		Method:      "GET",
-		QueryParams: api.QueryParams{"paused": fmt.Sprintf("%t", r.disabled)},
+		QueryParams: query,
 	}
 
 	projects, err := api.ApiRequest[[]api.Project](apiReq)

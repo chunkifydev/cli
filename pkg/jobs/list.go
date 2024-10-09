@@ -6,6 +6,7 @@ package jobs
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -35,45 +36,45 @@ type ListCmd struct {
 	Data        []api.Job
 }
 
-func (r *ListCmd) toQueryMap() map[string]string {
-	queryMap := map[string]string{}
+func (r *ListCmd) toQueryMap() url.Values {
+	query := url.Values{}
 
 	if r.Id != "" {
-		queryMap["id"] = r.Id
+		query.Add("id", r.Id)
 	}
 
 	if r.Offset != -1 {
-		queryMap["offset"] = fmt.Sprintf("%d", r.Offset)
+		query.Add("offset", fmt.Sprintf("%d", r.Offset))
 	}
 	if r.Limit != -1 {
-		queryMap["limit"] = fmt.Sprintf("%d", r.Limit)
+		query.Add("limit", fmt.Sprintf("%d", r.Limit))
 	}
 
 	if r.CreatedGte != "" {
-		queryMap["created.gte"] = r.CreatedGte
+		query.Add("created.gte", r.CreatedGte)
 	}
 	if r.CreatedLte != "" {
-		queryMap["created.lte"] = r.CreatedLte
+		query.Add("created.lte", r.CreatedLte)
 	}
 
 	if r.CreatedSort != "" {
-		queryMap["created.sort"] = r.CreatedSort
+		query.Add("created.sort", r.CreatedSort)
 	}
 
 	if r.Status != "" {
-		queryMap["status"] = r.Status
+		query.Add("status", r.Status)
 	}
 
 	if r.SourceId != "" {
-		queryMap["source_id"] = r.SourceId
+		query.Add("source_id", r.SourceId)
 	}
 
 	if r.TemplateName != "" {
-		queryMap["template_name"] = r.TemplateName
+		query.Add("template_name", r.TemplateName)
 	}
 
 	if r.TemplateVersion != "" {
-		queryMap["template_version"] = r.TemplateVersion
+		query.Add("template_version", r.TemplateVersion)
 	}
 
 	if len(r.Metadata) > 0 {
@@ -81,10 +82,10 @@ func (r *ListCmd) toQueryMap() map[string]string {
 		for _, metadata := range r.Metadata {
 			md = append(md, strings.Replace(metadata, "=", ":", -1))
 		}
-		queryMap["metadata"] = strings.Join(md, ",")
+		query.Add("metadata", strings.Join(md, ","))
 	}
 
-	return queryMap
+	return query
 }
 
 func (r *ListCmd) Execute() error {

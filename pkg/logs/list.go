@@ -3,6 +3,7 @@ package logs
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -30,7 +31,7 @@ func (r *ListCmd) Execute() error {
 		Config:      cmd.Config,
 		Path:        fmt.Sprintf("/api/jobs/%s/logs", r.Id),
 		Method:      "GET",
-		QueryParams: map[string]string{},
+		QueryParams: url.Values{},
 	}
 
 	if r.Service != "" {
@@ -38,7 +39,7 @@ func (r *ListCmd) Execute() error {
 		if strings.HasPrefix(r.Service, "transcoder#") {
 			filterService = "transcoder"
 		}
-		apiReq.QueryParams["service"] = filterService
+		apiReq.QueryParams.Add("service", filterService)
 	}
 
 	logs, err := api.ApiRequest[[]api.Log](apiReq)

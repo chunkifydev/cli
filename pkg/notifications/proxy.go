@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -118,20 +119,20 @@ func (m model) View() string {
 	return s
 }
 
-func (r *ProxyCmd) toQueryMap() map[string]string {
-	queryMap := map[string]string{}
+func (r *ProxyCmd) toQueryMap() url.Values {
+	query := url.Values{}
 
 	if r.WebhookId != "" {
-		queryMap["webhook_id"] = r.WebhookId
+		query.Add("webhook_id", r.WebhookId)
 	}
 
 	if lastProxiedNotification != nil {
-		queryMap["created.gte"] = lastProxiedNotification.CreatedAt.Add(1 * time.Second).Format(time.RFC3339)
+		query.Add("created.gte", lastProxiedNotification.CreatedAt.Add(1*time.Second).Format(time.RFC3339))
 	} else {
-		queryMap["created.gte"] = startTime.Format(time.RFC3339)
+		query.Add("created.gte", startTime.Format(time.RFC3339))
 	}
 
-	return queryMap
+	return query
 }
 
 func (r *ProxyCmd) Execute() error {

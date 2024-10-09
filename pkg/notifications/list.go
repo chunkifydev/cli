@@ -3,6 +3,7 @@ package notifications
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"slices"
 	"time"
 
@@ -32,44 +33,44 @@ type ListCmd struct {
 	Data []api.Notification
 }
 
-func (r *ListCmd) toQueryMap() map[string]string {
-	queryMap := map[string]string{}
+func (r *ListCmd) toQueryMap() url.Values {
+	query := url.Values{}
 
 	if r.JobId != "" {
-		queryMap["job_id"] = r.JobId
+		query.Add("job_id", r.JobId)
 	}
 
 	if r.WebhookId != "" {
-		queryMap["webhook_id"] = r.WebhookId
+		query.Add("webhook_id", r.WebhookId)
 	}
 
 	if r.Type != "" {
-		queryMap["type"] = r.Type
+		query.Add("type", r.Type)
 	}
 
 	if r.Event != "" {
-		queryMap["event"] = r.Event
+		query.Add("event", r.Event)
 	}
 
 	if r.Offset != -1 {
-		queryMap["offset"] = fmt.Sprintf("%d", r.Offset)
+		query.Add("offset", fmt.Sprintf("%d", r.Offset))
 	}
 	if r.Limit != -1 {
-		queryMap["limit"] = fmt.Sprintf("%d", r.Limit)
+		query.Add("limit", fmt.Sprintf("%d", r.Limit))
 	}
 
 	if r.CreatedGte != "" {
-		queryMap["created.gte"] = r.CreatedGte
+		query.Add("created.gte", r.CreatedGte)
 	}
 	if r.CreatedLte != "" {
-		queryMap["created.lte"] = r.CreatedLte
+		query.Add("created.lte", r.CreatedLte)
 	}
 
 	if r.CreatedSort != "" {
-		queryMap["created.sort"] = r.CreatedSort
+		query.Add("created.sort", r.CreatedSort)
 	}
 
-	return queryMap
+	return query
 }
 
 func (r *ListCmd) Execute() error {
