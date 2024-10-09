@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -66,7 +65,7 @@ func (r *ListCmd) View() {
 	if r.FfmpegDebug {
 		for _, log := range r.Data {
 			if log.Msg == "ffmpeg output" {
-				if stderr, ok := log.LogAttrs["stderr"].(string); ok {
+				if stderr, ok := log.Attributes["stderr"].(string); ok {
 					printFfmpegDebug(stderr)
 					fmt.Println()
 					return
@@ -153,24 +152,12 @@ func logsListToRows(r *ListCmd) [][]string {
 			}
 		}
 
-		attrs := []string{}
-		keys := make([]string, 0, len(log.LogAttrs))
-		for k := range log.LogAttrs {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			v := log.LogAttrs[k]
-			attrs = append(attrs, fmt.Sprintf("%s=%v", k, v))
-		}
-
-		var attrsStr string
+		attrsStr := log.AttributesString()
 
 		if log.Level == "DEBUG" && log.Msg == "ffmpeg output" {
 			log.Msg = "Check ffmpeg output by running: "
 			attrsStr = styles.Hint.Render(fmt.Sprintf("`level63 logs list %s --ffmpeg-debug`", r.Id))
 		} else {
-			attrsStr = strings.Join(attrs, " ")
 			if len(attrsStr) > 100 {
 				attrsStr = attrsStr[:100] + "..."
 			}

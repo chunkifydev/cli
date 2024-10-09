@@ -1,7 +1,9 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
 	"time"
 )
 
@@ -139,79 +141,36 @@ type WebhookPayloadData struct {
 }
 
 type Log struct {
-	Time     time.Time `json:"time"`
-	Level    string    `json:"level"`
-	Msg      string    `json:"msg"`
-	Service  string    `json:"service"`
-	LogAttrs LogAttrs  `json:"-"`
+	Time       time.Time `json:"time"`
+	Level      string    `json:"level"`
+	Msg        string    `json:"msg"`
+	Service    string    `json:"service"`
+	Attributes LogAttrs  `json:"attributes"`
+}
+
+func (l Log) AttributesString() string {
+	if l.Attributes == nil {
+		return ""
+	}
+	return l.Attributes.String()
 }
 
 type LogAttrs map[string]any
 
-// Custom UnmarshalJSON to capture dynamic fields
-func (l *Log) UnmarshalJSON(data []byte) error {
-	type Alias Log // Create an alias to avoid recursive calls
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(l),
+func (a LogAttrs) String() string {
+	attrs := []string{}
+	keys := make([]string, 0, len(a))
+	for k := range a {
+		keys = append(keys, k)
 	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-
-	// Unmarshal dynamic fields separately
-	var rawMap map[string]any
-	if err := json.Unmarshal(data, &rawMap); err != nil {
-		return err
+	sort.Strings(keys)
+	for _, k := range keys {
+		if a[k] != nil {
+			attrs = append(attrs, fmt.Sprintf("%s=%v", k, a[k]))
+		}
 	}
 
-	// Remove known fields to leave only dynamic ones
-	delete(rawMap, "time")
-	delete(rawMap, "level")
-	delete(rawMap, "msg")
-	delete(rawMap, "service")
+	fmt.Printf("attrs: %#+v\n", attrs)
 
-	l.LogAttrs = rawMap
-	return nil
-}
-
-func (l *Log) MarshalJSON() ([]byte, error) {
-	// Fixed fields
-	type Alias Log
-	aux := &struct {
-		*Alias
-	}{
-		Alias: (*Alias)(l),
-	}
-
-	// Marshal fixed fields
-	fixedFields, err := json.Marshal(aux)
-	if err != nil {
-		return nil, err
-	}
-
-	// Marshal dynamic fields
-	dynamicFields, err := json.Marshal(l.LogAttrs)
-	if err != nil {
-		return nil, err
-	}
-
-	// Merge fixed and dynamic fields into one map
-	var fixedMap map[string]any
-	if err := json.Unmarshal(fixedFields, &fixedMap); err != nil {
-		return nil, err
-	}
-	var dynamicMap map[string]any
-	if err := json.Unmarshal(dynamicFields, &dynamicMap); err != nil {
-		return nil, err
-	}
-
-	// Combine maps
-	for key, value := range dynamicMap {
-		fixedMap[key] = value
-	}
-
-	// Return combined JSON
-	return json.Marshal(fixedMap)
+	return strings.Join(attrs, " ")
 }

@@ -55,7 +55,7 @@ func (m *progressModel) getLastProgressLines(logs []api.Log) {
 			if _, ok := transcoders[log.Service]; ok {
 				continue
 			}
-			transcoders[log.Service] = log.LogAttrs
+			transcoders[log.Service] = log.Attributes
 
 			pr := progress.New(progress.WithSolidFill(progressBarColor), progress.WithWidth(30))
 
