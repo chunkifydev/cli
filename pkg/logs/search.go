@@ -214,13 +214,13 @@ func newSearchCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringArrayVar(&req.Services, "service", []string{}, "Filter by Service name: manager, transcoder")
-	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
+	cmd.Flags().StringArrayVar(&req.Services, "service", []string{}, "Search by Service name: manager, transcoder")
+	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Search by log level: INFO, DEBUG, WARN, ERROR")
 	cmd.Flags().BoolVar(&req.IgnoreProgress, "ignore-progress", false, "Do not show progress logs")
 	cmd.Flags().BoolVar(&req.FfmpegDebug, "ffmpeg-debug", false, "Show ffmpeg stderr for debugging")
 
-	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Filter by job id")
-	cmd.Flags().StringVar(&req.Msg, "message", "", "Filter by log message")
+	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Search by job id")
+	cmd.Flags().StringVar(&req.Msg, "message", "", "Search by log message")
 	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
 
 	cmd.Flags().StringVar(&req.CreatedGte, "created.gte", "", "Created Greater or Equal")
