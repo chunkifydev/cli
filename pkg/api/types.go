@@ -146,6 +146,7 @@ type Log struct {
 	Msg        string    `json:"msg"`
 	Service    string    `json:"service"`
 	Attributes LogAttrs  `json:"attributes"`
+	JobId      string    `json:"job_id,omitempty"`
 }
 
 func (l Log) AttributesString() string {
