@@ -170,7 +170,5 @@ func (a LogAttrs) String() string {
 		}
 	}
 
-	fmt.Printf("attrs: %#+v\n", attrs)
-
 	return strings.Join(attrs, " ")
 }
