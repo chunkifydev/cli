@@ -17,7 +17,6 @@ import (
 )
 
 type SearchCmd struct {
-	Id             string
 	Services       []string
 	Levels         []string
 	Msg            string
@@ -165,7 +164,7 @@ func logsSearchToRows(r *SearchCmd) [][]string {
 
 		if log.Level == "DEBUG" && log.Msg == "ffmpeg output" {
 			log.Msg = "Check ffmpeg output by running: "
-			attrsStr = styles.Hint.Render(fmt.Sprintf("`level63 logs list %s --ffmpeg-debug`", r.Id))
+			attrsStr = styles.Hint.Render(fmt.Sprintf("`level63 logs list %s --ffmpeg-debug`", log.JobId))
 		} else {
 			if len(attrsStr) > 100 {
 				attrsStr = attrsStr[:100] + "..."
