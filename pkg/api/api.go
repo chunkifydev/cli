@@ -81,10 +81,10 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 	req.Header.Set("User-Agent", "level63-cli")
 
 	// for these endpoints, we need the account API key
-	if strings.HasPrefix(apiReq.Path, "/api/projects") || strings.HasPrefix(apiReq.Path, "/api/storages") {
-		req.Header.Set("Authorization", "Bearer "+apiReq.Config.AccountApiKey)
+	if strings.HasPrefix(apiReq.Path, "/api/tokens") || strings.HasPrefix(apiReq.Path, "/api/projects") || strings.HasPrefix(apiReq.Path, "/api/storages") {
+		req.Header.Set("Authorization", "Bearer "+apiReq.Config.AccountToken)
 	} else {
-		req.Header.Set("Authorization", "Bearer "+apiReq.Config.ProjectApiKey)
+		req.Header.Set("Authorization", "Bearer "+apiReq.Config.ProjectToken)
 	}
 
 	// Make the HTTP request

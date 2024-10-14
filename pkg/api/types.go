@@ -140,6 +140,24 @@ type WebhookPayloadData struct {
 	Files    []File  `json:"files"`
 }
 
+type Token struct {
+	Id         string       `json:"id"`
+	Name       string       `json:"name"`
+	Token      string       `json:"token,omitempty"`
+	ProjectId  string       `json:"project_id"`
+	Scope      string       `json:"scope"`
+	CreatedAt  time.Time    `json:"created_at"`
+	TokenUsage []TokenUsage `json:"usage"`
+}
+
+type TokenUsage struct {
+	BillableTime int64     `json:"billable_time"`
+	FirstUsed    time.Time `json:"first_used"`
+	LastUsed     time.Time `json:"last_used"`
+	Instance     string    `json:"instance"`
+	Jobs         int64     `json:"jobs"`
+}
+
 type Log struct {
 	Time       time.Time `json:"time"`
 	Level      string    `json:"level"`

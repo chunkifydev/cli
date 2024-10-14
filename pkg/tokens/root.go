@@ -1,4 +1,4 @@
-package projects
+package tokens
 
 import (
 	"fmt"
@@ -19,19 +19,14 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use:   "projects",
-			Short: "Manage your Level63 projects",
-			Long:  "Manage your Level63 projects",
+			Use:   "tokens",
+			Short: "Manage your Level63 access tokens",
+			Long:  "Manage your Level63 access tokens",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newEnableCmd())
-	cmd.Command.AddCommand(newDisableCmd())
-	cmd.Command.AddCommand(newUpdateCmd())
 	cmd.Command.AddCommand(newDeleteCmd())
-	cmd.Command.AddCommand(newGetCmd())
 	cmd.Command.AddCommand(newListCmd())
-	cmd.Command.AddCommand(newSelectCmd(config))
 	return cmd
 }
 

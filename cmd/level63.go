@@ -11,16 +11,12 @@ import (
 	"github.com/level63/cli/pkg/projects"
 	"github.com/level63/cli/pkg/sources"
 	"github.com/level63/cli/pkg/storages"
+	"github.com/level63/cli/pkg/tokens"
 	"github.com/level63/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 )
 
-var serviceKey = "level63-cli"
-
-var cfg = &config.Config{
-	AccountApiKey: os.Getenv("LEVEL63_ACCOUNT_API_KEY"),
-	ProjectApiKey: os.Getenv("LEVEL63_API_KEY"),
-}
+var cfg = &config.Config{}
 
 type Commander interface {
 	execute() error
@@ -40,11 +36,21 @@ func Execute() {
 	}
 }
 
+func checkAccountSetup(cmd *cobra.Command, args []string) {
+	if cfg.AccountToken == "" && cmd.Name() != "auth" && cmd.Name() != "login" {
+		err := cfg.SetDefaultTokens()
+		if err != nil {
+			printError(err)
+			os.Exit(1)
+		}
+	}
+}
+
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().BoolVar(&cfg.Debug, "debug", false, "Print debug info")
 	rootCmd.PersistentFlags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api.level63-staging.dev/v1", "The API endpoint")
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVar(&cfg.DefaultProjectId, "env-project-id", "", "Select the project and run the command")
 
 	rootCmd.AddCommand(storages.NewCommand(cfg).Command)
 	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
@@ -54,5 +60,6 @@ func init() {
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(functions.NewCommand(cfg).Command)
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
-	rootCmd.AddCommand(newSetupCmd())
+	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
+	rootCmd.AddCommand(newAuthCmd(cfg))
 }
