@@ -191,3 +191,39 @@ func (a LogAttrs) String() string {
 
 	return strings.Join(attrs, " ")
 }
+
+type FfmpegTemplate struct {
+	// video common x264, x265 and av1
+	Width        int64   `json:"width,omitempty"`
+	Height       int64   `json:"height,omitempty"`
+	Framerate    float64 `json:"framerate,omitempty"`
+	Gop          int64   `json:"gop,omitempty"`
+	Duration     int64   `json:"duration,omitempty"`
+	VideoBitrate int64   `json:"video_bitrate,omitempty"`
+	DisableVideo bool    `json:"disable_video,omitempty"`
+	AudioBitrate int64   `json:"audio_bitrate,omitempty"`
+	Channels     int64   `json:"channels,omitempty"`
+	DisableAudio bool    `json:"disable_audio,omitempty"`
+	Maxrate      int64   `json:"maxrate,omitempty"`
+	Bufsize      int64   `json:"bufsize,omitempty"`
+	Chunk        int64   `json:"chunk,omitempty"`
+	PixFmt       string  `json:"pixfmt,omitempty"`
+	Seek         int64   `json:"seek,omitempty"`
+	Crf          int64   `json:"crf,omitempty"`
+	X264KeyInt   int64   `json:"x264_keyint,omitempty"`
+	X265KeyInt   int64   `json:"x265_keyint,omitempty"`
+	Level        int64   `json:"level,omitempty"`
+	Profilev     string  `json:"profilev,omitempty"`
+	Preset       string  `json:"preset,omitempty"`
+
+	// hls
+	HlsTime        int64  `json:"hls_time,omitempty"`
+	HlsSegmentType string `json:"hls_segment_type,omitempty"`
+	HlsEnc         bool   `json:"hls_enc,omitempty"`
+	HlsEncKey      string `json:"hls_enc_key,omitempty"`
+	HlsEncKeyUrl   string `json:"hls_enc_key_url,omitempty"`
+	HlsEncIv       string `json:"hls_enc_iv,omitempty"`
+
+	// image
+	Interval int64 `json:"interval,omitempty"`
+}
