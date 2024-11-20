@@ -80,9 +80,9 @@ type Project struct {
 }
 
 type Storage struct {
+	Id       string `json:"id"`
 	Provider string `json:"provider"`
 	Bucket   string `json:"bucket"`
-	Name     string `json:"name"`
 	Region   string `json:"region"`
 	Public   bool   `json:"public"`
 	Reserved bool   `json:"reserved"`

@@ -71,7 +71,7 @@ func (r *ListCmd) projectsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Name", "Storage", "Active").
+		Headers("Date", "Project Id", "Name", "Storage", "Active").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:

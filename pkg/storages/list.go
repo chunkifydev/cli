@@ -14,8 +14,7 @@ import (
 )
 
 type ListCmd struct {
-	disabled bool
-	Data     []api.Storage
+	Data []api.Storage
 }
 
 func (r *ListCmd) Execute() error {
@@ -65,7 +64,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Provider", "Name", "Bucket", "Region", "Private", "Test").
+		Headers("Storage Id", "Provider", "Bucket", "Region", "Private", "Test").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -99,8 +98,8 @@ func storagesListToRows(storages []api.Storage) [][]string {
 		}
 
 		rows[i] = []string{
+			styles.Important.Render(storage.Id),
 			storage.Provider,
-			styles.Important.Render(storage.Name),
 			storage.Bucket,
 			storage.Region,
 			formatter.BoolDefaultColor(!storage.Public),
@@ -115,8 +114,8 @@ func newListCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "list all projects",
-		Long:  `list all projects`,
+		Short: "list all storages",
+		Long:  `list all storages`,
 		Run: func(_ *cobra.Command, args []string) {
 			if err := req.Execute(); err != nil {
 				printError(err)
@@ -125,8 +124,6 @@ func newListCmd() *cobra.Command {
 			req.View()
 		},
 	}
-
-	cmd.Flags().BoolVar(&req.disabled, "disabled", false, "List disabled projects")
 
 	return cmd
 }

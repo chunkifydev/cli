@@ -8,14 +8,14 @@ import (
 )
 
 type GetCmd struct {
-	Name string
+	Id   string
 	Data api.Storage
 }
 
 func (r *GetCmd) Execute() error {
 	apiReq := api.Request{
 		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/storage/%s", r.Name),
+		Path:   fmt.Sprintf("/api/storage/%s", r.Id),
 		Method: "GET",
 	}
 
@@ -38,12 +38,12 @@ func newGetCmd() *cobra.Command {
 	req := GetCmd{}
 
 	cmd := &cobra.Command{
-		Use:   "get name",
+		Use:   "get storage-id",
 		Short: "get info about a storage",
 		Long:  "get info about a storage",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			req.Name = args[0]
+			req.Id = args[0]
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return

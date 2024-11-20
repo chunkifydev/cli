@@ -6,9 +6,8 @@ import (
 )
 
 type CreateCmd struct {
-	Name    string      `json:"name"`
-	Storage string      `json:"storage"`
-	Data    api.Project `json:"-"`
+	Name string      `json:"name"`
+	Data api.Project `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
@@ -44,7 +43,6 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.Name, "name", "", "The name of your project (required)")
-	cmd.Flags().StringVar(&req.Storage, "storage", "", "The storage to use for this project (required)")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("storage")
 
