@@ -19,6 +19,7 @@ import (
 type ListCmd struct {
 	Id             string
 	Service        string
+	Transcoder     int64
 	Levels         []string
 	IgnoreProgress bool
 	Tail           bool
@@ -34,12 +35,10 @@ func (r *ListCmd) Execute() error {
 		QueryParams: url.Values{},
 	}
 
-	if r.Service != "" {
-		filterService := r.Service
-		if strings.HasPrefix(r.Service, "transcoder#") {
-			filterService = "transcoder"
-		}
-		apiReq.QueryParams.Add("service", filterService)
+	apiReq.QueryParams.Add("service", r.Service)
+
+	if r.Service == "transcoder" && r.Transcoder > 0 {
+		apiReq.QueryParams.Add("transcoder_id", fmt.Sprintf("%d", r.Transcoder))
 	}
 
 	logs, err := api.ApiRequest[[]api.Log](apiReq)
@@ -135,18 +134,6 @@ func logsListToRows(r *ListCmd) [][]string {
 			continue
 		}
 
-		if r.Service != "" {
-			if r.Service == "transcoder" && !strings.HasPrefix(log.Service, "transcoder") {
-				continue
-			} else if strings.HasPrefix(r.Service, "transcoder#") && log.Service != r.Service {
-				continue
-			}
-
-			if r.Service != "transcoder" && r.Service != log.Service {
-				continue
-			}
-		}
-
 		if len(r.Levels) > 0 {
 			if !slices.Contains(r.Levels, log.Level) {
 				continue
@@ -207,9 +194,20 @@ func newListCmd() *cobra.Command {
 		Use:   "list job-id",
 		Short: "list all logs of a job",
 		Long:  `list all logs of a job`,
-		Args:  cobra.ExactArgs(1),
+		Args: func(cmd *cobra.Command, args []string) error {
+			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+				return err
+			}
+
+			if req.Service == "transcoder" && req.Transcoder == 0 {
+				err := fmt.Errorf("--id (min 1) is required when --service is set to transcoder")
+				return err
+			}
+			return nil
+		},
 		Run: func(_ *cobra.Command, args []string) {
 			req.Id = args[0]
+
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
@@ -223,7 +221,8 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Service, "service", "", "Filter by Service name: manager, transcoder, transcoder#1")
+	cmd.Flags().StringVar(&req.Service, "service", "manager", "Filter by Service name: manager or transcoder (required)")
+	cmd.Flags().Int64Var(&req.Transcoder, "id", 0, "Filter by transcoder number (min 1)")
 	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
 	cmd.Flags().BoolVar(&req.IgnoreProgress, "ignore-progress", false, "Do not show progress logs")
 	cmd.Flags().BoolVar(&req.Tail, "tail", false, "Tail logs")
