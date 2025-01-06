@@ -25,7 +25,6 @@ func NewCommand(config *config.Config) *Command {
 		}}
 
 	cmd.Command.AddCommand(newListCmd())
-	cmd.Command.AddCommand(newSearchCmd())
 
 	return cmd
 }
