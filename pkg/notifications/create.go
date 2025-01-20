@@ -60,7 +60,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.JobId, "job-id", "", "The job id (required)")
 	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "The webhook id (required if the notification is sent to webhook)")
 	cmd.Flags().StringVar(&req.FunctionId, "function-id", "", "The function id (required if the notification is for a function)")
-	cmd.Flags().StringVar(&req.Event, "event", "", "Event name: job.completed (required)")
+	cmd.Flags().StringVar(&req.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
 
 	cmd.MarkFlagsMutuallyExclusive("webhook-id", "function-id")
 	cmd.MarkFlagRequired("job-id")
