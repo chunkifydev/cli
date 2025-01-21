@@ -1,7 +1,7 @@
 package storages
 
 import (
-	"github.com/level63/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +56,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.AccessKeyId, "access-key-id", "", "The S3 access key id of the storage (required)")
 	cmd.Flags().StringVar(&req.SecretAccessKey, "secret-access-key", "", "The S3 secret access key of the storage (required)")
 	cmd.Flags().StringVar(&req.Bucket, "bucket", "", "The S3 bucket name of the storage (required)")
-	cmd.Flags().StringVar(&req.Provider, "provider", "", "The storage provider: level63, aws, cloudflare (required)")
+	cmd.Flags().StringVar(&req.Provider, "provider", "", "The storage provider: chunkify, aws, cloudflare (required)")
 	cmd.Flags().StringVar(&req.Region, "region", "", "The region of the storage (required)")
 	cmd.Flags().StringVar(&req.Location, "location", "", "The location of the storage: US, EU, ASIA (required)")
 	cmd.Flags().BoolVar(&req.Public, "public", false, "The uploaded files will be publicly available or not")

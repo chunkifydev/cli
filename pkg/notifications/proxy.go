@@ -16,11 +16,11 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/google/uuid"
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/styles"
-	"github.com/level63/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 )
 
@@ -182,10 +182,10 @@ func (r *ProxyCmd) httpProxy(notif api.Notification) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "level63-cli/proxy")
+	req.Header.Set("User-Agent", "chunkify-cli/proxy")
 
 	signature := generateSignature(notif.Payload, r.secretKey)
-	req.Header.Set("X-Level63-Signature", signature)
+	req.Header.Set("X-Chunkify-Signature", signature)
 
 	// Make the HTTP request
 	client := &http.Client{}
@@ -300,7 +300,7 @@ func newProxyCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			startTime = time.Now()
-			log("level63 proxy\n")
+			log("chunkify proxy\n")
 			req.localUrl = args[0]
 
 			webhook, err := createLocaldevWebhook()

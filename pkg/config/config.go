@@ -17,7 +17,7 @@ type Config struct {
 	Debug            bool
 }
 
-var KeyringServiceKey = "level63-cli"
+var KeyringServiceKey = "chunkify-cli"
 
 // we check for env variable first, then keyring
 func (cfg *Config) SetDefaultTokens() error {
@@ -26,7 +26,7 @@ func (cfg *Config) SetDefaultTokens() error {
 	if cfg.AccountToken == "" {
 		_, cfg.AccountToken, err = GetToken("AccountToken")
 		if err != nil {
-			return fmt.Errorf("couldn't get account token, please run `level63 auth login`")
+			return fmt.Errorf("couldn't get account token, please run `chunkify auth login`")
 		}
 	}
 
@@ -38,13 +38,13 @@ func (cfg *Config) SetDefaultTokens() error {
 	if cfg.DefaultProjectId == "" {
 		cfg.DefaultProjectId, err = Get("DefaultProject")
 		if err != nil {
-			return fmt.Errorf("select a project by running `level63 select`")
+			return fmt.Errorf("select a project by running `chunkify select`")
 		}
 	}
 
 	_, cfg.ProjectToken, err = GetToken(cfg.DefaultProjectId)
 	if err != nil {
-		return fmt.Errorf("couldn't get project token, please run `level63 select`")
+		return fmt.Errorf("couldn't get project token, please run `chunkify select`")
 	}
 
 	return nil

@@ -3,8 +3,8 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +20,8 @@ func NewCommand(config *config.Config) *Command {
 		Config: config,
 		Command: &cobra.Command{
 			Use:   "tokens",
-			Short: "Manage your Level63 access tokens",
-			Long:  "Manage your Level63 access tokens",
+			Short: "Manage your Chunkify access tokens",
+			Long:  "Manage your Chunkify access tokens",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())

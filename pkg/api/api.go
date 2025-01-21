@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/styles"
 )
 
 type Request struct {
@@ -78,7 +78,7 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 
 	// Set the appropriate headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "level63-cli")
+	req.Header.Set("User-Agent", "chunkify-cli")
 
 	// for these endpoints, we need the account API key
 	if strings.HasPrefix(apiReq.Path, "/api/tokens") || strings.HasPrefix(apiReq.Path, "/api/projects") {

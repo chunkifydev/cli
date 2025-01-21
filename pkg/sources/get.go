@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
-	"github.com/level63/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 

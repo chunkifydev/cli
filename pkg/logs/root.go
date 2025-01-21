@@ -3,8 +3,8 @@ package logs
 import (
 	"fmt"
 
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 

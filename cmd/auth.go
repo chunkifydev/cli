@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/config"
-	projectsCmd "github.com/level63/cli/pkg/projects"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/config"
+	projectsCmd "github.com/chunkifydev/cli/pkg/projects"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -26,8 +26,8 @@ var accountToken api.Token
 func newAuthCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
-		Short: "Connect to your Level63 account",
-		Long:  `Connect to your Level63 account`,
+		Short: "Connect to your Chunkify account",
+		Long:  `Connect to your Chunkify account`,
 	}
 
 	cmd.AddCommand(newLoginCmd(cfg))
@@ -39,15 +39,15 @@ func newAuthCmd(cfg *config.Config) *cobra.Command {
 func newLoginCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Login to Level63",
-		Long:  `Login to Level63`,
+		Short: "Login to Chunkify",
+		Long:  `Login to Chunkify`,
 		Run: func(c *cobra.Command, args []string) {
 			login(cfg)
 		},
 	}
 
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Don't open the browser to authorize the cli")
-	cmd.Flags().StringVar(&authUrl, "auth-url", "https://app.level63.dev/auth/cli", "The auth URL endpoint")
+	cmd.Flags().StringVar(&authUrl, "auth-url", "https://app.chunkify.dev/auth/cli", "The auth URL endpoint")
 	return cmd
 }
 
@@ -122,7 +122,7 @@ func login(cfg *config.Config) {
 	projectsCmd.SelectProjectPrompt(projects)
 
 	fmt.Println()
-	fmt.Println("All good. Run `level63 help` for help")
+	fmt.Println("All good. Run `chunkify help` for help")
 }
 
 func getAllProjects(config *config.Config) ([]api.Project, error) {

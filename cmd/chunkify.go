@@ -3,16 +3,16 @@ package cmd
 import (
 	"os"
 
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/functions"
-	"github.com/level63/cli/pkg/jobs"
-	"github.com/level63/cli/pkg/logs"
-	"github.com/level63/cli/pkg/notifications"
-	"github.com/level63/cli/pkg/projects"
-	"github.com/level63/cli/pkg/sources"
-	"github.com/level63/cli/pkg/storages"
-	"github.com/level63/cli/pkg/tokens"
-	"github.com/level63/cli/pkg/webhooks"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/functions"
+	"github.com/chunkifydev/cli/pkg/jobs"
+	"github.com/chunkifydev/cli/pkg/logs"
+	"github.com/chunkifydev/cli/pkg/notifications"
+	"github.com/chunkifydev/cli/pkg/projects"
+	"github.com/chunkifydev/cli/pkg/sources"
+	"github.com/chunkifydev/cli/pkg/storages"
+	"github.com/chunkifydev/cli/pkg/tokens"
+	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +24,9 @@ type Commander interface {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "level63",
-	Short: "level63 is a command line interface for Level63 API",
-	Long:  `level63 is a command line interface for Level63 API.`,
+	Use:   "chunkify",
+	Short: "chunkify is a command line interface for Cchunkify API",
+	Long:  `chunkify is a command line interface for Chunkify API.`,
 }
 
 func Execute() {
@@ -49,7 +49,7 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().BoolVar(&cfg.Debug, "debug", false, "Print debug info")
-	rootCmd.PersistentFlags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api.level63-staging.dev/v1", "The API endpoint")
+	rootCmd.PersistentFlags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api.chunkify.dev/v1", "The API endpoint")
 	rootCmd.PersistentFlags().StringVar(&cfg.DefaultProjectId, "env-project-id", "", "Select the project and run the command")
 
 	rootCmd.AddCommand(storages.NewCommand(cfg).Command)

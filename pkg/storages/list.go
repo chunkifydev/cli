@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 

@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/tokens"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/tokens"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +49,7 @@ func newSelectCmd(_ *config.Config) *cobra.Command {
 
 func SelectProjectPrompt(projects []api.Project) {
 	if len(projects) == 0 {
-		fmt.Println("You don't have any project. You can create a new project by running `level63 projects create --name 'Project name'`")
+		fmt.Println("You don't have any project. You can create a new project by running `chunkify projects create --name 'Project name'`")
 		return
 	}
 
@@ -88,7 +88,7 @@ func selectProject(projectId string) {
 
 	// we don't have the token saved
 	// so we generate a token to use this project
-	tokenCreate := tokens.CreateCmd{Name: "level63-cli", Scope: "project", ProjectId: projectId}
+	tokenCreate := tokens.CreateCmd{Name: "chunkify-cli", Scope: "project", ProjectId: projectId}
 	if err := tokenCreate.Execute(); err != nil {
 		printError(fmt.Errorf("couldn't create a token for this project: %s", err))
 		os.Exit(1)

@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/level63/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 

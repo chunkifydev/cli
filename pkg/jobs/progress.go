@@ -8,10 +8,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/logs"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/logs"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 

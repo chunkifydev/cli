@@ -3,8 +3,8 @@ package projects
 import (
 	"fmt"
 
-	"github.com/level63/cli/pkg/config"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +20,8 @@ func NewCommand(config *config.Config) *Command {
 		Config: config,
 		Command: &cobra.Command{
 			Use:   "projects",
-			Short: "Manage your Level63 projects",
-			Long:  "Manage your Level63 projects",
+			Short: "Manage your Chunkify projects",
+			Long:  "Manage your Chunkify projects",
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())

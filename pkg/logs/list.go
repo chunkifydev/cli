@@ -10,9 +10,9 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
@@ -144,7 +144,7 @@ func logsListToRows(r *ListCmd) [][]string {
 
 		if log.Level == "DEBUG" && log.Msg == "ffmpeg output" {
 			log.Msg = "Check ffmpeg output by running: "
-			attrsStr = styles.Hint.Render(fmt.Sprintf("`level63 logs list %s --ffmpeg-debug`", r.Id))
+			attrsStr = styles.Hint.Render(fmt.Sprintf("`chunkify logs list %s --ffmpeg-debug`", r.Id))
 		} else {
 			if len(attrsStr) > 100 {
 				attrsStr = attrsStr[:100] + "..."

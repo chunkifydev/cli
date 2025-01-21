@@ -1,4 +1,4 @@
-module github.com/level63/cli
+module github.com/chunkifydev/cli
 
 go 1.23.0
 

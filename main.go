@@ -1,6 +1,6 @@
 package main
 
-import "github.com/level63/cli/cmd"
+import "github.com/chunkifydev/cli/cmd"
 
 func main() {
 	cmd.Execute()

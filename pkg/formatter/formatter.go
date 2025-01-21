@@ -8,7 +8,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/level63/cli/pkg/styles"
+	"github.com/chunkifydev/cli/pkg/styles"
 )
 
 func Duration(duration int64) string {

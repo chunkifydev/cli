@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/level63/cli/pkg/api"
-	"github.com/level63/cli/pkg/formatter"
-	"github.com/level63/cli/pkg/sources"
+	"github.com/chunkifydev/cli/pkg/api"
+	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/sources"
 	"github.com/spf13/cobra"
 )
 
