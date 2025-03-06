@@ -185,7 +185,7 @@ func jobsListToRows(jobs []api.Job) [][]string {
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),
 			fmt.Sprintf("%.2fx", job.Transcoder.Speed),
 			formatter.TimeDiff(job.StartedAt, endDate),
-			fmt.Sprintf("%ds", job.BillableTime),
+			formatter.Duration(job.BillableTime),
 		}
 	}
 	return rows
