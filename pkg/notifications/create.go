@@ -1,23 +1,19 @@
 package notifications
 
 import (
-	"fmt"
-
 	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	JobId      string `json:"job_id"`
-	WebhookId  string `json:"webhook_id,omitempty"`
-	FunctionId string `json:"function_id,omitempty"`
-	Event      string `json:"event"`
+	JobId     string `json:"job_id"`
+	WebhookId string `json:"webhook_id,omitempty"`
+	Event     string `json:"event"`
 
 	Data api.Notification `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-
 	notification, err := api.ApiRequest[api.Notification](api.Request{Config: cmd.Config, Path: "/api/notifications", Method: "POST", Body: r})
 	if err != nil {
 		return err
@@ -44,11 +40,6 @@ func newCreateCmd() *cobra.Command {
 		Short: "Create a new notification",
 		Long:  `Create a new notification`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if req.WebhookId == "" && req.FunctionId == "" {
-				printError(fmt.Errorf("either --webhook-id or --function-id must be set"))
-				return
-			}
-
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
@@ -58,12 +49,11 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.JobId, "job-id", "", "The job id (required)")
-	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "The webhook id (required if the notification is sent to webhook)")
-	cmd.Flags().StringVar(&req.FunctionId, "function-id", "", "The function id (required if the notification is for a function)")
+	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "The webhook id (required)")
 	cmd.Flags().StringVar(&req.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
 
-	cmd.MarkFlagsMutuallyExclusive("webhook-id", "function-id")
 	cmd.MarkFlagRequired("job-id")
+	cmd.MarkFlagRequired("webhook-id")
 	cmd.MarkFlagRequired("event")
 
 	return cmd

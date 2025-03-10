@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/functions"
 	"github.com/chunkifydev/cli/pkg/jobs"
 	"github.com/chunkifydev/cli/pkg/logs"
 	"github.com/chunkifydev/cli/pkg/notifications"
@@ -25,7 +24,7 @@ type Commander interface {
 
 var rootCmd = &cobra.Command{
 	Use:   "chunkify",
-	Short: "chunkify is a command line interface for Cchunkify API",
+	Short: "chunkify is a command line interface for Chunkify API",
 	Long:  `chunkify is a command line interface for Chunkify API.`,
 }
 
@@ -58,7 +57,6 @@ func init() {
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
-	rootCmd.AddCommand(functions.NewCommand(cfg).Command)
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))

@@ -20,8 +20,6 @@ type ListCmd struct {
 	payload     bool
 	JobId       string
 	WebhookId   string
-	FunctionId  string
-	Type        string
 	Event       string
 	Offset      int64
 	Limit       int64
@@ -42,10 +40,6 @@ func (r *ListCmd) toQueryMap() url.Values {
 
 	if r.WebhookId != "" {
 		query.Add("webhook_id", r.WebhookId)
-	}
-
-	if r.Type != "" {
-		query.Add("type", r.Type)
 	}
 
 	if r.Event != "" {
@@ -128,7 +122,7 @@ func (r *ListCmd) notificationsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Type", "Event", "Status").
+		Headers("Date", "Id", "Event", "Status").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -159,7 +153,6 @@ func notificationsListToRows(notifications []api.Notification) [][]string {
 		rows[i] = []string{
 			notif.CreatedAt.Format(time.RFC822),
 			styles.Id.Render(notif.Id),
-			notif.Type,
 			notif.Event,
 			formatter.HttpCode(notif.ResponseStatusCode),
 		}
@@ -187,10 +180,8 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&req.payload, "payload", "p", false, "Return the webhook payload in JSON")
 
 	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Return all sent notifications for the job Id")
-	cmd.Flags().StringVar(&req.Type, "type", "", "Return all sent notifications with the given type. Type can be webhook or function")
 	cmd.Flags().StringVar(&req.Event, "event", "", "Return all sent notifications with the given event. Event can be *, job.* or job.completed")
 	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
-	cmd.Flags().StringVar(&req.FunctionId, "function-id", "", "Return all sent notifications for a given function Id")
 
 	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
 	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")

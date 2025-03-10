@@ -101,20 +101,6 @@ type WebhookWithSecretKey struct {
 	SecretKey string `json:"secret_key"`
 }
 
-type Function struct {
-	Id        string    `json:"id"`
-	Name      string    `json:"name"`
-	ProjectId string    `json:"project_id"`
-	CreatedAt time.Time `json:"created_at"`
-	Enabled   bool      `json:"enabled"`
-	Events    []string  `json:"events"`
-}
-
-type FunctionInvoked struct {
-	StatusCode int    `json:"status_code"`
-	Body       string `json:"body"`
-}
-
 type Notification struct {
 	Id                 string    `json:"id"`
 	JobId              string    `json:"job_id"`
