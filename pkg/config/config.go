@@ -22,7 +22,7 @@ var KeyringServiceKey = "chunkify-cli"
 // we check for env variable first, then keyring
 func (cfg *Config) SetDefaultTokens() error {
 	var err error
-	cfg.AccountToken = os.Getenv("LEVEL63_ACCOUNT_TOKEN")
+	cfg.AccountToken = os.Getenv("CHUNKIFY_ACCOUNT_TOKEN")
 	if cfg.AccountToken == "" {
 		_, cfg.AccountToken, err = GetToken("AccountToken")
 		if err != nil {
@@ -30,7 +30,7 @@ func (cfg *Config) SetDefaultTokens() error {
 		}
 	}
 
-	cfg.ProjectToken = os.Getenv("LEVEL63_PROJECT_TOKEN")
+	cfg.ProjectToken = os.Getenv("CHUNKIFY_PROJECT_TOKEN")
 	if cfg.ProjectToken != "" {
 		return nil
 	}
