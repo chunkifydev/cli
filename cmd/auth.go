@@ -184,7 +184,6 @@ func printError(err error) {
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	tok := r.URL.Query().Get("token")
 	token := strings.Split(tok, ":")
-	fmt.Printf("token: %#+v\n", token)
 	accountToken.Id = token[0]
 	accountToken.Token = token[1]
 
