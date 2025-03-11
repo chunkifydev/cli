@@ -63,7 +63,9 @@ func (r *CreateCmd) Execute() error {
 		}
 	}
 
-	r.Transcoder.Type = fmt.Sprintf("%dvCPU", r.vcpu)
+	if r.vcpu > 0 {
+		r.Transcoder.Type = fmt.Sprintf("%dvCPU", r.vcpu)
+	}
 
 	job, err := api.ApiRequest[api.Job](api.Request{Config: cmd.Config, Path: "/api/jobs", Method: "POST", Body: r})
 	if err != nil {
