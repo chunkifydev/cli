@@ -33,8 +33,8 @@ type templateParams struct {
 }
 
 type transcoderParams struct {
-	Quantity int64  `json:"quantity"`
-	Type     string `json:"type"`
+	Quantity int64  `json:"quantity,omitempty"`
+	Type     string `json:"type,omitempty"`
 }
 
 type storageParams struct {
@@ -114,8 +114,8 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
 	cmd.Flags().StringVar(&req.Template.Name, "format", "mp4", "Template name: mp4, hls, jpg")
 	cmd.Flags().StringVar(&req.Template.Version, "codec", "x264-v1", "Template version: x264-v1, x265-v1, av1-v1, v1")
-	cmd.Flags().Int64Var(&req.Transcoder.Quantity, "transcoder", 1, "Number of transcoders: 1 to 50")
-	cmd.Flags().Int64Var(&req.vcpu, "cpu", 4, "Instance vCPU: 2, 4, 8, 16")
+	cmd.Flags().Int64Var(&req.Transcoder.Quantity, "transcoder", 0, "Number of transcoders: 1 to 50 (required if cpu is set)")
+	cmd.Flags().Int64Var(&req.vcpu, "cpu", 0, "Instance vCPU: 2, 4, 8, 16 (required if transcoder is set)")
 	cmd.Flags().StringVar(&req.Storage.Name, "storage", "", "The storage name (default: your default storage)")
 	cmd.Flags().StringVar(&req.Storage.Path, "path", "", "The destination path on your storage")
 	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the list in real time")
@@ -151,6 +151,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Template.Config.HlsEncIv, "hls_enc_iv", "", "ffmpeg config: HlsEncIv")
 	cmd.Flags().Int64Var(&req.Template.Config.Interval, "interval", 0, "ffmpeg config: Interval")
 
+	cmd.MarkFlagsRequiredTogether("transcoder", "cpu")
 	cmd.MarkFlagsMutuallyExclusive("source-id", "url")
 
 	return cmd
