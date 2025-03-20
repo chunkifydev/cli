@@ -45,8 +45,8 @@ func newCreateCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a new project",
-		Long:  `Create a new project`,
+		Short: "Create a new token",
+		Long:  `Create a new token`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := req.Execute(); err != nil {
 				printError(err)
