@@ -63,7 +63,7 @@ CHUNKIFY_ACCOUNT_TOKEN=sk_account_123...abc CHUNKIFY_PROJECT_TOKEN=sk_project_45
 
 ## Usage
 
-Here are some of the most used commands
+Here are the most common commands and their usage examples:
 
 ### Source Creation
 
