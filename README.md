@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://chunkify.s3.us-east-1.amazonaws.com/logos/chunkify.png" alt="Chunkify Logo" width="300"/>
+</p>
+
 # Chunkify CLI
 
 The Chunkify CLI provides easy access to all Chunkify services and features directly from your terminal.
@@ -5,15 +9,16 @@ The Chunkify CLI provides easy access to all Chunkify services and features dire
 #### With this CLI, you can:
 
 -   **Create and manage** sources, projects, jobs, storages, webhooks, notifications and tokens
+-   **Forward** webhooks notifications to your local environment
 -   **View** jobs logs
 
 ## Installation
 
+Installing the latest version:
+
 ```bash
 curl -L https://chunkify.dev/install.sh | sh
 ```
-
-This will automatically download and install the latest version of the CLI.
 
 ## Getting Started
 
@@ -33,9 +38,9 @@ chunkify auth login
 # List all the projects of your team
 $ chunkify projects list
 ╭──────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Project Id     Name       Storage             Active        │
+│ Date                 Project Id            Name       Storage             Active │
 ├──────────────────────────────────────────────────────────────────────────────────┤
-│ 11 Jul 24 13:00 UTC  ch..54        Local Dev  chunkify-us-east-1   yes           │
+│ 11 Jul 24 13:00 UTC  charming-halley-6554  Local Dev  chunkify-us-east-1  yes    │
 ╰──────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -46,17 +51,22 @@ $ chunkify projects list
 
 ### Environment-based Authentication
 
-For CI/CD environments or automated scripts where interactive login isn't possible (like GitHub Actions), you can authenticate using environment variables. You'll need both an account token and a project token for full CLI functionality:
+For CI/CD environments or automated scripts where interactive login isn't possible (like GitHub Actions), you can authenticate using environment variables. First, generate your tokens from the chunkify app, you'll need both an account token and a project token for full CLI functionality :
+
+-   Team token: Required for projects and tokens commands
+-   Project token: Required for all other commands (jobs, sources, webhooks, etc.)
 
 ```bash
-# First, create an account token
-$ chunkify tokens create --scope account
+# Option 1: Use tokens inline for a single command
+$ CHUNKIFY_TEAM_TOKEN=sk_account_123...abc chunkify projects list
+$ CHUNKIFY_PROJECT_TOKEN=sk_project_456...xyz chunkify jobs list
 
-# Create a project token using your project ID
-CHUNKIFY_ACCOUNT_TOKEN=sk_account_123...abc chunkify tokens create --scope project --project-id your_project_id
-
-# Use these tokens inline for any CLI command
-CHUNKIFY_ACCOUNT_TOKEN=sk_account_123...abc CHUNKIFY_PROJECT_TOKEN=sk_project_456...xyz chunkify jobs list
+# Option 2: Export tokens for multiple commands in the same session
+$ export CHUNKIFY_TEAM_TOKEN=sk_account_123...abc
+$ export CHUNKIFY_PROJECT_TOKEN=sk_project_456...xyz
+$ chunkify projects list  # Uses team token
+$ chunkify jobs list      # Uses project token
+$ chunkify sources list   # Uses project token
 ```
 
 > Note: Store your tokens securely and never commit them to version control. For GitHub Actions, use repository secrets. When you're done with tokens, revoke them explicitly with `chunkify tokens revoke <token-id>`.
@@ -83,7 +93,7 @@ There are two ways to create a job, you can use the source id if you already hav
 #### Create a job using a source ID:
 
 ```bash
-$ chunkify jobs create --source-id 55..79
+$ chunkify jobs create --source-id 55..79 --codec x264-v1 --height 1080 --crf 23
 ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Date                 Id      Status  Progress  Template     Transcoders  Speed  Time  Billable │
 ├────────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -94,7 +104,7 @@ $ chunkify jobs create --source-id 55..79
 #### Create a job directly with a source URL:
 
 ```bash
-$ chunkify jobs create --url https://videosource.com/video.mp4
+$ chunkify jobs create --url https://videosource.com/video.mp4 --codec av1-v1 --width 3840 --crf 28
 ```
 
 ### Webhook Creation
@@ -102,7 +112,7 @@ $ chunkify jobs create --url https://videosource.com/video.mp4
 The webhook will be created for your current selected project.
 
 ```bash
-$ chunkify webhooks create --url http://www.webhooks.com/
+$ chunkify webhooks create --url http://www.example.com/webhooks
 ╭────────────────────────────────────────────────────────────╮
 │ Id      Url                     Events  Active             │
 ├────────────────────────────────────────────────────────────┤
@@ -110,7 +120,7 @@ $ chunkify webhooks create --url http://www.webhooks.com/
 ╰────────────────────────────────────────────────────────────╯
 ```
 
-### Local Webhook Development
+### Testing Webhook Notifications Locally
 
 When developing webhook integrations locally, you can use the notifications proxy to forward webhooks to your local server:
 
@@ -147,15 +157,12 @@ The CLI can be configured using command-line flags or environment variables:
 
 -   `--json`: Output results in JSON format
 -   `--debug`: Enable debug mode for verbose output
--   `--endpoint`: Specify a custom API endpoint
--   `--env-project-id`: Set the project context
 
 ## Development
 
 ### Prerequisites
 
 -   Go 1.x or higher
--   Git
 
 ## Support
 
