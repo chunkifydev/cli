@@ -58,12 +58,12 @@ For CI/CD environments or automated scripts where interactive login isn't possib
 
 ```bash
 # Option 1: Use tokens inline for a single command
-$ CHUNKIFY_TEAM_TOKEN=sk_account_123...abc chunkify projects list
-$ CHUNKIFY_PROJECT_TOKEN=sk_project_456...xyz chunkify jobs list
+$ CHUNKIFY_TEAM_TOKEN=your_team_token chunkify projects list
+$ CHUNKIFY_PROJECT_TOKEN=your_project_token chunkify jobs list
 
 # Option 2: Export tokens for multiple commands in the same session
-$ export CHUNKIFY_TEAM_TOKEN=sk_account_123...abc
-$ export CHUNKIFY_PROJECT_TOKEN=sk_project_456...xyz
+$ export CHUNKIFY_TEAM_TOKEN=your_team_token
+$ export CHUNKIFY_PROJECT_TOKEN=your_project_token
 $ chunkify projects list  # Uses team token
 $ chunkify jobs list      # Uses project token
 $ chunkify sources list   # Uses project token
