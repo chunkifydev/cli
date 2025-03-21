@@ -71,7 +71,7 @@ func login(cfg *config.Config) {
 	if noBrowser {
 		// If no-browser flag is set, prompt for manual token entry
 		fmt.Printf("Please enter your team token:\n")
-		bytePassword, err := term.ReadPassword(syscall.Stdin)
+		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			printError(err)
 			os.Exit(1)
