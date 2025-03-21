@@ -19,7 +19,7 @@ main() {
     mkdir -p "$tmp_dir"
 
     # Construct download URL based on OS and architecture
-    download_url="https://api.chunkify.dev/releases/$os/$arch/$version"
+    download_url="https://github.com/chunkifydev/cli/releases/download/$version/$os/$arch/chunkify.tar.gz"
 
     echo "Downloading Chunkify CLI..."
     curl -q --fail --location --progress-bar --output "$tmp_dir/chunkify.tar.gz" "$download_url"
