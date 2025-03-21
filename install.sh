@@ -21,7 +21,6 @@ main() {
     # Construct download URL based on OS and architecture
     download_url="https://github.com/chunkifydev/cli/releases/download/$version/chunkify_${os}_${arch}.tar.gz"
 
-    echo "download URL: $download_url"
     echo "Downloading Chunkify CLI..."
     curl -q --fail --location --progress-bar --output "$tmp_dir/chunkify.tar.gz" "$download_url"
 
