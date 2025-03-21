@@ -36,9 +36,25 @@ func Execute() {
 }
 
 func checkAccountSetup(cmd *cobra.Command, args []string) {
-	if cfg.AccountToken == "" && cmd.Name() != "auth" && cmd.Name() != "login" {
-		err := cfg.SetDefaultTokens()
-		if err != nil {
+	// Skip auth commands
+	if cmd.Name() == "auth" || cmd.Name() == "login" {
+		return
+	}
+
+	// For projects and tokens commands, only check team token
+	if cmd.Parent() != nil && (cmd.Parent().Name() == "projects" || cmd.Parent().Name() == "tokens") {
+		if cfg.TeamToken == "" {
+			if err := cfg.SetDefaultTeamToken(); err != nil {
+				printError(err)
+				os.Exit(1)
+			}
+		}
+		return
+	}
+
+	// For all other commands, check project token
+	if cfg.ProjectToken == "" {
+		if err := cfg.SetDefaultProjectToken(); err != nil {
 			printError(err)
 			os.Exit(1)
 		}

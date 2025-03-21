@@ -11,7 +11,7 @@ import (
 type Config struct {
 	ApiEndpoint      string
 	ProjectToken     string
-	AccountToken     string
+	TeamToken        string
 	DefaultProjectId string
 	JSON             bool
 	Debug            bool
@@ -20,16 +20,20 @@ type Config struct {
 var KeyringServiceKey = "chunkify-cli"
 
 // we check for env variable first, then keyring
-func (cfg *Config) SetDefaultTokens() error {
+func (cfg *Config) SetDefaultTeamToken() error {
 	var err error
-	cfg.AccountToken = os.Getenv("CHUNKIFY_ACCOUNT_TOKEN")
-	if cfg.AccountToken == "" {
-		_, cfg.AccountToken, err = GetToken("AccountToken")
+	cfg.TeamToken = os.Getenv("CHUNKIFY_TEAM_TOKEN")
+	if cfg.TeamToken == "" {
+		_, cfg.TeamToken, err = GetToken("TeamToken")
 		if err != nil {
-			return fmt.Errorf("couldn't get account token, please run `chunkify auth login`")
+			return fmt.Errorf("couldn't get team token, please run `chunkify auth login`")
 		}
 	}
+	return nil
+}
 
+func (cfg *Config) SetDefaultProjectToken() error {
+	var err error
 	cfg.ProjectToken = os.Getenv("CHUNKIFY_PROJECT_TOKEN")
 	if cfg.ProjectToken != "" {
 		return nil
@@ -52,8 +56,8 @@ func (cfg *Config) SetDefaultTokens() error {
 
 // return the tokenId, Token, error if any
 func GetToken(pkey string) (string, string, error) {
-	key := "AccountToken"
-	if pkey != "AccountToken" {
+	key := "TeamToken"
+	if pkey != "TeamToken" {
 		key = "project:" + pkey
 	}
 	tok, err := Get(key)
@@ -66,8 +70,8 @@ func GetToken(pkey string) (string, string, error) {
 }
 
 func SetToken(pkeyId, pkey, value string) error {
-	key := "AccountToken"
-	if pkey != "AccountToken" {
+	key := "TeamToken"
+	if pkey != "TeamToken" {
 		key = "project:" + pkey
 	}
 	value = pkeyId + ":" + value
