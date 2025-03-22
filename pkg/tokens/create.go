@@ -45,8 +45,8 @@ func newCreateCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a new project",
-		Long:  `Create a new project`,
+		Short: "Create a new token",
+		Long:  `Create a new token`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := req.Execute(); err != nil {
 				printError(err)
@@ -57,7 +57,7 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.Name, "name", "", "The name of your access token")
-	cmd.Flags().StringVar(&req.Scope, "scope", "", "The access token scope: account or project (required)")
+	cmd.Flags().StringVar(&req.Scope, "scope", "", "The access token scope: team or project (required)")
 	cmd.Flags().StringVar(&req.ProjectId, "project-id", "", "The created access token will have permissions to create jobs for the given project id")
 
 	cmd.MarkFlagRequired("scope")

@@ -21,7 +21,7 @@ import (
 
 var authUrl string
 var noBrowser = false
-var accountToken api.Token
+var teamToken api.Token
 
 func newAuthCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
@@ -70,13 +70,13 @@ func login(cfg *config.Config) {
 
 	if noBrowser {
 		// If no-browser flag is set, prompt for manual token entry
-		fmt.Printf("Please enter your account token:\n")
-		bytePassword, err := term.ReadPassword(syscall.Stdin)
+		fmt.Printf("Please enter your team token:\n")
+		bytePassword, err := term.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			printError(err)
 			os.Exit(1)
 		}
-		accountToken.Token = string(bytePassword)
+		teamToken.Token = string(bytePassword)
 	} else {
 		// Otherwise, initiate browser-based authentication
 		fmt.Println("Waiting...")
@@ -89,7 +89,7 @@ func login(cfg *config.Config) {
 
 		// Wait for authentication to complete or timeout
 		for range t.C {
-			if accountToken.Token != "" {
+			if teamToken.Token != "" {
 				t.Stop()
 				break
 			}
@@ -101,19 +101,19 @@ func login(cfg *config.Config) {
 		}
 	}
 
-	cfg.AccountToken = accountToken.Token
+	cfg.TeamToken = teamToken.Token
 
-	// Verify the account token by fetching projects
+	// Verify the team token by fetching projects
 	fmt.Println("Checking your account...")
 	list := projectsCmd.ListCmd{}
 	if err := list.Execute(); err != nil {
-		printError(fmt.Errorf("account token is invalid"))
+		printError(fmt.Errorf("team token is invalid"))
 		os.Exit(1)
 	}
 	projects := list.Data
 
-	// Save the account token to configuration
-	if err := config.SetToken(accountToken.Id, "AccountToken", accountToken.Token); err != nil {
+	// Save the team token to configuration
+	if err := config.SetToken(teamToken.Id, "TeamToken", teamToken.Token); err != nil {
 		printError(err)
 		os.Exit(1)
 	}
@@ -165,9 +165,9 @@ func logout(cfg *config.Config) {
 	}
 
 	// revoke account token
-	tokId, _, _ := config.GetToken("AccountToken")
+	tokId, _, _ := config.GetToken("TeamToken")
 	if tokId != "" {
-		fmt.Println("Revoke account token")
+		fmt.Println("Revoke team token")
 		revokeToken(cfg, tokId)
 	}
 
@@ -184,8 +184,8 @@ func printError(err error) {
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	tok := r.URL.Query().Get("token")
 	token := strings.Split(tok, ":")
-	accountToken.Id = token[0]
-	accountToken.Token = token[1]
+	teamToken.Id = token[0]
+	teamToken.Token = token[1]
 
 	http.Redirect(w, r, "/auth/ok", http.StatusFound)
 }

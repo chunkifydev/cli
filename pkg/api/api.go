@@ -82,7 +82,7 @@ func ApiRequest[T any](apiReq Request) (T, error) {
 
 	// for these endpoints, we need the account API key
 	if strings.HasPrefix(apiReq.Path, "/api/tokens") || strings.HasPrefix(apiReq.Path, "/api/projects") {
-		req.Header.Set("Authorization", "Bearer "+apiReq.Config.AccountToken)
+		req.Header.Set("Authorization", "Bearer "+apiReq.Config.TeamToken)
 	} else {
 		req.Header.Set("Authorization", "Bearer "+apiReq.Config.ProjectToken)
 	}
