@@ -42,9 +42,8 @@ type Job struct {
 }
 
 type Template struct {
-	Name    string         `json:"name"`
-	Version string         `json:"version"`
-	Config  map[string]any `json:"config"`
+	Name   string         `json:"name"`
+	Config map[string]any `json:"config"`
 }
 
 type Transcoder struct {

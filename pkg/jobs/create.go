@@ -26,7 +26,6 @@ type CreateCmd struct {
 
 type templateParams struct {
 	Name         string             `json:"name"`
-	Version      string             `json:"version"`
 	Config       api.FfmpegTemplate `json:"config"`
 	videoBitrate string
 	audioBitrate string
@@ -114,8 +113,7 @@ func newCreateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&req.SourceId, "source-id", "", "The source id (required)")
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
-	cmd.Flags().StringVar(&req.Template.Name, "format", "mp4", "Template name: mp4, hls, jpg")
-	cmd.Flags().StringVar(&req.Template.Version, "codec", "x264-v1", "Template version: x264-v1, x265-v1, av1-v1, v1")
+	cmd.Flags().StringVar(&req.Template.Name, "format", "mp4/x264", "Template name: mp4/x264, mp4/x265, mp4/av1, hls/x264, image/jpg")
 	cmd.Flags().Int64Var(&req.Transcoder.Quantity, "transcoder", 0, "Number of transcoders: 1 to 50 (required if cpu is set)")
 	cmd.Flags().Int64Var(&req.vcpu, "cpu", 0, "Instance vCPU: 2, 4, 8, 16 (required if transcoder is set)")
 	cmd.Flags().StringVar(&req.Storage.Name, "storage", "", "The storage name (default: your default storage)")

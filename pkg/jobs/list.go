@@ -181,7 +181,7 @@ func jobsListToRows(jobs []api.Job) [][]string {
 			styles.Id.Render(job.Id),
 			formatter.JobStatus(job.Status),
 			fmt.Sprintf("%.f%%", job.Progress),
-			fmt.Sprintf("%s/%s", job.Template.Name, job.Template.Version),
+			job.Template.Name,
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),
 			fmt.Sprintf("%.2fx", job.Transcoder.Speed),
 			formatter.TimeDiff(job.StartedAt, endDate),
