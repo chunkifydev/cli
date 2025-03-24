@@ -5,7 +5,6 @@ go 1.23.0
 require (
 	github.com/TheZoraiz/ascii-image-converter v1.13.1
 	github.com/charmbracelet/bubbletea v1.1.1
-	github.com/lucasb-eyer/go-colorful v1.2.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/term v0.24.0
 )
@@ -23,6 +22,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gookit/color v1.5.4 // indirect
+	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/makeworld-the-better-one/dither/v2 v2.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect

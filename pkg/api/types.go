@@ -54,7 +54,7 @@ type Transcoder struct {
 }
 
 type JobStorage struct {
-	Name   string `json:"name"`
+	Id     string `json:"id"`
 	Region string `json:"region"`
 	Path   string `json:"path"`
 }

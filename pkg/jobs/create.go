@@ -38,7 +38,7 @@ type transcoderParams struct {
 
 type storageParams struct {
 	Path string `json:"path,omitempty"`
-	Name string `json:"name,omitempty"`
+	Id   string `json:"id,omitempty"`
 }
 
 func (r *CreateCmd) Execute() error {
@@ -113,10 +113,10 @@ func newCreateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&req.SourceId, "source-id", "", "The source id (required)")
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
-	cmd.Flags().StringVar(&req.Template.Name, "format", "mp4/x264", "Template name: mp4/x264, mp4/x265, mp4/av1, hls/x264, image/jpg")
+	cmd.Flags().StringVar(&req.Template.Name, "format", "mp4/x264", "Template name: mp4/x264, mp4/x265, mp4/av1, hls/x264, jpg")
 	cmd.Flags().Int64Var(&req.Transcoder.Quantity, "transcoder", 0, "Number of transcoders: 1 to 50 (required if cpu is set)")
-	cmd.Flags().Int64Var(&req.vcpu, "cpu", 0, "Instance vCPU: 2, 4, 8, 16 (required if transcoder is set)")
-	cmd.Flags().StringVar(&req.Storage.Name, "storage", "", "The storage name (default: your default storage)")
+	cmd.Flags().Int64Var(&req.vcpu, "cpu", 0, "Instance vCPU: 4, 8, 16 (required if transcoder is set)")
+	cmd.Flags().StringVar(&req.Storage.Id, "storage", "", "The storage id (default is the project default storage id)")
 	cmd.Flags().StringVar(&req.Storage.Path, "path", "", "The destination path on your storage")
 	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the list in real time")
 	cmd.Flags().StringVar(&req.sourceUrl, "url", "", "Create the job with the given source url")
