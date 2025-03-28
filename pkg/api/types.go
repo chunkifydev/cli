@@ -211,4 +211,5 @@ type FfmpegTemplate struct {
 
 	// image
 	Interval int64 `json:"interval,omitempty"`
+	Sprite   bool  `json:"sprite,omitempty"`
 }

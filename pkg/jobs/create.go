@@ -150,6 +150,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Template.Config.HlsEncKeyUrl, "hls_enc_key_url", "", "ffmpeg config: HlsEncKeyUrl")
 	cmd.Flags().StringVar(&req.Template.Config.HlsEncIv, "hls_enc_iv", "", "ffmpeg config: HlsEncIv")
 	cmd.Flags().Int64Var(&req.Template.Config.Interval, "interval", 0, "ffmpeg config: Interval")
+	cmd.Flags().BoolVar(&req.Template.Config.Sprite, "sprite", false, "Generate sprite images instead of many single images")
 
 	cmd.MarkFlagsRequiredTogether("transcoder", "cpu")
 	cmd.MarkFlagsMutuallyExclusive("source-id", "url")
