@@ -11,11 +11,12 @@ import (
 )
 
 type CreateCmd struct {
-	SourceId   string           `json:"source_id"`
-	Metadata   map[string]any   `json:"metadata,omitempty"`
-	Storage    storageParams    `json:"storage,omitempty"`
-	Template   templateParams   `json:"template"`
-	Transcoder transcoderParams `json:"transcoder"`
+	SourceId      string           `json:"source_id"`
+	HlsManifestId string           `json:"hls_manifest_id,omitempty"`
+	Metadata      map[string]any   `json:"metadata,omitempty"`
+	Storage       storageParams    `json:"storage,omitempty"`
+	Template      templateParams   `json:"template"`
+	Transcoder    transcoderParams `json:"transcoder"`
 
 	vcpu        int64   `json:"-"`
 	metadata    string  `json:"-"`
@@ -151,7 +152,8 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Template.Config.HlsEncIv, "hls_enc_iv", "", "ffmpeg config: HlsEncIv")
 	cmd.Flags().Int64Var(&req.Template.Config.Interval, "interval", 0, "ffmpeg config: Interval")
 	cmd.Flags().BoolVar(&req.Template.Config.Sprite, "sprite", false, "Generate sprite images instead of many single images")
-
+	cmd.Flags().Int64Var(&req.Template.Config.Frames, "frames", 0, "Generate only the number of givenframes")
+	cmd.Flags().StringVar(&req.HlsManifestId, "hls-manifest-id", "", "The hls manifest ID to group multiple jobs into a single manifest")
 	cmd.MarkFlagsRequiredTogether("transcoder", "cpu")
 	cmd.MarkFlagsMutuallyExclusive("source-id", "url")
 

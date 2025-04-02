@@ -27,18 +27,19 @@ type Source struct {
 }
 
 type Job struct {
-	Id           string     `json:"id"`
-	Status       string     `json:"status"`
-	Progress     float64    `json:"progress"`
-	BillableTime int64      `json:"billable_time"`
-	SourceId     string     `json:"source_id"`
-	Storage      JobStorage `json:"storage"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	StartedAt    time.Time  `json:"started_at"`
-	Transcoder   Transcoder `json:"transcoder"`
-	Template     Template   `json:"template"`
-	Metadata     any        `json:"metadata"`
+	Id            string     `json:"id"`
+	Status        string     `json:"status"`
+	Progress      float64    `json:"progress"`
+	BillableTime  int64      `json:"billable_time"`
+	SourceId      string     `json:"source_id"`
+	HlsManifestId *string    `json:"hls_manifest_id"`
+	Storage       JobStorage `json:"storage"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+	StartedAt     time.Time  `json:"started_at"`
+	Transcoder    Transcoder `json:"transcoder"`
+	Template      Template   `json:"template"`
+	Metadata      any        `json:"metadata"`
 }
 
 type Template struct {
@@ -212,4 +213,5 @@ type FfmpegTemplate struct {
 	// image
 	Interval int64 `json:"interval,omitempty"`
 	Sprite   bool  `json:"sprite,omitempty"`
+	Frames   int64 `json:"frames,omitempty"`
 }

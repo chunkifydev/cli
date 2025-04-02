@@ -20,17 +20,16 @@ import (
 )
 
 type ListCmd struct {
-	Id              string
-	Offset          int64
-	Limit           int64
-	CreatedGte      string
-	CreatedLte      string
-	CreatedSort     string
-	SourceId        string
-	Status          string
-	TemplateName    string
-	TemplateVersion string
-	Metadata        []string
+	Id           string
+	Offset       int64
+	Limit        int64
+	CreatedGte   string
+	CreatedLte   string
+	CreatedSort  string
+	SourceId     string
+	Status       string
+	TemplateName string
+	Metadata     []string
 
 	interactive bool
 	Data        []api.Job
@@ -71,10 +70,6 @@ func (r *ListCmd) toQueryMap() url.Values {
 
 	if r.TemplateName != "" {
 		query.Add("template_name", r.TemplateName)
-	}
-
-	if r.TemplateVersion != "" {
-		query.Add("template_version", r.TemplateVersion)
 	}
 
 	if len(r.Metadata) > 0 {
@@ -139,7 +134,7 @@ func (r *ListCmd) jobsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Status", "Progress", "Template", "Transcoders", "Speed", "Time", "Billable").
+		Headers("Date", "Id", "HLS", "Status", "Progress", "Template", "Transcoders", "Time", "Billable").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -151,7 +146,7 @@ func (r *ListCmd) jobsTable() *table.Table {
 				}
 
 				return styles.Header.Padding(0, 1)
-			case col == 2:
+			case col == 3:
 				return styles.Center.Padding(0, 1).Width(14)
 			case slices.Contains(rightCols, col):
 				return styles.Right.Padding(0, 1)
@@ -176,14 +171,19 @@ func jobsListToRows(jobs []api.Job) [][]string {
 			endDate = job.UpdatedAt
 		}
 
+		hlsManifestId := ""
+		if job.HlsManifestId != nil {
+			hlsManifestId = *job.HlsManifestId
+		}
+
 		rows[i] = []string{
 			job.CreatedAt.Format(time.RFC822),
 			styles.Id.Render(job.Id),
+			styles.Id.Render(hlsManifestId),
 			formatter.JobStatus(job.Status),
 			fmt.Sprintf("%.f%%", job.Progress),
 			job.Template.Name,
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),
-			fmt.Sprintf("%.2fx", job.Transcoder.Speed),
 			formatter.TimeDiff(job.StartedAt, endDate),
 			formatter.Duration(job.BillableTime),
 		}
@@ -222,9 +222,7 @@ func newListCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&req.SourceId, "source-id", "", "List jobs by source Id")
 
-	cmd.Flags().StringVar(&req.TemplateName, "template-name", "", "List jobs by template name: mp4, hls, jpg, webm")
-	cmd.Flags().StringVar(&req.TemplateVersion, "template-version", "", "List jobs by template version: x264-v1, x265-v1, av1-v1, v1")
-
+	cmd.Flags().StringVar(&req.TemplateName, "template", "", "List jobs by template name: mp4/x264, mp4/x265, mp4/av1, hls/x264, webm/vp9, jpg")
 	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
 
 	cmd.Flags().StringArrayVar(&req.Metadata, "metadata", nil, "Metadata")
