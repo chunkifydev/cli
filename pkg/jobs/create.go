@@ -134,6 +134,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&req.Template.Config.DisableVideo, "vn", false, "ffmpeg config: DisableVideo")
 	cmd.Flags().Int64Var(&req.Template.Config.Channels, "channels", 0, "ffmpeg config: Channels")
 	cmd.Flags().BoolVar(&req.Template.Config.DisableAudio, "an", false, "ffmpeg config: DisableAudio")
+	cmd.Flags().Int64Var(&req.Template.Config.Minrate, "minrate", 0, "ffmpeg config: Minrate")
 	cmd.Flags().Int64Var(&req.Template.Config.Maxrate, "maxrate", 0, "ffmpeg config: Maxrate")
 	cmd.Flags().Int64Var(&req.Template.Config.Bufsize, "bufsize", 0, "ffmpeg config: Bufsize")
 	cmd.Flags().StringVar(&req.Template.Config.PixFmt, "pixfmt", "", "ffmpeg config: PixFmt")

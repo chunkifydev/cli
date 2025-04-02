@@ -190,6 +190,7 @@ type FfmpegTemplate struct {
 	AudioBitrate int64   `json:"audio_bitrate,omitempty"`
 	Channels     int64   `json:"channels,omitempty"`
 	DisableAudio bool    `json:"disable_audio,omitempty"`
+	Minrate      int64   `json:"minrate,omitempty"`
 	Maxrate      int64   `json:"maxrate,omitempty"`
 	Bufsize      int64   `json:"bufsize,omitempty"`
 	Chunk        int64   `json:"chunk,omitempty"`
