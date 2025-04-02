@@ -124,7 +124,7 @@ func newCreateCmd() *cobra.Command {
 
 	// ffmpeg config
 	cmd.Flags().StringVar(&req.Template.videoBitrate, "vb", "", "ffmpeg config: VideoBitrate")
-	cmd.Flags().StringVar(&req.Template.videoBitrate, "ab", "", "ffmpeg config: AudioBitrate")
+	cmd.Flags().StringVar(&req.Template.audioBitrate, "ab", "", "ffmpeg config: AudioBitrate")
 
 	cmd.Flags().Int64Var(&req.Template.Config.Width, "width", 0, "ffmpeg config: Width")
 	cmd.Flags().Int64Var(&req.Template.Config.Height, "height", 0, "ffmpeg config: Height")
