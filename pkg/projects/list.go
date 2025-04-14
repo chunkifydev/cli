@@ -3,32 +3,25 @@ package projects
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"slices"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/chunkifydev/cli/pkg/api"
-	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	disabled bool
-	Data     []api.Project
+	Data []api.Project
 }
 
 func (r *ListCmd) Execute() error {
-	query := url.Values{}
-	query.Add("paused", fmt.Sprintf("%t", r.disabled))
-
 	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/projects",
-		Method:      "GET",
-		QueryParams: query,
+		Config: cmd.Config,
+		Path:   "/api/projects",
+		Method: "GET",
 	}
 
 	projects, err := api.ApiRequest[[]api.Project](apiReq)
@@ -71,7 +64,7 @@ func (r *ListCmd) projectsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Project Id", "Name", "Storage", "Active").
+		Headers("Date", "Project Id", "Name", "Storage").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -104,7 +97,6 @@ func projectsListToRows(projects []api.Project) [][]string {
 			styles.Id.Render(project.Id),
 			project.Name,
 			project.Storage,
-			formatter.Bool(!project.Paused),
 		}
 	}
 	return rows
@@ -125,8 +117,6 @@ func newListCmd() *cobra.Command {
 			req.View()
 		},
 	}
-
-	cmd.Flags().BoolVar(&req.disabled, "disabled", false, "List disabled projects")
 
 	return cmd
 }
