@@ -11,7 +11,7 @@ import (
 type CreateCmd struct {
 	Name      string    `json:"name,omitempty"`
 	Scope     string    `json:"scope"`
-	ProjectId string    `json:"project,omitempty"`
+	ProjectId string    `json:"project_id,omitempty"`
 	Data      api.Token `json:"-"`
 }
 
