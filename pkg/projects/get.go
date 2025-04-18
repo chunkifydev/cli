@@ -1,36 +1,28 @@
 package projects
 
 import (
-	"fmt"
-
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type GetCmd struct {
 	Id   string `json:"id"`
-	Data api.Project
+	Data chunkify.Project
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/projects/%s", r.Id),
-		Method: "GET",
-	}
-
-	source, err := api.ApiRequest[api.Project](apiReq)
+	project, err := cmd.Config.Client.Project(r.Id)
 	if err != nil {
 		return err
 	}
 
-	r.Data = source
+	r.Data = project
 
 	return nil
 }
 
 func (r *GetCmd) View() {
-	sourceList := ListCmd{Data: []api.Project{r.Data}}
+	sourceList := ListCmd{Data: []chunkify.Project{r.Data}}
 	sourceList.View()
 }
 

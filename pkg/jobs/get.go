@@ -4,26 +4,18 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package jobs
 
 import (
-	"fmt"
-
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type GetCmd struct {
 	Id          string `json:"id"`
-	Data        api.Job
+	Data        chunkify.Job
 	interactive bool
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/jobs/%s", r.Id),
-		Method: "GET",
-	}
-
-	job, err := api.ApiRequest[api.Job](apiReq)
+	job, err := cmd.Config.Client.Job(r.Id)
 	if err != nil {
 		return err
 	}
@@ -33,7 +25,7 @@ func (r *GetCmd) Execute() error {
 }
 
 func (r *GetCmd) View() {
-	jobList := &ListCmd{Id: r.Data.Id, Data: []api.Job{r.Data}, interactive: r.interactive}
+	jobList := &ListCmd{Params: chunkify.JobListParams{Id: r.Data.Id}, Data: []chunkify.Job{r.Data}, interactive: r.interactive}
 	if !cmd.Config.JSON && r.interactive {
 		StartPolling(jobList)
 	} else {

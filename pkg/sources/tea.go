@@ -7,19 +7,19 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/styles"
 )
 
 type model struct {
 	cmd          *ListCmd
-	ch           chan []api.Source
+	ch           chan []chunkify.Source
 	sourcesTable *table.Table
 }
 
 type tickMsg time.Time
 
-func initialModel(cmd *ListCmd, ch chan []api.Source) model {
+func initialModel(cmd *ListCmd, ch chan []chunkify.Source) model {
 	return model{
 		cmd:          cmd,
 		ch:           ch,
@@ -27,7 +27,7 @@ func initialModel(cmd *ListCmd, ch chan []api.Source) model {
 	}
 }
 
-func listenToSourceChan(ch chan []api.Source) tea.Cmd {
+func listenToSourceChan(ch chan []chunkify.Source) tea.Cmd {
 	return func() tea.Msg {
 		jobs := <-ch
 		return jobs
@@ -45,7 +45,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		}
-	case []api.Source:
+	case []chunkify.Source:
 		m.cmd.Data = msg
 		return m, listenToSourceChan(m.ch)
 	case tickMsg:
@@ -68,7 +68,7 @@ func (m model) View() string {
 	return s
 }
 
-func polling(r *ListCmd, ch chan []api.Source) {
+func polling(r *ListCmd, ch chan []chunkify.Source) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
@@ -82,7 +82,7 @@ func polling(r *ListCmd, ch chan []api.Source) {
 }
 
 func StartPolling(r *ListCmd) {
-	ch := make(chan []api.Source)
+	ch := make(chan []chunkify.Source)
 	go polling(r, ch)
 	p := tea.NewProgram(initialModel(r, ch))
 	if _, err := p.Run(); err != nil {

@@ -6,98 +6,45 @@ package jobs
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Id           string
-	Offset       int64
-	Limit        int64
-	CreatedGte   string
-	CreatedLte   string
-	CreatedSort  string
-	SourceId     string
-	Status       string
-	TemplateName string
-	Metadata     []string
+	Metadata []string
+
+	Params chunkify.JobListParams
 
 	interactive bool
-	Data        []api.Job
-}
-
-func (r *ListCmd) toQueryMap() url.Values {
-	query := url.Values{}
-
-	if r.Id != "" {
-		query.Add("id", r.Id)
-	}
-
-	if r.Offset != -1 {
-		query.Add("offset", fmt.Sprintf("%d", r.Offset))
-	}
-	if r.Limit != -1 {
-		query.Add("limit", fmt.Sprintf("%d", r.Limit))
-	}
-
-	if r.CreatedGte != "" {
-		query.Add("created.gte", r.CreatedGte)
-	}
-	if r.CreatedLte != "" {
-		query.Add("created.lte", r.CreatedLte)
-	}
-
-	if r.CreatedSort != "" {
-		query.Add("created.sort", r.CreatedSort)
-	}
-
-	if r.Status != "" {
-		query.Add("status", r.Status)
-	}
-
-	if r.SourceId != "" {
-		query.Add("source_id", r.SourceId)
-	}
-
-	if r.TemplateName != "" {
-		query.Add("template_name", r.TemplateName)
-	}
-
-	if len(r.Metadata) > 0 {
-		md := []string{}
-		for _, metadata := range r.Metadata {
-			md = append(md, strings.Replace(metadata, "=", ":", -1))
-		}
-		query.Add("metadata", strings.Join(md, ","))
-	}
-
-	return query
+	Data        []chunkify.Job
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/jobs",
-		Method:      "GET",
-		QueryParams: r.toQueryMap(),
+	// Convert metadata to the required format
+	var metadata [][]string
+	if len(r.Metadata) > 0 {
+		md := []string{}
+		for _, m := range r.Metadata {
+			md = append(md, strings.Replace(m, "=", ":", -1))
+		}
+		metadata = [][]string{md}
 	}
+	r.Params.Metadata = metadata
 
-	jobs, err := api.ApiRequest[[]api.Job](apiReq)
+	jobs, err := cmd.Config.Client.JobList(r.Params)
 	if err != nil {
 		return err
 	}
 
-	r.Data = jobs
-
+	r.Data = jobs.Items
 	return nil
 }
 
@@ -161,7 +108,7 @@ func (r *ListCmd) jobsTable() *table.Table {
 	return table
 }
 
-func jobsListToRows(jobs []api.Job) [][]string {
+func jobsListToRows(jobs []chunkify.Job) [][]string {
 	rows := make([][]string, len(jobs))
 	for i, job := range jobs {
 
@@ -182,7 +129,7 @@ func jobsListToRows(jobs []api.Job) [][]string {
 			styles.Id.Render(hlsManifestId),
 			formatter.JobStatus(job.Status),
 			fmt.Sprintf("%.f%%", job.Progress),
-			job.Template.Name,
+			job.Format.Name,
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),
 			formatter.TimeDiff(job.StartedAt, endDate),
 			formatter.Duration(job.BillableTime),
@@ -212,18 +159,18 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
+	cmd.Flags().Int64Var(&req.Params.Offset, "offset", 0, "Offset")
+	cmd.Flags().Int64Var(&req.Params.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.CreatedLte, "created.lte", "", "Created Less or Equal")
+	cmd.Flags().StringVar(&req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	cmd.Flags().StringVar(&req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().StringVar(&req.Status, "status", "", "Job's status: finished, processing, error")
+	cmd.Flags().StringVar(&req.Params.Status, "status", "", "Job's status: finished, processing, error")
 
-	cmd.Flags().StringVar(&req.SourceId, "source-id", "", "List jobs by source Id")
+	cmd.Flags().StringVar(&req.Params.SourceId, "source-id", "", "List jobs by source Id")
 
-	cmd.Flags().StringVar(&req.TemplateName, "template", "", "List jobs by template name: mp4/x264, mp4/x265, mp4/av1, hls/x264, webm/vp9, jpg")
-	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
+	cmd.Flags().StringVar(&req.Params.FormatName, "format", "", "List jobs by format name: mp4/x264, mp4/x265, mp4/av1, hls/x264, webm/vp9, jpg")
+	cmd.Flags().StringVar(&req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
 
 	cmd.Flags().StringArrayVar(&req.Metadata, "metadata", nil, "Metadata")
 

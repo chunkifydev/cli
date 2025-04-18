@@ -4,23 +4,17 @@ import (
 	"fmt"
 
 	"github.com/TheZoraiz/ascii-image-converter/aic_package"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type GetCmd struct {
 	Id   string `json:"id"`
-	Data api.Source
+	Data chunkify.Source
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/sources/%s", r.Id),
-		Method: "GET",
-	}
-
-	source, err := api.ApiRequest[api.Source](apiReq)
+	source, err := cmd.Config.Client.Source(r.Id)
 	if err != nil {
 		return err
 	}
@@ -31,7 +25,7 @@ func (r *GetCmd) Execute() error {
 }
 
 func (r *GetCmd) View() {
-	sourceList := ListCmd{Data: []api.Source{r.Data}}
+	sourceList := ListCmd{Data: []chunkify.Source{r.Data}}
 	sourceList.View()
 
 	if !cmd.Config.JSON && len(r.Data.Images) == 1 {
@@ -60,7 +54,7 @@ func newGetCmd() *cobra.Command {
 	return cmd
 }
 
-func asciiImage(source api.Source) {
+func asciiImage(source chunkify.Source) {
 	flags := aic_package.DefaultFlags()
 	flags.Width = 80
 	flags.Colored = true

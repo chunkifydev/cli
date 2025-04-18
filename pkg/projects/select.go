@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/tokens"
 	"github.com/spf13/cobra"
@@ -47,7 +47,7 @@ func newSelectCmd(_ *config.Config) *cobra.Command {
 	return cmd
 }
 
-func SelectProjectPrompt(projects []api.Project) {
+func SelectProjectPrompt(projects []chunkify.Project) {
 	if len(projects) == 0 {
 		fmt.Println("You don't have any project. You can create a new project by running `chunkify projects create --name 'Project name'`")
 		return
@@ -88,7 +88,7 @@ func selectProject(projectId string) {
 
 	// we don't have the token saved
 	// so we generate a token to use this project
-	tokenCreate := tokens.CreateCmd{Name: "chunkify-cli", Scope: "project", ProjectId: projectId}
+	tokenCreate := tokens.CreateCmd{Params: chunkify.TokenCreateParams{Name: "chunkify-cli", Scope: "project", ProjectId: projectId}}
 	if err := tokenCreate.Execute(); err != nil {
 		printError(fmt.Errorf("couldn't create a token for this project: %s", err))
 		os.Exit(1)

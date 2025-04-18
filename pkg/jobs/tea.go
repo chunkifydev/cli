@@ -7,19 +7,19 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/styles"
 )
 
 type model struct {
 	cmd       *ListCmd
-	ch        chan []api.Job
+	ch        chan []chunkify.Job
 	jobsTable *table.Table
 }
 
 type tickMsg time.Time
 
-func listenToJobChan(ch chan []api.Job) tea.Cmd {
+func listenToJobChan(ch chan []chunkify.Job) tea.Cmd {
 	return func() tea.Msg {
 		jobs := <-ch
 		return jobs
@@ -37,7 +37,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		}
-	case []api.Job:
+	case []chunkify.Job:
 		m.cmd.Data = msg
 		return m, listenToJobChan(m.ch)
 	case tickMsg:
@@ -60,7 +60,7 @@ func (m model) View() string {
 	return s
 }
 
-func polling(r *ListCmd, ch chan []api.Job) {
+func polling(r *ListCmd, ch chan []chunkify.Job) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
@@ -74,7 +74,7 @@ func polling(r *ListCmd, ch chan []api.Job) {
 }
 
 func StartPolling(r *ListCmd) {
-	ch := make(chan []api.Job)
+	ch := make(chan []chunkify.Job)
 	go polling(r, ch)
 
 	m := model{

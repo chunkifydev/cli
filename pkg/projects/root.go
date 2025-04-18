@@ -25,8 +25,6 @@ func NewCommand(config *config.Config) *Command {
 		}}
 
 	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newEnableCmd())
-	cmd.Command.AddCommand(newDisableCmd())
 	cmd.Command.AddCommand(newUpdateCmd())
 	cmd.Command.AddCommand(newDeleteCmd())
 	cmd.Command.AddCommand(newGetCmd())

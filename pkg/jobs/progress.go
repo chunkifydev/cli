@@ -8,7 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/logs"
 	"github.com/chunkifydev/cli/pkg/styles"
@@ -19,8 +19,8 @@ var progressBarColor = "#7ce4a1"
 
 type progressModel struct {
 	cmd                *logs.ListCmd
-	ch                 chan []api.Log
-	transcoderProgress map[string]api.LogAttrs
+	ch                 chan []chunkify.Log
+	transcoderProgress map[string]chunkify.LogAttrs
 	progressBars       map[string]progress.Model
 }
 
@@ -36,7 +36,7 @@ func (m *progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		}
-	case []api.Log:
+	case []chunkify.Log:
 		m.cmd.Data = msg
 		return m, logs.ListenToLogsChan(m.ch)
 	case tickMsg:
@@ -46,8 +46,8 @@ func (m *progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *progressModel) getLastProgressLines(logs []api.Log) {
-	transcoders := map[string]api.LogAttrs{}
+func (m *progressModel) getLastProgressLines(logs []chunkify.Log) {
+	transcoders := map[string]chunkify.LogAttrs{}
 
 	for i := len(logs) - 1; i >= 0; i-- {
 		log := logs[i]
@@ -68,7 +68,7 @@ func (m *progressModel) getLastProgressLines(logs []api.Log) {
 
 func (m *progressModel) View() string {
 	s := ""
-	transcoders := make([]api.LogAttrs, 50)
+	transcoders := make([]chunkify.LogAttrs, 50)
 
 	for k, v := range m.transcoderProgress {
 		trName := strings.Split(k, "#")
@@ -132,13 +132,13 @@ func (m *progressModel) View() string {
 }
 
 func StartTranscoderProgressTailing(r *logs.ListCmd) {
-	ch := make(chan []api.Log)
+	ch := make(chan []chunkify.Log)
 	go logs.LogsPolling(r, ch)
 
 	m := progressModel{
 		cmd:                r,
 		ch:                 ch,
-		transcoderProgress: map[string]api.LogAttrs{},
+		transcoderProgress: map[string]chunkify.LogAttrs{},
 	}
 
 	p := tea.NewProgram(&m)
@@ -149,7 +149,7 @@ func StartTranscoderProgressTailing(r *logs.ListCmd) {
 }
 
 func newTranscoderProgressCmd() *cobra.Command {
-	req := logs.ListCmd{Service: "transcoder"}
+	req := logs.ListCmd{Params: chunkify.JobListLogsParams{Service: "transcoder"}}
 
 	cmd := &cobra.Command{
 		Use:   "progress job-id",

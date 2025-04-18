@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -16,7 +15,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/chunkifydev/cli/pkg/webhooks"
@@ -26,7 +25,7 @@ import (
 
 var (
 	mut                     sync.Mutex
-	lastProxiedNotification *api.Notification
+	lastProxiedNotification *chunkify.Notification
 	logs                    []string
 	startTime               time.Time
 )
@@ -38,17 +37,31 @@ type ProxyCmd struct {
 	Events     []string
 	CreatedGte time.Time
 
-	Data []api.Notification
+	Data []chunkify.Notification
+}
+
+type WebhookPayload struct {
+	Event string             `json:"event"`
+	Date  time.Time          `json:"date"`
+	Data  WebhookPayloadData `json:"data"`
+}
+
+type WebhookPayloadData struct {
+	JobId    string          `json:"job_id"`
+	Metadata any             `json:"metadata"`
+	SourceId string          `json:"source_id"`
+	Error    *string         `json:"error"`
+	Files    []chunkify.File `json:"files"`
 }
 
 type model struct {
 	cmd *ProxyCmd
-	ch  chan []api.Notification
+	ch  chan []chunkify.Notification
 }
 
 type tickMsg time.Time
 
-func listenToNotificationsChan(ch chan []api.Notification) tea.Cmd {
+func listenToNotificationsChan(ch chan []chunkify.Notification) tea.Cmd {
 	return func() tea.Msg {
 		notifs := <-ch
 		return notifs
@@ -72,7 +85,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tickCmd()
 		case "t":
 			testNotif := generateTestNotification()
-			m.cmd.Data = []api.Notification{testNotif}
+			m.cmd.Data = []chunkify.Notification{testNotif}
 			m.cmd.httpProxy(testNotif)
 			return m, tickCmd()
 		case "v":
@@ -82,7 +95,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tickCmd()
 		}
-	case []api.Notification:
+	case []chunkify.Notification:
 		if len(msg) > 0 {
 			for _, notif := range msg {
 				go m.cmd.httpProxy(notif)
@@ -119,39 +132,30 @@ func (m model) View() string {
 	return s
 }
 
-func (r *ProxyCmd) toQueryMap() url.Values {
-	query := url.Values{}
-
-	if r.WebhookId != "" {
-		query.Add("webhook_id", r.WebhookId)
+func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
+	params := chunkify.NotificationListParams{
+		WebhookId: r.WebhookId,
 	}
 
 	if lastProxiedNotification != nil {
-		query.Add("created.gte", lastProxiedNotification.CreatedAt.Add(1*time.Second).Format(time.RFC3339))
+		params.CreatedGte = lastProxiedNotification.CreatedAt.Add(1 * time.Second).Format(time.RFC3339)
 	} else {
-		query.Add("created.gte", startTime.Format(time.RFC3339))
+		params.CreatedGte = startTime.Format(time.RFC3339)
 	}
 
-	return query
+	return params
 }
 
 func (r *ProxyCmd) Execute() error {
-	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/notifications",
-		Method:      "GET",
-		QueryParams: r.toQueryMap(),
-	}
-
-	notifications, err := api.ApiRequest[[]api.Notification](apiReq)
+	notifications, err := cmd.Config.Client.NotificationList(r.toParams())
 	if err != nil {
 		return err
 	}
 
 	// we filter the notifications by the given events
 	if len(r.Events) > 0 && !slices.Contains(r.Events, "*") {
-		filteredNotifications := []api.Notification{}
-		for _, notif := range notifications {
+		filteredNotifications := []chunkify.Notification{}
+		for _, notif := range notifications.Items {
 			if slices.Contains(r.Events, notif.Event) {
 				filteredNotifications = append(filteredNotifications, notif)
 			}
@@ -160,12 +164,12 @@ func (r *ProxyCmd) Execute() error {
 		return nil
 	}
 
-	r.Data = notifications
+	r.Data = notifications.Items
 
 	return nil
 }
 
-func (r *ProxyCmd) httpProxy(notif api.Notification) {
+func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
 	if lastProxiedNotification != nil && lastProxiedNotification.CreatedAt.After(notif.CreatedAt) {
 		return
 	}
@@ -205,7 +209,7 @@ func generateSignature(payloadString string, secretKey string) string {
 }
 
 func prettyRenderJSONPayload(payload string) string {
-	var payloadStruct api.WebhookPayload
+	var payloadStruct WebhookPayload
 
 	if err := json.Unmarshal([]byte(payload), &payloadStruct); err != nil {
 		log("Couldn't not pretty render JSON payload")
@@ -221,12 +225,12 @@ func prettyRenderJSONPayload(payload string) string {
 	return string(prettryBytes)
 }
 
-func createLocaldevWebhook() (api.WebhookWithSecretKey, error) {
+func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
 	log(fmt.Sprintln("Setting up localdev webhook..."))
-	cmd := &webhooks.CreateCmd{Url: "http://localdev", Events: "*", Enabled: true}
+	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: "*", Enabled: true}}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
-		return api.WebhookWithSecretKey{}, err
+		return chunkify.WebhookWithSecretKey{}, err
 	}
 
 	return cmd.Data, nil
@@ -242,17 +246,17 @@ func deleteLocalDevWebhook(webhookId string) error {
 	return nil
 }
 
-func generateTestNotification() api.Notification {
+func generateTestNotification() chunkify.Notification {
 	jobId := uuid.NewString()
-	payload := api.WebhookPayload{
+	payload := WebhookPayload{
 		Event: "job.completed",
 		Date:  time.Now(),
-		Data: api.WebhookPayloadData{
+		Data: WebhookPayloadData{
 			JobId:    jobId,
 			Metadata: map[string]any{"VideoId": uuid.NewString()},
 			SourceId: uuid.NewString(),
 			Error:    nil,
-			Files: []api.File{
+			Files: []chunkify.File{
 				{
 					Id:        uuid.NewString(),
 					JobId:     jobId,
@@ -269,15 +273,13 @@ func generateTestNotification() api.Notification {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		log("Couldn't not marshal json")
-		return api.Notification{}
+		return chunkify.Notification{}
 	}
 
-	notif := api.Notification{
+	notif := chunkify.Notification{
 		Id:                 uuid.NewString(),
 		JobId:              jobId,
-		Type:               "webhook",
 		CreatedAt:          time.Now(),
-		Attempts:           1,
 		Payload:            string(payloadBytes),
 		ResponseStatusCode: 200,
 		Event:              "job.completed",
@@ -318,7 +320,7 @@ func newProxyCmd() *cobra.Command {
 
 			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
 
-			ch := make(chan []api.Notification)
+			ch := make(chan []chunkify.Notification)
 			m := model{
 				cmd: &req,
 				ch:  ch,

@@ -1,20 +1,18 @@
 package notifications
 
 import (
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	JobId     string `json:"job_id"`
-	WebhookId string `json:"webhook_id,omitempty"`
-	Event     string `json:"event"`
+	Params chunkify.NotificationCreateParams
 
-	Data api.Notification `json:"-"`
+	Data chunkify.Notification `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-	notification, err := api.ApiRequest[api.Notification](api.Request{Config: cmd.Config, Path: "/api/notifications", Method: "POST", Body: r})
+	notification, err := cmd.Config.Client.NotificationCreate(r.Params)
 	if err != nil {
 		return err
 	}
@@ -25,7 +23,7 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	notifList := &ListCmd{CreatedSort: "asc", JobId: r.JobId}
+	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: "asc", JobId: r.Params.JobId}}
 	notifList.Execute()
 
 	notifList.View()
@@ -48,9 +46,9 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.JobId, "job-id", "", "The job id (required)")
-	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "The webhook id (required)")
-	cmd.Flags().StringVar(&req.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
+	cmd.Flags().StringVar(&req.Params.JobId, "job-id", "", "The job id (required)")
+	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "The webhook id (required)")
+	cmd.Flags().StringVar(&req.Params.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
 
 	cmd.MarkFlagRequired("job-id")
 	cmd.MarkFlagRequired("webhook-id")

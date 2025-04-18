@@ -8,23 +8,17 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Data []api.Project
+	Data []chunkify.Project
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   "/api/projects",
-		Method: "GET",
-	}
-
-	projects, err := api.ApiRequest[[]api.Project](apiReq)
+	projects, err := cmd.Config.Client.ProjectList()
 	if err != nil {
 		return err
 	}
@@ -89,7 +83,7 @@ func (r *ListCmd) projectsTable() *table.Table {
 	return table
 }
 
-func projectsListToRows(projects []api.Project) [][]string {
+func projectsListToRows(projects []chunkify.Project) [][]string {
 	rows := make([][]string, len(projects))
 	for i, project := range projects {
 		rows[i] = []string{

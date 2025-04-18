@@ -1,19 +1,17 @@
 package webhooks
 
 import (
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	Url     string                   `json:"url"`
-	Enabled bool                     `json:"enabled"`
-	Events  string                   `json:"events,omitempty"`
-	Data    api.WebhookWithSecretKey `json:"-"`
+	Params chunkify.WebhookCreateParams
+	Data   chunkify.WebhookWithSecretKey `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-	webhook, err := api.ApiRequest[api.WebhookWithSecretKey](api.Request{Config: cmd.Config, Path: "/api/webhooks", Method: "POST", Body: r})
+	webhook, err := cmd.Config.Client.WebhookCreate(r.Params)
 	if err != nil {
 		return err
 	}
@@ -24,7 +22,7 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	webhooksList := ListCmd{Data: []api.Webhook{r.Data.Webhook}}
+	webhooksList := ListCmd{Data: []chunkify.Webhook{r.Data.Webhook}}
 	webhooksList.View()
 }
 
@@ -44,9 +42,9 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Url, "url", "", "The webhook URL (required)")
-	cmd.Flags().BoolVar(&req.Enabled, "enabled", true, "Enable the webhook")
-	cmd.Flags().StringVar(&req.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
+	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The webhook URL (required)")
+	cmd.Flags().BoolVar(&req.Params.Enabled, "enabled", true, "Enable the webhook")
+	cmd.Flags().StringVar(&req.Params.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

@@ -4,24 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	Name      string    `json:"name,omitempty"`
-	Scope     string    `json:"scope"`
-	ProjectId string    `json:"project_id,omitempty"`
-	Data      api.Token `json:"-"`
+	Params chunkify.TokenCreateParams
+	Data   chunkify.Token `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-	project, err := api.ApiRequest[api.Token](api.Request{Config: cmd.Config, Path: "/api/tokens", Method: "POST", Body: r})
+	token, err := cmd.Config.Client.TokenCreate(r.Params)
 	if err != nil {
 		return err
 	}
 
-	r.Data = project
+	r.Data = token
 
 	return nil
 }
@@ -56,9 +54,9 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Name, "name", "", "The name of your access token")
-	cmd.Flags().StringVar(&req.Scope, "scope", "", "The access token scope: team or project (required)")
-	cmd.Flags().StringVar(&req.ProjectId, "project-id", "", "The created access token will have permissions to create jobs for the given project id")
+	cmd.Flags().StringVar(&req.Params.Name, "name", "", "The name of your access token")
+	cmd.Flags().StringVar(&req.Params.Scope, "scope", "", "The access token scope: team or project (required)")
+	cmd.Flags().StringVar(&req.Params.ProjectId, "project-id", "", "The created access token will have permissions to create jobs for the given project slug")
 
 	cmd.MarkFlagRequired("scope")
 	return cmd

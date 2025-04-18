@@ -8,24 +8,18 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Data []api.Webhook
+	Data []chunkify.Webhook
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   "/api/webhooks",
-		Method: "GET",
-	}
-
-	webhooks, err := api.ApiRequest[[]api.Webhook](apiReq)
+	webhooks, err := cmd.Config.Client.WebhookList()
 	if err != nil {
 		return err
 	}
@@ -90,7 +84,7 @@ func (r *ListCmd) webhooksTable() *table.Table {
 	return table
 }
 
-func webhooksListToRows(webhooks []api.Webhook) [][]string {
+func webhooksListToRows(webhooks []chunkify.Webhook) [][]string {
 	rows := make([][]string, len(webhooks))
 	for i, webhook := range webhooks {
 		rows[i] = []string{

@@ -3,7 +3,6 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -12,14 +11,7 @@ type RevokeCmd struct {
 }
 
 func (r *RevokeCmd) Execute() error {
-	_, err := api.ApiRequest[api.EmptyResponse](
-		api.Request{
-			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/tokens/%s", r.Id),
-			Method: "DELETE",
-			Body:   r,
-		})
-
+	err := cmd.Config.Client.TokenRevoke(r.Id)
 	if err != nil {
 		return err
 	}

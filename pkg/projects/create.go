@@ -1,17 +1,18 @@
 package projects
 
 import (
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	Name string      `json:"name"`
-	Data api.Project `json:"-"`
+	Params chunkify.ProjectCreateParams
+	Data   chunkify.Project `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
-	project, err := api.ApiRequest[api.Project](api.Request{Config: cmd.Config, Path: "/api/projects", Method: "POST", Body: r})
+	project, err := cmd.Config.Client.ProjectCreate(r.Params)
+
 	if err != nil {
 		return err
 	}
@@ -22,7 +23,7 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	projectList := ListCmd{Data: []api.Project{r.Data}}
+	projectList := ListCmd{Data: []chunkify.Project{r.Data}}
 	projectList.View()
 }
 
@@ -42,7 +43,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Name, "name", "", "The name of your project (required)")
+	cmd.Flags().StringVar(&req.Params.Name, "name", "", "The name of your project (required)")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("storage")
 

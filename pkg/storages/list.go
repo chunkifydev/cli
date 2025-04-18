@@ -7,24 +7,18 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Data []api.Storage
+	Data []chunkify.Storage
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   "/api/storages",
-		Method: "GET",
-	}
-
-	storages, err := api.ApiRequest[[]api.Storage](apiReq)
+	storages, err := cmd.Config.Client.StorageList()
 	if err != nil {
 		return err
 	}
@@ -64,7 +58,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Storage Id", "Provider", "Bucket", "Region", "Private", "Test").
+		Headers("Storage Slug", "Provider", "Bucket", "Region", "Private", "Test").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -89,7 +83,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 	return table
 }
 
-func storagesListToRows(storages []api.Storage) [][]string {
+func storagesListToRows(storages []chunkify.Storage) [][]string {
 	rows := make([][]string, len(storages))
 	for i, storage := range storages {
 		test := ""
@@ -98,7 +92,7 @@ func storagesListToRows(storages []api.Storage) [][]string {
 		}
 
 		rows[i] = []string{
-			styles.Important.Render(storage.Id),
+			styles.Important.Render(storage.Slug),
 			storage.Provider,
 			storage.Bucket,
 			storage.Region,

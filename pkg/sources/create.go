@@ -2,26 +2,26 @@ package sources
 
 import (
 	"encoding/json"
+	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type CreateCmd struct {
-	Url      string         `json:"url"`
-	metadata string         `json:"-"`
-	Metadata map[string]any `json:"metadata,omitempty"`
-	Data     api.Source     `json:"-"`
+	Params   chunkify.SourceCreateParams
+	metadata string          `json:"-"`
+	Data     chunkify.Source `json:"-"`
 }
 
 func (r *CreateCmd) Execute() error {
 	if r.metadata != "" {
-		if err := json.Unmarshal([]byte(r.metadata), &r.Metadata); err != nil {
-			return err
+		if err := json.Unmarshal([]byte(r.metadata), &r.Params.Metadata); err != nil {
+			return fmt.Errorf("invalid JSON format for metadata: %v", err)
 		}
 	}
 
-	source, err := api.ApiRequest[api.Source](api.Request{Config: cmd.Config, Path: "/api/sources", Method: "POST", Body: r})
+	source, err := cmd.Config.Client.SourceCreate(r.Params)
 	if err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func (r *CreateCmd) Execute() error {
 }
 
 func (r *CreateCmd) View() {
-	sourceList := ListCmd{Data: []api.Source{r.Data}}
+	sourceList := ListCmd{Data: []chunkify.Source{r.Data}}
 	sourceList.View()
 }
 
@@ -52,7 +52,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Url, "url", "", "The url of the source (required)")
+	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The url of the source (required)")
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
 	cmd.MarkFlagRequired("url")
 

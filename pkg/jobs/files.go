@@ -8,26 +8,21 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
+
+	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 type FilesListCmd struct {
 	Id      string `json:"id"`
 	presign bool
-	Data    []api.File
+	Data    []chunkify.File
 }
 
 func (r *FilesListCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/jobs/%s/files", r.Id),
-		Method: "GET",
-	}
-
-	files, err := api.ApiRequest[[]api.File](apiReq)
+	files, err := cmd.Config.Client.JobListFiles(r.Id)
 	if err != nil {
 		return err
 	}
@@ -106,7 +101,7 @@ func (r *FilesListCmd) filesTable() *table.Table {
 	return table
 }
 
-func filesListToRows(files []api.File) [][]string {
+func filesListToRows(files []chunkify.File) [][]string {
 	rows := make([][]string, len(files))
 	for i, file := range files {
 		rows[i] = []string{

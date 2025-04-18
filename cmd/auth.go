@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
 	projectsCmd "github.com/chunkifydev/cli/pkg/projects"
 	"github.com/chunkifydev/cli/pkg/styles"
@@ -21,7 +21,7 @@ import (
 
 var authUrl string
 var noBrowser = false
-var teamToken api.Token
+var teamToken chunkify.Token
 
 func newAuthCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
@@ -42,12 +42,17 @@ func newLoginCmd(cfg *config.Config) *cobra.Command {
 		Short: "Login to Chunkify",
 		Long:  `Login to Chunkify`,
 		Run: func(c *cobra.Command, args []string) {
+			// client := chunkify.NewClientWithConfig(chunkify.Config{
+			// 	BaseURL: cfg.ApiEndpoint,
+			// })
+			// cfg.Client = &client
+
 			login(cfg)
 		},
 	}
 
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Don't open the browser to authorize the cli")
-	cmd.Flags().StringVar(&authUrl, "auth-url", "https://app.chunkify.dev/auth/cli", "The auth URL endpoint")
+	cmd.Flags().StringVar(&authUrl, "auth-url", "https://chunkify.ing/auth/cli", "The auth URL endpoint")
 	return cmd
 }
 
@@ -103,6 +108,15 @@ func login(cfg *config.Config) {
 
 	cfg.TeamToken = teamToken.Token
 
+	//Init client with team token for the account check.
+	client := chunkify.NewClientWithConfig(chunkify.Config{
+		AccessTokens: chunkify.AccessTokens{
+			TeamToken: cfg.TeamToken,
+		},
+		BaseURL: cfg.ApiEndpoint,
+	})
+	cfg.Client = &client
+
 	// Verify the team token by fetching projects
 	fmt.Println("Checking your account...")
 	list := projectsCmd.ListCmd{}
@@ -125,25 +139,17 @@ func login(cfg *config.Config) {
 	fmt.Println("All good. Run `chunkify help` for help")
 }
 
-func getAllProjects(config *config.Config) ([]api.Project, error) {
-	projects, err := api.ApiRequest[[]api.Project](api.Request{
-		Config: config,
-		Path:   "/api/projects",
-		Method: "GET",
-	})
+func getAllProjects(config *config.Config) ([]chunkify.Project, error) {
+	projects, err := config.Client.ProjectList()
 	if err != nil {
-		return []api.Project{}, err
+		return []chunkify.Project{}, err
 	}
 
 	return projects, nil
 }
 
 func revokeToken(config *config.Config, tokenId string) error {
-	_, err := api.ApiRequest[api.EmptyResponse](api.Request{
-		Config: config,
-		Path:   "/api/tokens/" + tokenId,
-		Method: "DELETE",
-	})
+	err := config.Client.TokenRevoke(tokenId)
 	if err != nil {
 		return err
 	}

@@ -8,23 +8,17 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Data []api.Token
+	Data []chunkify.Token
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   "/api/tokens",
-		Method: "GET",
-	}
-
-	tokens, err := api.ApiRequest[[]api.Token](apiReq)
+	tokens, err := cmd.Config.Client.TokenList()
 	if err != nil {
 		return err
 	}
@@ -64,7 +58,7 @@ func (r *ListCmd) tokensTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Name", "Last used", "Scope", "Project Id").
+		Headers("Date", "Id", "Name", "Scope", "Project Id").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -89,18 +83,13 @@ func (r *ListCmd) tokensTable() *table.Table {
 	return table
 }
 
-func tokensListToRows(tokens []api.Token) [][]string {
+func tokensListToRows(tokens []chunkify.Token) [][]string {
 	rows := make([][]string, len(tokens))
 	for i, token := range tokens {
-		lastUsed := "-"
-		if len(token.TokenUsage) > 0 {
-			lastUsed = token.TokenUsage[0].LastUsed.Format(time.RFC822)
-		}
 		rows[i] = []string{
 			token.CreatedAt.Format(time.RFC822),
 			styles.Id.Render(token.Id),
 			token.Name,
-			lastUsed,
 			token.Scope,
 			token.ProjectId,
 		}

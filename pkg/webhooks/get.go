@@ -1,25 +1,17 @@
 package webhooks
 
 import (
-	"fmt"
-
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type GetCmd struct {
 	Id   string `json:"id"`
-	Data api.Webhook
+	Data chunkify.Webhook
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/webhooks/%s", r.Id),
-		Method: "GET",
-	}
-
-	source, err := api.ApiRequest[api.Webhook](apiReq)
+	source, err := cmd.Config.Client.Webhook(r.Id)
 	if err != nil {
 		return err
 	}
@@ -30,7 +22,7 @@ func (r *GetCmd) Execute() error {
 }
 
 func (r *GetCmd) View() {
-	sourceList := ListCmd{Data: []api.Webhook{r.Data}}
+	sourceList := ListCmd{Data: []chunkify.Webhook{r.Data}}
 	sourceList.View()
 }
 

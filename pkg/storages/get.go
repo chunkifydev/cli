@@ -1,36 +1,28 @@
 package storages
 
 import (
-	"fmt"
-
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type GetCmd struct {
 	Id   string
-	Data api.Storage
+	Data chunkify.Storage
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/storage/%s", r.Id),
-		Method: "GET",
-	}
-
-	source, err := api.ApiRequest[api.Storage](apiReq)
+	storage, err := cmd.Config.Client.Storage(r.Id)
 	if err != nil {
 		return err
 	}
 
-	r.Data = source
+	r.Data = storage
 
 	return nil
 }
 
 func (r *GetCmd) View() {
-	sourceList := ListCmd{Data: []api.Storage{r.Data}}
+	sourceList := ListCmd{Data: []chunkify.Storage{r.Data}}
 	sourceList.View()
 }
 

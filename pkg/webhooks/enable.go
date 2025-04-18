@@ -3,23 +3,16 @@ package webhooks
 import (
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type EnableCmd struct {
-	Id      string `json:"-"`
-	Enabled bool   `json:"enabled"`
+	Params chunkify.WebhookUpdateParams
 }
 
 func (r *EnableCmd) Execute() error {
-	_, err := api.ApiRequest[api.EmptyResponse](
-		api.Request{
-			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/webhooks/%s", r.Id),
-			Method: "PATCH",
-			Body:   r,
-		})
+	err := cmd.Config.Client.WebhookUpdate(r.Params)
 	if err != nil {
 		return err
 	}
@@ -32,7 +25,8 @@ func (r *EnableCmd) View() {
 }
 
 func newEnableCmd() *cobra.Command {
-	req := EnableCmd{Enabled: true}
+	enabled := true
+	req := EnableCmd{Params: chunkify.WebhookUpdateParams{Enabled: &enabled}}
 
 	cmd := &cobra.Command{
 		Use:   "enable webhook-id",
@@ -40,7 +34,7 @@ func newEnableCmd() *cobra.Command {
 		Long:  `Enable a webhook`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			req.Id = args[0]
+			req.Params.WebhookId = args[0]
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
@@ -12,17 +12,12 @@ type GetCmd struct {
 	Id      string `json:"id"`
 	payload bool
 
-	Data api.Notification
+	Data chunkify.Notification
 }
 
 func (r *GetCmd) Execute() error {
-	apiReq := api.Request{
-		Config: cmd.Config,
-		Path:   fmt.Sprintf("/api/notifications/%s", r.Id),
-		Method: "GET",
-	}
 
-	notifications, err := api.ApiRequest[api.Notification](apiReq)
+	notifications, err := cmd.Config.Client.Notification(r.Id)
 	if err != nil {
 		return err
 	}
@@ -48,7 +43,7 @@ func (r *GetCmd) View() {
 		return
 	}
 
-	notificationsList := &ListCmd{Id: r.Data.Id, Data: []api.Notification{r.Data}}
+	notificationsList := &ListCmd{Data: []chunkify.Notification{r.Data}}
 	notificationsList.View()
 }
 

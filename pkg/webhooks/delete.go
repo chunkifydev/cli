@@ -3,7 +3,6 @@ package webhooks
 import (
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/spf13/cobra"
 )
 
@@ -12,14 +11,7 @@ type DeleteCmd struct {
 }
 
 func (r *DeleteCmd) Execute() error {
-	_, err := api.ApiRequest[api.EmptyResponse](
-		api.Request{
-			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/webhooks/%s", r.Id),
-			Method: "DELETE",
-			Body:   r,
-		})
-
+	err := cmd.Config.Client.WebhookDelete(r.Id)
 	if err != nil {
 		return err
 	}

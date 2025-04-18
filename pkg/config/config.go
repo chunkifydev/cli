@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/zalando/go-keyring"
 )
 
@@ -12,6 +13,7 @@ type Config struct {
 	ApiEndpoint      string
 	ProjectToken     string
 	TeamToken        string
+	Client           *chunkify.Client
 	DefaultProjectId string
 	JSON             bool
 	Debug            bool

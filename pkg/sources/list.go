@@ -3,17 +3,17 @@ package sources
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
+
+	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 type ListCmd struct {
@@ -48,151 +48,133 @@ type ListCmd struct {
 	Metadata    []string
 
 	interactive bool
-	Data        []api.Source
+	Data        []chunkify.Source
 }
 
-func (r *ListCmd) toQueryMap() url.Values {
-	query := url.Values{}
+func (r *ListCmd) toParams() chunkify.SourceListParams {
+	params := chunkify.SourceListParams{}
 
-	if r.Offset != -1 {
-		query.Add("offset", fmt.Sprintf("%d", r.Offset))
-	}
-	if r.Limit != -1 {
-		query.Add("limit", fmt.Sprintf("%d", r.Limit))
-	}
 	if r.DurationEq != "" {
 		dur, err := time.ParseDuration(r.DurationEq)
 		if err == nil {
-			query.Add("duration.eq", fmt.Sprintf("%f", dur.Seconds()))
+			params.DurationEq = dur.Seconds()
 		}
 	}
 	if r.DurationGte != "" {
 		dur, err := time.ParseDuration(r.DurationGte)
 		if err == nil {
-			query.Add("duration.gte", fmt.Sprintf("%f", dur.Seconds()))
+			params.DurationGte = dur.Seconds()
 		}
 	}
 	if r.DurationGt != "" {
 		dur, err := time.ParseDuration(r.DurationGt)
 		if err == nil {
-			query.Add("duration.gt", fmt.Sprintf("%f", dur.Seconds()))
+			params.DurationGt = dur.Seconds()
 		}
 	}
 	if r.DurationLte != "" {
 		dur, err := time.ParseDuration(r.DurationLte)
 		if err == nil {
-			query.Add("duration.lte", fmt.Sprintf("%f", dur.Seconds()))
+			params.DurationLte = dur.Seconds()
 		}
 	}
 	if r.DurationLt != "" {
 		dur, err := time.ParseDuration(r.DurationLt)
 		if err == nil {
-			query.Add("duration.lt", fmt.Sprintf("%f", dur.Seconds()))
+			params.DurationLt = dur.Seconds()
 		}
 	}
-	if r.CreatedGte != "" {
-		query.Add("created.gte", r.CreatedGte)
-	}
-	if r.CreatedLte != "" {
-		query.Add("created.lte", r.CreatedLte)
-	}
 	if r.WidthEq != -1 {
-		query.Add("width.eq", fmt.Sprintf("%d", r.WidthEq))
+		params.WidthEq = r.WidthEq
 	}
 	if r.WidthGte != -1 {
-		query.Add("width.gte", fmt.Sprintf("%d", r.WidthGte))
+		params.WidthGte = r.WidthGte
 	}
 	if r.WidthGt != -1 {
-		query.Add("width.gt", fmt.Sprintf("%d", r.WidthGt))
+		params.WidthGt = r.WidthGt
 	}
 	if r.WidthLte != -1 {
-		query.Add("width.lte", fmt.Sprintf("%d", r.WidthLte))
+		params.WidthLte = r.WidthLte
 	}
 	if r.WidthLt != -1 {
-		query.Add("width.lt", fmt.Sprintf("%d", r.WidthLt))
+		params.WidthLt = r.WidthLt
 	}
 	if r.HeightEq != -1 {
-		query.Add("height.eq", fmt.Sprintf("%d", r.HeightEq))
+		params.HeightEq = r.HeightEq
 	}
 	if r.HeightGte != -1 {
-		query.Add("height.gte", fmt.Sprintf("%d", r.HeightGte))
+		params.HeightGte = r.HeightGte
 	}
 	if r.HeightGt != -1 {
-		query.Add("height.gt", fmt.Sprintf("%d", r.HeightGt))
+		params.HeightGt = r.HeightGt
 	}
 	if r.HeightLte != -1 {
-		query.Add("height.lte", fmt.Sprintf("%d", r.HeightLte))
+		params.HeightLte = r.HeightLte
 	}
 	if r.HeightLt != -1 {
-		query.Add("height.lt", fmt.Sprintf("%d", r.HeightLt))
+		params.HeightLt = r.HeightLt
 	}
 	if r.SizeEq != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeEq)
 		if err == nil {
-			query.Add("size.eq", fmt.Sprintf("%d", bytes))
+			params.SizeEq = bytes
 		}
 	}
 	if r.SizeGte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGte)
 		if err == nil {
-			query.Add("size.gte", fmt.Sprintf("%d", bytes))
+			params.SizeGte = bytes
 		}
 	}
 	if r.SizeGt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGt)
 		if err == nil {
-			query.Add("size.gt", fmt.Sprintf("%d", bytes))
+			params.SizeGt = bytes
 		}
 	}
 	if r.SizeLte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLte)
 		if err == nil {
-			query.Add("size.lte", fmt.Sprintf("%d", bytes))
+			params.SizeLte = bytes
 		}
 	}
 	if r.SizeLt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLt)
 		if err == nil {
-			query.Add("size.lt", fmt.Sprintf("%d", bytes))
+			params.SizeLt = bytes
 		}
-	}
-	if r.AudioCodec != "" {
-		query.Add("audio_codec", r.AudioCodec)
-	}
-	if r.VideoCodec != "" {
-		query.Add("video_codec", r.VideoCodec)
-	}
-	if r.Device != "" {
-		query.Add("device", r.Device)
-	}
-	if r.CreatedSort != "" {
-		query.Add("created.sort", r.CreatedSort)
-	}
-	if len(r.Metadata) > 0 {
-		md := []string{}
-		for _, metadata := range r.Metadata {
-			md = append(md, strings.Replace(metadata, "=", ":", -1))
-		}
-		query.Add("metadata", strings.Join(md, ","))
 	}
 
-	return query
+	var metadata [][]string
+	if len(r.Metadata) > 0 {
+		md := []string{}
+		for _, m := range r.Metadata {
+			md = append(md, strings.Replace(m, "=", ":", -1))
+		}
+		metadata = [][]string{md}
+	}
+
+	params.Metadata = metadata
+	params.Offset = r.Offset
+	params.Limit = r.Limit
+	params.CreatedSort = r.CreatedSort
+	params.AudioCodec = r.AudioCodec
+	params.VideoCodec = r.VideoCodec
+	params.Device = r.Device
+
+	return params
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/sources",
-		Method:      "GET",
-		QueryParams: r.toQueryMap(),
-	}
+	params := r.toParams()
+	// Convert metadata to the required format
 
-	sources, err := api.ApiRequest[[]api.Source](apiReq)
+	sources, err := cmd.Config.Client.SourceList(params)
 	if err != nil {
 		return err
 	}
 
-	r.Data = sources
+	r.Data = sources.Items
 
 	return nil
 }
@@ -227,7 +209,7 @@ func (r *ListCmd) sourcesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Duration", "Size", "WxH", "Video", "Bitrate", "Audio", "Bitrate", "jobs").
+		Headers("Date", "Id", "Duration", "Size", "WxH", "Video", "Bitrate", "Audio", "Bitrate").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -252,7 +234,7 @@ func (r *ListCmd) sourcesTable() *table.Table {
 	return table
 }
 
-func sourcesListToRows(sources []api.Source) [][]string {
+func sourcesListToRows(sources []chunkify.Source) [][]string {
 	rows := make([][]string, len(sources))
 	for i, source := range sources {
 		rows[i] = []string{
@@ -265,7 +247,6 @@ func sourcesListToRows(sources []api.Source) [][]string {
 			formatter.Bitrate(source.VideoBitrate),
 			source.AudioCodec,
 			formatter.Bitrate(source.AudioBitrate),
-			fmt.Sprintf("%d", len(source.Jobs)),
 		}
 	}
 	return rows

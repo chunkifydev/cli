@@ -3,45 +3,31 @@ package logs
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
+	Params         chunkify.JobListLogsParams
 	Id             string
-	Service        string
-	Transcoder     int64
 	Levels         []string
 	IgnoreProgress bool
 	Tail           bool
 	FfmpegDebug    bool
-	Data           []api.Log
+	Data           []chunkify.Log
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        fmt.Sprintf("/api/jobs/%s/logs", r.Id),
-		Method:      "GET",
-		QueryParams: url.Values{},
-	}
-
-	apiReq.QueryParams.Add("service", r.Service)
-
-	if r.Service == "transcoder" && r.Transcoder > 0 {
-		apiReq.QueryParams.Add("transcoder_id", fmt.Sprintf("%d", r.Transcoder))
-	}
-
-	logs, err := api.ApiRequest[[]api.Log](apiReq)
+	logs, err := cmd.Config.Client.JobListLogs(r.Params)
 	if err != nil {
 		return err
 	}
@@ -140,7 +126,7 @@ func logsListToRows(r *ListCmd) [][]string {
 			}
 		}
 
-		attrsStr := log.AttributesString()
+		attrsStr := String(log.Attributes)
 
 		if log.Level == "DEBUG" && log.Msg == "ffmpeg output" {
 			log.Msg = "Check ffmpeg output by running: "
@@ -199,14 +185,14 @@ func newListCmd() *cobra.Command {
 				return err
 			}
 
-			if req.Service == "transcoder" && req.Transcoder == 0 {
+			if req.Params.Service == "transcoder" && req.Params.TranscoderId == 0 {
 				err := fmt.Errorf("--id (min 1) is required when --service is set to transcoder")
 				return err
 			}
 			return nil
 		},
 		Run: func(_ *cobra.Command, args []string) {
-			req.Id = args[0]
+			req.Params.JobId = args[0]
 
 			if err := req.Execute(); err != nil {
 				printError(err)
@@ -221,12 +207,35 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Service, "service", "manager", "Filter by Service name: manager or transcoder (required)")
-	cmd.Flags().Int64Var(&req.Transcoder, "id", 0, "Filter by transcoder number (min 1)")
+	cmd.Flags().StringVar(&req.Params.Service, "service", "manager", "Filter by Service name: manager or transcoder (required)")
+	cmd.Flags().Int64Var(&req.Params.TranscoderId, "id", 0, "Filter by transcoder number (min 1)")
 	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
 	cmd.Flags().BoolVar(&req.IgnoreProgress, "ignore-progress", false, "Do not show progress logs")
 	cmd.Flags().BoolVar(&req.Tail, "tail", false, "Tail logs")
 	cmd.Flags().BoolVar(&req.FfmpegDebug, "ffmpeg-debug", false, "Show ffmpeg stderr for debugging")
 
 	return cmd
+}
+
+func AttributesString(l chunkify.Log) string {
+	if l.Attributes == nil {
+		return ""
+	}
+	return String(l.Attributes)
+}
+
+func String(a chunkify.LogAttrs) string {
+	attrs := []string{}
+	keys := make([]string, 0, len(a))
+	for k := range a {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if a[k] != nil {
+			attrs = append(attrs, fmt.Sprintf("%s=%v", k, a[k]))
+		}
+	}
+
+	return strings.Join(attrs, " ")
 }

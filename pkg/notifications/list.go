@@ -3,84 +3,32 @@ package notifications
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"slices"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
 
 type ListCmd struct {
-	Id          string `json:"id"`
+	Params chunkify.NotificationListParams
+
 	payload     bool
-	JobId       string
-	WebhookId   string
-	Event       string
-	Offset      int64
-	Limit       int64
-	CreatedGte  string
-	CreatedLte  string
-	CreatedSort string
 	interactive bool
-
-	Data []api.Notification
-}
-
-func (r *ListCmd) toQueryMap() url.Values {
-	query := url.Values{}
-
-	if r.JobId != "" {
-		query.Add("job_id", r.JobId)
-	}
-
-	if r.WebhookId != "" {
-		query.Add("webhook_id", r.WebhookId)
-	}
-
-	if r.Event != "" {
-		query.Add("event", r.Event)
-	}
-
-	if r.Offset != -1 {
-		query.Add("offset", fmt.Sprintf("%d", r.Offset))
-	}
-	if r.Limit != -1 {
-		query.Add("limit", fmt.Sprintf("%d", r.Limit))
-	}
-
-	if r.CreatedGte != "" {
-		query.Add("created.gte", r.CreatedGte)
-	}
-	if r.CreatedLte != "" {
-		query.Add("created.lte", r.CreatedLte)
-	}
-
-	if r.CreatedSort != "" {
-		query.Add("created.sort", r.CreatedSort)
-	}
-
-	return query
+	Data        []chunkify.Notification
 }
 
 func (r *ListCmd) Execute() error {
-	apiReq := api.Request{
-		Config:      cmd.Config,
-		Path:        "/api/notifications",
-		Method:      "GET",
-		QueryParams: r.toQueryMap(),
-	}
-
-	notifications, err := api.ApiRequest[[]api.Notification](apiReq)
+	notifications, err := cmd.Config.Client.NotificationList(r.Params)
 	if err != nil {
 		return err
 	}
 
-	r.Data = notifications
+	r.Data = notifications.Items
 
 	return nil
 }
@@ -147,7 +95,7 @@ func (r *ListCmd) notificationsTable() *table.Table {
 	return table
 }
 
-func notificationsListToRows(notifications []api.Notification) [][]string {
+func notificationsListToRows(notifications []chunkify.Notification) [][]string {
 	rows := make([][]string, len(notifications))
 	for i, notif := range notifications {
 		rows[i] = []string{
@@ -179,17 +127,17 @@ func newListCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&req.payload, "payload", "p", false, "Return the webhook payload in JSON")
 
-	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Return all sent notifications for the job Id")
-	cmd.Flags().StringVar(&req.Event, "event", "", "Return all sent notifications with the given event. Event can be *, job.* or job.completed")
-	cmd.Flags().StringVar(&req.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
+	cmd.Flags().StringVar(&req.Params.JobId, "job-id", "", "Return all sent notifications for the job Id")
+	cmd.Flags().StringArrayVar(&req.Params.Events, "event", nil, "Return all sent notifications with the given event. Event can be *, job.* or job.completed")
+	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
 
-	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
+	cmd.Flags().Int64Var(&req.Params.Offset, "offset", 0, "Offset")
+	cmd.Flags().Int64Var(&req.Params.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.CreatedLte, "created.lte", "", "Created Less or Equal")
+	cmd.Flags().StringVar(&req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	cmd.Flags().StringVar(&req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
+	cmd.Flags().StringVar(&req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
 
 	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the jobs in real time")
 

@@ -5,9 +5,12 @@ go 1.23.0
 require (
 	github.com/TheZoraiz/ascii-image-converter v1.13.1
 	github.com/charmbracelet/bubbletea v1.1.1
+	github.com/chunkifydev/chunkify-go v0.0.0-00010101000000-000000000000
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/term v0.24.0
 )
+
+replace github.com/chunkifydev/chunkify-go => ../chunkify-go
 
 require (
 	github.com/alessio/shellescape v1.4.2 // indirect

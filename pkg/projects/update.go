@@ -3,25 +3,16 @@ package projects
 import (
 	"fmt"
 
-	"github.com/chunkifydev/cli/pkg/api"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
 
 type UpdateCmd struct {
-	Id      string
-	Name    string `json:"name"`
-	Storage string `json:"storage"`
+	Params chunkify.ProjectUpdateParams
 }
 
 func (r *UpdateCmd) Execute() error {
-	_, err := api.ApiRequest[api.EmptyResponse](
-		api.Request{
-			Config: cmd.Config,
-			Path:   fmt.Sprintf("/api/projects/%s", r.Id),
-			Method: "PATCH",
-			Body:   r,
-		})
-
+	err := cmd.Config.Client.ProjectUpdate(r.Params)
 	if err != nil {
 		return err
 	}
@@ -42,7 +33,7 @@ func newUpdateCmd() *cobra.Command {
 		Long:  `Update a project`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			req.Id = args[0]
+			req.Params.Id = args[0]
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
@@ -51,8 +42,8 @@ func newUpdateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Name, "name", "", "Rename this project")
-	cmd.Flags().StringVar(&req.Storage, "storage", "", "Change the default storage for this project")
+	cmd.Flags().StringVar(&req.Params.Name, "name", "", "Rename this project")
+	cmd.Flags().StringVar(&req.Params.StorageSlug, "storage", "", "Change the default storage for this project")
 	cmd.MarkFlagsOneRequired("name", "storage")
 
 	return cmd
