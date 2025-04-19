@@ -58,7 +58,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Storage Slug", "Provider", "Bucket", "Region", "Private", "Test").
+		Headers("Storage ID", "Provider", "Bucket", "Region", "Private").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -86,18 +86,12 @@ func (r *ListCmd) storagesTable() *table.Table {
 func storagesListToRows(storages []chunkify.Storage) [][]string {
 	rows := make([][]string, len(storages))
 	for i, storage := range storages {
-		test := ""
-		if storage.Reserved {
-			test = "Ephemeral (24h)"
-		}
-
 		rows[i] = []string{
-			styles.Important.Render(storage.Slug),
+			styles.Important.Render(storage.Id),
 			storage.Provider,
 			storage.Bucket,
 			storage.Region,
 			formatter.BoolDefaultColor(!storage.Public),
-			styles.DefaultText.Render(test),
 		}
 	}
 	return rows
