@@ -1,9 +1,6 @@
 package sources
 
 import (
-	"fmt"
-
-	"github.com/TheZoraiz/ascii-image-converter/aic_package"
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
 )
@@ -27,10 +24,6 @@ func (r *GetCmd) Execute() error {
 func (r *GetCmd) View() {
 	sourceList := ListCmd{Data: []chunkify.Source{r.Data}}
 	sourceList.View()
-
-	if !cmd.Config.JSON && len(r.Data.Images) == 1 {
-		asciiImage(r.Data)
-	}
 }
 
 func newGetCmd() *cobra.Command {
@@ -52,18 +45,4 @@ func newGetCmd() *cobra.Command {
 	}
 
 	return cmd
-}
-
-func asciiImage(source chunkify.Source) {
-	flags := aic_package.DefaultFlags()
-	flags.Width = 80
-	flags.Colored = true
-	flags.CustomMap = " .-=+#@"
-
-	asciiArt, err := aic_package.Convert(source.Images[0], flags)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	fmt.Printf("%v\n", asciiArt)
 }
