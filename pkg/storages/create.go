@@ -52,24 +52,23 @@ func newCreateCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&req.Params.Public, "public", false, "The uploaded files will be publicly available or not")
 
 	cmd.MarkFlagRequired("provider")
-	cmd.MarkFlagRequired("region")
 
 	// Add validation for required flags based on provider
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		provider, _ := cmd.Flags().GetString("provider")
 
 		if provider == "chunkify" {
+			if err := cmd.MarkFlagRequired("region"); err != nil {
+				return err
+			}
+			// Chunkify provider does not require any other flags
 			return nil
 		}
 
-		if err := cmd.MarkFlagRequired("access-key-id"); err != nil {
-			return err
-		}
-		if err := cmd.MarkFlagRequired("secret-access-key"); err != nil {
-			return err
-		}
-		if err := cmd.MarkFlagRequired("bucket"); err != nil {
-			return err
+		if provider == "aws" {
+			if err := cmd.MarkFlagRequired("region"); err != nil {
+				return err
+			}
 		}
 
 		if provider == "cloudflare" {
@@ -80,6 +79,18 @@ func newCreateCmd() *cobra.Command {
 				return err
 			}
 		}
+
+		// All providers except chunkify require bucket, access-key-id and secret-access-key
+		if err := cmd.MarkFlagRequired("access-key-id"); err != nil {
+			return err
+		}
+		if err := cmd.MarkFlagRequired("secret-access-key"); err != nil {
+			return err
+		}
+		if err := cmd.MarkFlagRequired("bucket"); err != nil {
+			return err
+		}
+
 		return nil
 	}
 
