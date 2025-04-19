@@ -43,21 +43,45 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.Params.Endpoint, "endpoint", "", "The S3 compatible endpoint of the storage")
-	cmd.Flags().StringVar(&req.Params.AccessKeyId, "access-key-id", "", "The S3 access key id of the storage (required)")
-	cmd.Flags().StringVar(&req.Params.SecretAccessKey, "secret-access-key", "", "The S3 secret access key of the storage (required)")
-	cmd.Flags().StringVar(&req.Params.Bucket, "bucket", "", "The S3 bucket name of the storage (required)")
+	cmd.Flags().StringVar(&req.Params.AccessKeyId, "access-key-id", "", "The S3 access key id of the storage")
+	cmd.Flags().StringVar(&req.Params.SecretAccessKey, "secret-access-key", "", "The S3 secret access key of the storage")
+	cmd.Flags().StringVar(&req.Params.Bucket, "bucket", "", "The S3 bucket name of the storage")
 	cmd.Flags().StringVar(&req.Params.Provider, "provider", "", "The storage provider: chunkify, aws, cloudflare (required)")
 	cmd.Flags().StringVar(&req.Params.Region, "region", "", "The region of the storage (required)")
-	cmd.Flags().StringVar(&req.Params.Location, "location", "", "The location of the storage: US, EU, ASIA (required)")
+	cmd.Flags().StringVar(&req.Params.Location, "location", "", "The location of the storage: US, EU, ASIA")
 	cmd.Flags().BoolVar(&req.Params.Public, "public", false, "The uploaded files will be publicly available or not")
 
-	cmd.MarkFlagRequired("name")
-	cmd.MarkFlagRequired("access-key-id")
-	cmd.MarkFlagRequired("secret-access-key")
-	cmd.MarkFlagRequired("bucket")
 	cmd.MarkFlagRequired("provider")
 	cmd.MarkFlagRequired("region")
-	cmd.MarkFlagRequired("location")
+
+	// Add validation for required flags based on provider
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		provider, _ := cmd.Flags().GetString("provider")
+
+		if provider == "chunkify" {
+			return nil
+		}
+
+		if err := cmd.MarkFlagRequired("access-key-id"); err != nil {
+			return err
+		}
+		if err := cmd.MarkFlagRequired("secret-access-key"); err != nil {
+			return err
+		}
+		if err := cmd.MarkFlagRequired("bucket"); err != nil {
+			return err
+		}
+
+		if provider == "cloudflare" {
+			if err := cmd.MarkFlagRequired("endpoint"); err != nil {
+				return err
+			}
+			if err := cmd.MarkFlagRequired("location"); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
 	return cmd
 }
