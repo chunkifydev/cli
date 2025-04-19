@@ -16,7 +16,6 @@ type Config struct {
 	Client           *chunkify.Client
 	DefaultProjectId string
 	JSON             bool
-	Debug            bool
 }
 
 var KeyringServiceKey = "chunkify-cli"

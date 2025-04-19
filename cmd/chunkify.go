@@ -89,7 +89,6 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
-	rootCmd.PersistentFlags().BoolVar(&cfg.Debug, "debug", false, "Print debug info")
 	rootCmd.PersistentFlags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api.chunkify.ing/v1", "The API endpoint")
 	rootCmd.PersistentFlags().StringVar(&cfg.DefaultProjectId, "env-project-id", "", "Select the project and run the command")
 
