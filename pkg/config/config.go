@@ -10,12 +10,11 @@ import (
 )
 
 type Config struct {
-	ApiEndpoint      string
-	ProjectToken     string
-	TeamToken        string
-	Client           *chunkify.Client
-	DefaultProjectId string
-	JSON             bool
+	ApiEndpoint  string
+	ProjectToken string
+	TeamToken    string
+	Client       *chunkify.Client
+	JSON         bool
 }
 
 var KeyringServiceKey = "chunkify-cli"
@@ -40,14 +39,12 @@ func (cfg *Config) SetDefaultProjectToken() error {
 		return nil
 	}
 
-	if cfg.DefaultProjectId == "" {
-		cfg.DefaultProjectId, err = Get("DefaultProject")
-		if err != nil {
-			return fmt.Errorf("select a project by running `chunkify select`")
-		}
+	defaultProject, err := Get("DefaultProject")
+	if err != nil {
+		return fmt.Errorf("select a project by running `chunkify select`")
 	}
 
-	_, cfg.ProjectToken, err = GetToken(cfg.DefaultProjectId)
+	_, cfg.ProjectToken, err = GetToken(defaultProject)
 	if err != nil {
 		return fmt.Errorf("couldn't get project token, please run `chunkify select`")
 	}

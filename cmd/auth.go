@@ -19,9 +19,13 @@ import (
 	"golang.org/x/term"
 )
 
-var authUrl string
-var noBrowser = false
-var teamToken chunkify.Token
+const ChunkifyAuthUrl = "https://chunkify.dev/auth/cli"
+
+var (
+	authUrl   string
+	noBrowser = false
+	teamToken chunkify.Token
+)
 
 func newAuthCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
@@ -52,7 +56,11 @@ func newLoginCmd(cfg *config.Config) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Don't open the browser to authorize the cli")
-	cmd.Flags().StringVar(&authUrl, "auth-url", "https://chunkify.ing/auth/cli", "The auth URL endpoint")
+	if os.Getenv("CHUNKIFY_AUTH_URL") != "" {
+		authUrl = os.Getenv("CHUNKIFY_AUTH_URL")
+	} else {
+		authUrl = ChunkifyAuthUrl
+	}
 	return cmd
 }
 

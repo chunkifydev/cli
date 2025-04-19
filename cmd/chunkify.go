@@ -18,7 +18,11 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
-var cfg = &config.Config{}
+const (
+	ChunkifyApiEndpoint = "https://api.chunkify.ing/v1"
+)
+
+var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
 
 type Commander interface {
 	execute() error
@@ -88,10 +92,11 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
-	rootCmd.PersistentFlags().StringVar(&cfg.ApiEndpoint, "endpoint", "https://api.chunkify.ing/v1", "The API endpoint")
-	rootCmd.PersistentFlags().StringVar(&cfg.DefaultProjectId, "env-project-id", "", "Select the project and run the command")
+	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
+		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
+	}
 
+	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
 	rootCmd.AddCommand(storages.NewCommand(cfg).Command)
 	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
 	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
