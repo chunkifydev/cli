@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	ChunkifyApiEndpoint = "https://api.chunkify.ing/v1"
+	ChunkifyApiEndpoint = "https://api.chunkify.dev/v1"
 )
 
 var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
