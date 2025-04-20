@@ -43,8 +43,8 @@ func newUpdateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.Params.Name, "name", "", "Rename this project")
-	cmd.Flags().StringVar(&req.Params.StorageSlug, "storage", "", "Change the default storage for this project")
-	cmd.MarkFlagsOneRequired("name", "storage")
+	cmd.Flags().StringVar(&req.Params.StorageSlug, "storage-id", "", "Change the default storage for this project")
+	cmd.MarkFlagsOneRequired("name", "storage-id")
 
 	return cmd
 }
