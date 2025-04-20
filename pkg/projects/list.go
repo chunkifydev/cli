@@ -58,7 +58,7 @@ func (r *ListCmd) projectsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Project Id", "Name", "Storage").
+		Headers("Date", "Project Id", "Name", "Storage Id").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -90,7 +90,7 @@ func projectsListToRows(projects []chunkify.Project) [][]string {
 			project.CreatedAt.Format(time.RFC822),
 			styles.Id.Render(project.Id),
 			project.Name,
-			project.Storage,
+			project.StorageId,
 		}
 	}
 	return rows
