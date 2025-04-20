@@ -81,7 +81,7 @@ func (r *ListCmd) jobsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "HLS", "Status", "Progress", "Template", "Transcoders", "Time", "Billable").
+		Headers("Date", "Id", "HLS", "Status", "Progress", "Template", "Transcoders", "Time").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -132,7 +132,6 @@ func jobsListToRows(jobs []chunkify.Job) [][]string {
 			job.Format.Name,
 			fmt.Sprintf("%d x %s", job.Transcoder.Quantity, job.Transcoder.Type),
 			formatter.TimeDiff(job.StartedAt, endDate),
-			formatter.Duration(job.BillableTime),
 		}
 	}
 	return rows
