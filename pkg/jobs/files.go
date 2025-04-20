@@ -76,7 +76,7 @@ func (r *FilesListCmd) filesTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Storage", "Path", "Mime-Type", "Size").
+		Headers("Date", "Storage Id", "Path", "Mime-Type", "Size").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -106,7 +106,7 @@ func filesListToRows(files []chunkify.File) [][]string {
 	for i, file := range files {
 		rows[i] = []string{
 			file.CreatedAt.Format(time.RFC822),
-			file.Storage,
+			file.StorageId,
 			styles.Important.Render(file.Path),
 			file.MimeType,
 			formatter.Size(file.Size),

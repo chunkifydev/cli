@@ -260,7 +260,7 @@ func generateTestNotification() chunkify.Notification {
 				{
 					Id:        uuid.NewString(),
 					JobId:     jobId,
-					Storage:   "aws",
+					StorageId: "stor_aws_xxx",
 					Path:      "/tmp/test.mp4",
 					Size:      1024,
 					MimeType:  "video/mp4",
