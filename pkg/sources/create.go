@@ -53,7 +53,7 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The url of the source (required)")
-	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
+	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

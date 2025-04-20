@@ -22,6 +22,8 @@ type CreateCmd struct {
 	audioBitrate string
 }
 
+var validCpus = map[int64]bool{4: true, 8: true, 16: true}
+
 func (r *CreateCmd) Execute() error {
 	// Handle metadata
 	if r.metadata != "" {
@@ -45,6 +47,10 @@ func (r *CreateCmd) Execute() error {
 
 	// Set transcoder type if CPU is specified
 	if r.vcpu > 0 {
+		// Validate vCPU value
+		if !validCpus[r.vcpu] {
+			return fmt.Errorf("invalid cpu value: %d. Allowed values are 4, 8, 16", r.vcpu)
+		}
 		r.Params.Transcoder.Type = fmt.Sprintf("%dvCPU", r.vcpu)
 	}
 
@@ -78,7 +84,7 @@ func newCreateCmd() *cobra.Command {
 
 	// Add common flags that will be shared across all subcommands
 	cmd.PersistentFlags().StringVar(&req.Params.SourceId, "source-id", "", "The source id (required)")
-	cmd.PersistentFlags().StringVar(&req.metadata, "metadata", "", "Optional metadata. Format is key=value")
+	cmd.PersistentFlags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
 	cmd.PersistentFlags().Int64Var(&req.Params.Transcoder.Quantity, "transcoder", 0, "Number of transcoders: 1 to 50 (required if cpu is set)")
 	cmd.PersistentFlags().Int64Var(&req.vcpu, "cpu", 0, "Instance vCPU: 4, 8, 16 (required if transcoder is set)")
 	cmd.PersistentFlags().StringVar(&req.Params.Storage.Id, "storage", "", "The storage id (default is the project default storage id)")
@@ -390,7 +396,7 @@ func newJpgCmd(req *CreateCmd) *cobra.Command {
 
 	// Add image specific flags
 	cmd.Flags().BoolVar(&jpgConfig.Sprite, "sprite", false, "Generate sprite images instead of many single images")
-	cmd.Flags().Int64Var(&jpgConfig.Frames, "frames", 0, "Generate only the number of givenframes")
+	cmd.Flags().Int64Var(&jpgConfig.Frames, "frames", 0, "Generate only the number of given frames")
 	cmd.Flags().Int64Var(&jpgConfig.Width, "width", 0, "ffmpeg config: Width")
 	cmd.Flags().Int64Var(&jpgConfig.Height, "height", 0, "ffmpeg config: Height")
 	cmd.Flags().Int64Var(&jpgConfig.Interval, "interval", 0, "ffmpeg config: Interval")
