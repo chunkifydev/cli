@@ -37,11 +37,11 @@ chunkify auth login
 ```bash
 # List all the projects of your team
 $ chunkify projects list
-╭──────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Project Id            Name       Storage             Active │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│ 11 Jul 24 13:00 UTC  charming-halley-6554  Local Dev  chunkify-us-east-1  yes    │
-╰──────────────────────────────────────────────────────────────────────────────────╯
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Date                 Project Id                        Name              Storage                              │
+├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ 11 Jul 24 13:00 UTC  proj_A1cce6120E56e7Tu9ioP09Nhjk1  Chunkify project  stor_aws_2vuLlCyiW1mvAsKGq5zECh1MvRm │
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ### Authentication Commands
@@ -58,12 +58,12 @@ For CI/CD environments or automated scripts where interactive login isn't possib
 
 ```bash
 # Option 1: Use tokens inline for a single command
-$ CHUNKIFY_TEAM_TOKEN=your_team_token chunkify projects list
-$ CHUNKIFY_PROJECT_TOKEN=your_project_token chunkify jobs list
+$ CHUNKIFY_TEAM_TOKEN=sk_team_token chunkify projects list
+$ CHUNKIFY_PROJECT_TOKEN=sk_project_token chunkify jobs list
 
 # Option 2: Export tokens for multiple commands in the same session
-$ export CHUNKIFY_TEAM_TOKEN=your_team_token
-$ export CHUNKIFY_PROJECT_TOKEN=your_project_token
+$ export CHUNKIFY_TEAM_TOKEN=sk_team_token
+$ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 $ chunkify projects list  # Uses team token
 $ chunkify jobs list      # Uses project token
 $ chunkify sources list   # Uses project token
@@ -93,18 +93,18 @@ There are two ways to create a job, you can use the source id if you already hav
 #### Create a job using a source ID:
 
 ```bash
-$ chunkify jobs create --source-id 55..79 --codec x264-v1 --height 1080 --crf 23
+$ chunkify jobs create mp4/x264 --source-id src_... --height 1080 --crf 23
 ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Id      Status  Progress  Template     Transcoders  Speed  Time  Billable │
+│ Date                 Id      Status  Progress  Format     Transcoders  Speed  Time  Billable   │
 ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 20 Mar 25 13:58 UTC  31..3a  queued  0%       mp4/x264-v1   1 x 4vCPU    0.00x  00:00    -     │
+│ 20 Mar 25 13:58 UTC  job_...  queued  0%       mp4/x264   1 x 4vCPU    0.00x  00:00    -       │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 #### Create a job directly with a source URL:
 
 ```bash
-$ chunkify jobs create --url https://videosource.com/video.mp4 --codec av1-v1 --width 3840 --crf 28
+$ chunkify jobs create mp4/av1--url https://videosource.com/video.mp4 --width 3840 --crf 28
 ```
 
 ### Webhook Creation
@@ -116,7 +116,7 @@ $ chunkify webhooks create --url http://www.example.com/webhooks
 ╭────────────────────────────────────────────────────────────╮
 │ Id      Url                     Events  Active             │
 ├────────────────────────────────────────────────────────────┤
-│ 66..3b  http://www.webhooks.com  *      yes                │
+│ wh_...  http://www.webhooks.com  *      yes                │
 ╰────────────────────────────────────────────────────────────╯
 ```
 
@@ -156,7 +156,6 @@ The CLI can be configured using command-line flags or environment variables:
 ### Global Flags
 
 -   `--json`: Output results in JSON format
--   `--debug`: Enable debug mode for verbose output
 
 ## Development
 
@@ -174,4 +173,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[Add your license information here]
+MIT
