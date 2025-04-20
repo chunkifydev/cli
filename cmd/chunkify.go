@@ -15,7 +15,7 @@ import (
 	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 
-	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/chunkify-go"
 )
 
 const (
