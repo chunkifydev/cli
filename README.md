@@ -69,7 +69,7 @@ $ chunkify jobs list      # Uses project token
 $ chunkify sources list   # Uses project token
 ```
 
-> Note: Store your tokens securely and never commit them to version control. For GitHub Actions, use repository secrets. When you're done with tokens, revoke them explicitly with `chunkify tokens revoke <token-id>`.
+> Note: Store your tokens securely and never commit them to version control. For GitHub Actions, use repository secrets.
 
 ## Usage
 
@@ -82,7 +82,7 @@ $ chunkify sources create --url https://videosource.com/video.mp4
 ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ Date                 Id      Duration  Size  WxH      Video  Bitrate  Audio  Bitrate  Jobs     │
 ├────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 20 Mar 25 13:55 UTC  97..07  00:15    2MB   1280x720 h264   1MB/s    aac    187KB/s   0        │
+│ 20 Mar 25 13:55 UTC  src_...  00:15    2MB   1280x720 h264   1MB/s    aac    187KB/s   0       │
 ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -94,11 +94,11 @@ There are two ways to create a job, you can use the source id if you already hav
 
 ```bash
 $ chunkify jobs create mp4/x264 --source-id src_... --height 1080 --crf 23
-╭────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Id      Status  Progress  Format     Transcoders  Speed  Time  Billable   │
-├────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 20 Mar 25 13:58 UTC  job_...  queued  0%       mp4/x264   1 x 4vCPU    0.00x  00:00    -       │
-╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────╮
+│ Date                 Id      Status  Progress  Format     Transcoders  Speed  Time       │
+├──────────────────────────────────────────────────────────────────────────────────────────┤
+│ 20 Mar 25 13:58 UTC  job_...  queued  0%       mp4/x264   1 x 4vCPU    0.00x  00:00      │
+╰──────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 #### Create a job directly with a source URL:
