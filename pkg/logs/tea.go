@@ -81,6 +81,7 @@ func LogsPolling(r *ListCmd, ch chan []chunkify.Log) {
 	}
 }
 
+// StartTailing initializes and runs the interactive log viewer
 func StartTailing(r *ListCmd) {
 	ch := make(chan []chunkify.Log)
 	go LogsPolling(r, ch)
