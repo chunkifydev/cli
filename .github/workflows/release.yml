@@ -23,8 +23,9 @@ jobs:
               env:
                   GOOS: ${{ matrix.goos }}
                   GOARCH: ${{ matrix.goarch }}
+                  VERSION: ${{ github.event.release.tag_name }}
               run: |
-                  go build -o chunkify
+                  go build -ldflags "-X github.com/chunkifydev/cli/cmd.version=${VERSION}" -o chunkify
                   tar -czf chunkify.tar.gz chunkify
             - name: Upload
               uses: actions/upload-release-asset@v1

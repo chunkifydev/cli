@@ -118,4 +118,5 @@ func init() {
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
+	rootCmd.AddCommand(VersionCmd)
 }
