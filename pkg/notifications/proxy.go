@@ -1,3 +1,4 @@
+// Package notifications provides functionality for managing and interacting with notifications
 package notifications
 
 import (
@@ -23,44 +24,50 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Global variables used across the proxy functionality
 var (
-	mut                     sync.Mutex
-	lastProxiedNotification *chunkify.Notification
-	logs                    []string
-	startTime               time.Time
+	mut                     sync.Mutex             // Mutex for thread-safe access to shared resources
+	lastProxiedNotification *chunkify.Notification // Tracks the most recently proxied notification
+	logs                    []string               // Stores log messages
+	startTime               time.Time              // Records when proxy started
 )
 
+// ProxyCmd represents the command for proxying notifications to a local URL
 type ProxyCmd struct {
-	localUrl   string
-	secretKey  string
-	WebhookId  string
-	Events     []string
-	CreatedGte time.Time
-
-	Data []chunkify.Notification
+	localUrl   string                  // Target URL to proxy notifications to
+	secretKey  string                  // Key used to sign proxied notifications
+	WebhookId  string                  // ID of the webhook receiving notifications
+	Events     []string                // List of event types to proxy
+	CreatedGte time.Time               // Filter for notifications created after this time
+	Data       []chunkify.Notification // The notifications data
 }
 
+// WebhookPayload represents the structure of webhook notification payloads
 type WebhookPayload struct {
-	Event string             `json:"event"`
-	Date  time.Time          `json:"date"`
-	Data  WebhookPayloadData `json:"data"`
+	Event string             `json:"event"` // Type of event
+	Date  time.Time          `json:"date"`  // When the event occurred
+	Data  WebhookPayloadData `json:"data"`  // Event-specific data
 }
 
+// WebhookPayloadData contains the detailed data for a webhook notification
 type WebhookPayloadData struct {
-	JobId    string          `json:"job_id"`
-	Metadata any             `json:"metadata"`
-	SourceId string          `json:"source_id"`
-	Error    *string         `json:"error"`
-	Files    []chunkify.File `json:"files"`
+	JobId    string          `json:"job_id"`    // ID of the associated job
+	Metadata any             `json:"metadata"`  // Additional metadata
+	SourceId string          `json:"source_id"` // ID of the source
+	Error    *string         `json:"error"`     // Error message if any
+	Files    []chunkify.File `json:"files"`     // Associated files
 }
 
+// model represents the state for the bubbletea TUI
 type model struct {
-	cmd *ProxyCmd
-	ch  chan []chunkify.Notification
+	cmd *ProxyCmd                    // Reference to the proxy command
+	ch  chan []chunkify.Notification // Channel for notification updates
 }
 
+// tickMsg represents a tick event for periodic updates
 type tickMsg time.Time
 
+// listenToNotificationsChan creates a tea.Cmd that listens for notification updates
 func listenToNotificationsChan(ch chan []chunkify.Notification) tea.Cmd {
 	return func() tea.Msg {
 		notifs := <-ch
@@ -68,10 +75,12 @@ func listenToNotificationsChan(ch chan []chunkify.Notification) tea.Cmd {
 	}
 }
 
+// Init initializes the TUI model
 func (m model) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), listenToNotificationsChan(m.ch))
 }
 
+// Update handles incoming messages and updates the model state
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -118,12 +127,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// tickCmd creates a tea.Cmd that sends tick events periodically
 func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second*5, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
 
+// View renders the current state as a string
 func (m model) View() string {
 	s := strings.Join(logs, "\n")
 	s += "\n\n"
@@ -132,6 +143,7 @@ func (m model) View() string {
 	return s
 }
 
+// toParams converts ProxyCmd fields to NotificationListParams
 func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
 	params := chunkify.NotificationListParams{
 		WebhookId: r.WebhookId,
@@ -146,6 +158,7 @@ func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
 	return params
 }
 
+// Execute fetches notifications from the API based on the command parameters
 func (r *ProxyCmd) Execute() error {
 	notifications, err := cmd.Config.Client.NotificationList(r.toParams())
 	if err != nil {
@@ -169,6 +182,7 @@ func (r *ProxyCmd) Execute() error {
 	return nil
 }
 
+// httpProxy forwards a notification to the configured local URL
 func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
 	if lastProxiedNotification != nil && lastProxiedNotification.CreatedAt.After(notif.CreatedAt) {
 		return
@@ -202,12 +216,14 @@ func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
 	log(fmt.Sprintf("[%s] Proxied notification %s (signature: %s)", formatter.HttpCode(resp.StatusCode), notif.Id, signature))
 }
 
+// generateSignature creates an HMAC signature for the payload using the secret key
 func generateSignature(payloadString string, secretKey string) string {
 	h := hmac.New(sha256.New, []byte(secretKey))
 	h.Write([]byte(payloadString))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
+// prettyRenderJSONPayload formats a JSON payload string for display
 func prettyRenderJSONPayload(payload string) string {
 	var payloadStruct WebhookPayload
 
@@ -225,6 +241,7 @@ func prettyRenderJSONPayload(payload string) string {
 	return string(prettryBytes)
 }
 
+// createLocaldevWebhook sets up a webhook for local development
 func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
 	log(fmt.Sprintln("Setting up localdev webhook..."))
 	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: "*", Enabled: true}}
@@ -236,6 +253,7 @@ func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
 	return cmd.Data, nil
 }
 
+// deleteLocalDevWebhook removes the local development webhook
 func deleteLocalDevWebhook(webhookId string) error {
 	cmd := webhooks.DeleteCmd{Id: webhookId}
 	if err := cmd.Execute(); err != nil {
@@ -246,6 +264,7 @@ func deleteLocalDevWebhook(webhookId string) error {
 	return nil
 }
 
+// generateTestNotification creates a sample notification for testing
 func generateTestNotification() chunkify.Notification {
 	jobId := uuid.NewString()
 	payload := WebhookPayload{
@@ -288,10 +307,12 @@ func generateTestNotification() chunkify.Notification {
 	return notif
 }
 
+// log adds a message to the log list
 func log(l string) {
 	logs = append(logs, l)
 }
 
+// newProxyCmd creates and configures a new cobra command for proxying notifications
 func newProxyCmd() *cobra.Command {
 	req := ProxyCmd{}
 
