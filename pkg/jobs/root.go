@@ -8,13 +8,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Command wraps a cobra.Command with configuration
 type Command struct {
-	Command *cobra.Command
-	Config  *config.Config
+	Command *cobra.Command // The underlying cobra command
+	Config  *config.Config // Configuration for the command
 }
 
+// Global command instance
 var cmd *Command
 
+// NewCommand creates and configures a new jobs command with subcommands
 func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
@@ -24,15 +27,17 @@ func NewCommand(config *config.Config) *Command {
 			Long:  "Manage your jobs",
 		}}
 
-	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newGetCmd())
-	cmd.Command.AddCommand(newListCmd())
-	cmd.Command.AddCommand(newFilesListCmd())
-	cmd.Command.AddCommand(newTranscoderProgressCmd())
+	// Add all subcommands
+	cmd.Command.AddCommand(newCreateCmd())             // Create new jobs
+	cmd.Command.AddCommand(newGetCmd())                // Get details of a specific job
+	cmd.Command.AddCommand(newListCmd())               // List all jobs
+	cmd.Command.AddCommand(newFilesListCmd())          // List files associated with jobs
+	cmd.Command.AddCommand(newTranscoderProgressCmd()) // Monitor transcoding progress
 
 	return cmd
 }
 
+// printError formats and prints an error message
 func printError(err error) {
 	fmt.Println(styles.Error.Render(err.Error()))
 }

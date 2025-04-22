@@ -8,13 +8,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Command wraps a cobra.Command with configuration
 type Command struct {
-	Command *cobra.Command
-	Config  *config.Config
+	Command *cobra.Command // The underlying cobra command
+	Config  *config.Config // Configuration for the command
 }
 
+// Global command instance
 var cmd *Command
 
+// NewCommand creates and configures a new logs command with subcommands
 func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
@@ -24,11 +27,12 @@ func NewCommand(config *config.Config) *Command {
 			Long:  "Retrieve logs",
 		}}
 
-	cmd.Command.AddCommand(newListCmd())
+	cmd.Command.AddCommand(newListCmd()) // Add list subcommand
 
 	return cmd
 }
 
+// printError formats and prints an error message
 func printError(err error) {
 	fmt.Println(styles.Error.Render(err.Error()))
 }

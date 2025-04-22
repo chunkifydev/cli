@@ -8,19 +8,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new source
 type CreateCmd struct {
-	Params   chunkify.SourceCreateParams
-	metadata string          `json:"-"`
-	Data     chunkify.Source `json:"-"`
+	Params   chunkify.SourceCreateParams // Parameters for creating the source
+	metadata string                      `json:"-"` // Raw metadata string to be parsed
+	Data     chunkify.Source             `json:"-"` // The created source data
 }
 
+// Execute creates a new source with the specified parameters
 func (r *CreateCmd) Execute() error {
+	// Parse metadata JSON if provided
 	if r.metadata != "" {
 		if err := json.Unmarshal([]byte(r.metadata), &r.Params.Metadata); err != nil {
 			return fmt.Errorf("invalid JSON format for metadata: %v", err)
 		}
 	}
 
+	// Create the source via API
 	source, err := cmd.Config.Client.SourceCreate(r.Params)
 	if err != nil {
 		return err
@@ -31,11 +35,13 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the newly created source information
 func (r *CreateCmd) View() {
 	sourceList := ListCmd{Data: []chunkify.Source{r.Data}}
 	sourceList.View()
 }
 
+// newCreateCmd creates and configures a new cobra command for creating sources
 func newCreateCmd() *cobra.Command {
 	req := CreateCmd{}
 
@@ -52,6 +58,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
+	// Define flags for source creation
 	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The url of the source (required)")
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
 	cmd.MarkFlagRequired("url")

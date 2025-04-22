@@ -10,20 +10,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new job
 type CreateCmd struct {
 	Params chunkify.JobCreateParams `json:"-"`
 
-	vcpu         int64        `json:"-"`
-	metadata     string       `json:"-"`
-	interactive  bool         `json:"-"`
-	sourceUrl    string       `json:"-"`
-	Data         chunkify.Job `json:"-"`
-	videoBitrate string
-	audioBitrate string
+	vcpu         int64        `json:"-"` // Number of vCPUs to use
+	metadata     string       `json:"-"` // metadata for the job
+	interactive  bool         `json:"-"` // Whether to run in interactive mode
+	sourceUrl    string       `json:"-"` // URL of the source media
+	Data         chunkify.Job `json:"-"` // Response data from job creation
+	videoBitrate string       // Video bitrate setting
+	audioBitrate string       // Audio bitrate setting
 }
 
+// Valid vCPU values that can be used for transcoding
 var validCpus = map[int64]bool{4: true, 8: true, 16: true}
 
+// Execute creates a new job with the configured parameters
 func (r *CreateCmd) Execute() error {
 	// Handle metadata
 	if r.metadata != "" {
@@ -64,6 +67,7 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the job list, either once or continuously in interactive mode
 func (r *CreateCmd) View() {
 	jobList := &ListCmd{Params: chunkify.JobListParams{CreatedSort: "asc", SourceId: r.Params.SourceId}, interactive: r.interactive}
 	jobList.Execute()
@@ -74,6 +78,7 @@ func (r *CreateCmd) View() {
 	}
 }
 
+// newCreateCmd creates and returns a new cobra command for job creation
 func newCreateCmd() *cobra.Command {
 	req := &CreateCmd{}
 	cmd := &cobra.Command{
@@ -94,7 +99,7 @@ func newCreateCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&req.videoBitrate, "vb", "", "ffmpeg config: VideoBitrate")
 	cmd.PersistentFlags().StringVar(&req.audioBitrate, "ab", "", "ffmpeg config: AudioBitrate")
 
-	// Add subcommands
+	// Add subcommands for different encoding formats
 	cmd.AddCommand(newX264Cmd(req))
 	cmd.AddCommand(newX265Cmd(req))
 	cmd.AddCommand(newAv1Cmd(req))
@@ -104,12 +109,14 @@ func newCreateCmd() *cobra.Command {
 	cmd.AddCommand(newHlsAv1Cmd(req))
 	cmd.AddCommand(newJpgCmd(req))
 
+	// Set flag requirements and exclusions
 	cmd.MarkFlagsRequiredTogether("transcoder", "cpu")
 	cmd.MarkFlagsMutuallyExclusive("source-id", "url")
 
 	return cmd
 }
 
+// newX264Cmd creates a new command for x264 encoding
 func newX264Cmd(req *CreateCmd) *cobra.Command {
 	// Create x264 config
 	x264Config := &chunkify.FfmpegX264{}
@@ -146,6 +153,7 @@ func newX264Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newX265Cmd creates a new command for x265 encoding
 func newX265Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	x265Config := &chunkify.FfmpegX265{}
@@ -182,6 +190,7 @@ func newX265Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newAv1Cmd creates a new command for AV1 encoding
 func newAv1Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	av1Config := &chunkify.FfmpegAv1{}
@@ -218,6 +227,7 @@ func newAv1Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newVp9Cmd creates a new command for VP9 encoding
 func newVp9Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	vp9Config := &chunkify.FfmpegVp9{}
@@ -254,6 +264,7 @@ func newVp9Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newHlsX264Cmd creates a new command for HLS with x264 encoding
 func newHlsX264Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	hlsX264Config := &chunkify.FfmpegHlsX264{}
@@ -293,6 +304,7 @@ func newHlsX264Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newHlsX265Cmd creates a new command for HLS with x265 encoding
 func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	hlsX265Config := &chunkify.FfmpegHlsX265{}
@@ -332,6 +344,7 @@ func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newHlsAv1Cmd creates a new command for HLS with AV1 encoding
 func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	hlsAv1Config := &chunkify.FfmpegHlsAv1{}
@@ -371,6 +384,7 @@ func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// newJpgCmd creates a new command for JPG encoding
 func newJpgCmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
 	jpgConfig := &chunkify.FfmpegJpg{}
@@ -407,8 +421,8 @@ func newJpgCmd(req *CreateCmd) *cobra.Command {
 	return cmd
 }
 
+// setCommonVideoFlags adds common video-related flags to the command
 func setCommonVideoFlags(cmd *cobra.Command, videoCommon *chunkify.FfmpegVideo) {
-
 	cmd.Flags().Int64Var(&videoCommon.Width, "width", 0, "ffmpeg config: Width")
 	cmd.Flags().Int64Var(&videoCommon.Height, "height", 0, "ffmpeg config: Height")
 	cmd.Flags().Float64Var(&videoCommon.Framerate, "framerate", 0, "ffmpeg config: Framerate")
@@ -421,6 +435,7 @@ func setCommonVideoFlags(cmd *cobra.Command, videoCommon *chunkify.FfmpegVideo) 
 	cmd.Flags().BoolVar(&videoCommon.DisableVideo, "vn", false, "ffmpeg config: DisableVideo")
 }
 
+// setBitrate parses and sets video and audio bitrates
 func setBitrate(vb, ab string, videoCommon *chunkify.FfmpegVideo) {
 	if vb != "" {
 		if vb, err := formatter.ParseFileSize(vb); err == nil {
@@ -434,23 +449,22 @@ func setBitrate(vb, ab string, videoCommon *chunkify.FfmpegVideo) {
 	}
 }
 
-// Helper function for common settings
+// setCommonFlags adds common ffmpeg flags to the command
 func setCommonFlags(cmd *cobra.Command, common *chunkify.FfmpegCommon) {
 	cmd.Flags().Int64Var(&common.Duration, "duration", 0, "ffmpeg config: Duration")
 	cmd.Flags().Int64Var(&common.Seek, "seek", 0, "ffmpeg config: Seek")
 }
 
-// Helper function for X264 codec flags
+// setX264Flags adds x264-specific encoding flags to the command
 func setX264Flags(cmd *cobra.Command, x264 *chunkify.FfmpegX264) {
 	cmd.Flags().Int64Var(&x264.X264KeyInt, "x264_keyint", 0, "ffmpeg config: X264KeyInt")
 	cmd.Flags().Int64Var(&x264.Level, "level", 0, "ffmpeg config: Level")
 	cmd.Flags().StringVar(&x264.Profilev, "profilev", "", "ffmpeg config: Profilev")
 	cmd.Flags().Int64Var(&x264.Crf, "crf", 0, "ffmpeg config: Crf")
 	cmd.Flags().StringVar(&x264.Preset, "preset", "", "ffmpeg config: Preset")
-
 }
 
-// Helper function for X265 codec flags
+// setX265Flags adds x265-specific encoding flags to the command
 func setX265Flags(cmd *cobra.Command, x265 *chunkify.FfmpegX265) {
 	cmd.Flags().Int64Var(&x265.X265KeyInt, "x265_keyint", 0, "ffmpeg config: X265KeyInt")
 	cmd.Flags().Int64Var(&x265.Level, "level", 0, "ffmpeg config: Level")
@@ -459,13 +473,14 @@ func setX265Flags(cmd *cobra.Command, x265 *chunkify.FfmpegX265) {
 	cmd.Flags().StringVar(&x265.Preset, "preset", "", "ffmpeg config: Preset")
 }
 
+// setVp9Flags adds VP9-specific encoding flags to the command
 func setVp9Flags(cmd *cobra.Command, vp9 *chunkify.FfmpegVp9) {
 	cmd.Flags().Int64Var(&vp9.Crf, "crf", 0, "ffmpeg config: Crf")
 	cmd.Flags().StringVar(&vp9.CpuUsed, "cpu_used", "", "ffmpeg config: CpuUsed")
 	cmd.Flags().StringVar(&vp9.Quality, "quality", "", "ffmpeg config: Quality")
 }
 
-// Helper function for AV1 codec flags
+// setAv1Flags adds AV1-specific encoding flags to the command
 func setAv1Flags(cmd *cobra.Command, av1 *chunkify.FfmpegAv1) {
 	cmd.Flags().Int64Var(&av1.Level, "level", 0, "ffmpeg config: Level")
 	cmd.Flags().StringVar(&av1.Profilev, "profilev", "", "ffmpeg config: Profilev")
@@ -473,7 +488,7 @@ func setAv1Flags(cmd *cobra.Command, av1 *chunkify.FfmpegAv1) {
 	cmd.Flags().StringVar(&av1.Preset, "preset", "", "ffmpeg config: Preset")
 }
 
-// Helper function for HLS flags
+// setHLSFlags adds HLS-specific encoding flags to the command
 func setHLSFlags(cmd *cobra.Command, hls *chunkify.FfmpegHls) {
 	cmd.Flags().Int64Var(&hls.HlsTime, "hls_time", 0, "ffmpeg config: HlsTime")
 	cmd.Flags().StringVar(&hls.HlsSegmentType, "hls_segment_type", "", "ffmpeg config: HlsSegmentType")

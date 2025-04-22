@@ -13,10 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListCmd represents the command for listing storage configurations
 type ListCmd struct {
-	Data []chunkify.Storage
+	Data []chunkify.Storage // List of storages
 }
 
+// Execute retrieves the list of storage configurations
 func (r *ListCmd) Execute() error {
 	storages, err := cmd.Config.Client.StorageList()
 	if err != nil {
@@ -28,6 +30,9 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the list of storage configurations
+// If JSON output is enabled, it prints the data in JSON format
+// Otherwise, it displays the data in a formatted table
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -50,6 +55,7 @@ func (r *ListCmd) View() {
 	}
 }
 
+// storagesTable creates and configures a table for displaying storage information
 func (r *ListCmd) storagesTable() *table.Table {
 	rightCols := []int{}
 	centerCols := []int{3, 4}
@@ -83,6 +89,7 @@ func (r *ListCmd) storagesTable() *table.Table {
 	return table
 }
 
+// storagesListToRows converts storage data into string rows for table display
 func storagesListToRows(storages []chunkify.Storage) [][]string {
 	rows := make([][]string, len(storages))
 	for i, storage := range storages {
@@ -97,6 +104,7 @@ func storagesListToRows(storages []chunkify.Storage) [][]string {
 	return rows
 }
 
+// newListCmd creates and configures a new cobra command for listing storage configurations
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 

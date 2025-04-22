@@ -11,14 +11,17 @@ import (
 	"github.com/chunkifydev/cli/pkg/styles"
 )
 
+// model represents the state and data needed for the interactive jobs list view
 type model struct {
-	cmd       *ListCmd
-	ch        chan []chunkify.Job
-	jobsTable *table.Table
+	cmd       *ListCmd            // Command for listing jobs
+	ch        chan []chunkify.Job // Channel for receiving job updates
+	jobsTable *table.Table        // Table for displaying jobs
 }
 
+// tickMsg represents a tick event for periodic updates
 type tickMsg time.Time
 
+// listenToJobChan creates a tea.Cmd that listens for job updates on a channel
 func listenToJobChan(ch chan []chunkify.Job) tea.Cmd {
 	return func() tea.Msg {
 		jobs := <-ch
@@ -26,10 +29,12 @@ func listenToJobChan(ch chan []chunkify.Job) tea.Cmd {
 	}
 }
 
+// Init initializes the model and starts the update loop
 func (m model) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), listenToJobChan(m.ch))
 }
 
+// Update handles incoming messages and updates the model state
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -47,12 +52,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// tickCmd creates a tea.Cmd that sends tick events periodically
 func tickCmd() tea.Cmd {
 	return tea.Tick(time.Millisecond*500, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
 }
 
+// View renders the current state as a string
 func (m model) View() string {
 	s := m.jobsTable.String()
 	s += "\n\n"
@@ -60,6 +67,7 @@ func (m model) View() string {
 	return s
 }
 
+// polling periodically fetches updated job data and sends it on a channel
 func polling(r *ListCmd, ch chan []chunkify.Job) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
@@ -73,6 +81,7 @@ func polling(r *ListCmd, ch chan []chunkify.Job) {
 	}
 }
 
+// StartPolling initializes and runs the interactive jobs list view
 func StartPolling(r *ListCmd) {
 	ch := make(chan []chunkify.Job)
 	go polling(r, ch)

@@ -13,10 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListCmd represents the command for listing all projects
 type ListCmd struct {
-	Data []chunkify.Project
+	Data []chunkify.Project // The list of projects retrieved from the API
 }
 
+// Execute retrieves the list of all projects from the API
 func (r *ListCmd) Execute() error {
 	projects, err := cmd.Config.Client.ProjectList()
 	if err != nil {
@@ -28,6 +30,7 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the list of projects either in JSON or table format
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -50,6 +53,7 @@ func (r *ListCmd) View() {
 	}
 }
 
+// projectsTable creates and configures a formatted table to display project information
 func (r *ListCmd) projectsTable() *table.Table {
 	rightCols := []int{}
 	centerCols := []int{4}
@@ -83,6 +87,7 @@ func (r *ListCmd) projectsTable() *table.Table {
 	return table
 }
 
+// projectsListToRows converts a slice of projects into rows of strings for table display
 func projectsListToRows(projects []chunkify.Project) [][]string {
 	rows := make([][]string, len(projects))
 	for i, project := range projects {
@@ -96,6 +101,7 @@ func projectsListToRows(projects []chunkify.Project) [][]string {
 	return rows
 }
 
+// newListCmd creates and configures a new cobra command for listing projects
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 

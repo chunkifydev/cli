@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package jobs
 
 import (
@@ -8,12 +5,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GetCmd represents the command for retrieving job information
 type GetCmd struct {
-	Id          string `json:"id"`
-	Data        chunkify.Job
-	interactive bool
+	Id          string       `json:"id"` // ID of the job to retrieve
+	Data        chunkify.Job // Response data containing job details
+	interactive bool         // Whether to run in interactive mode
 }
 
+// Execute retrieves the job information from the API
 func (r *GetCmd) Execute() error {
 	job, err := cmd.Config.Client.Job(r.Id)
 	if err != nil {
@@ -24,6 +23,7 @@ func (r *GetCmd) Execute() error {
 	return nil
 }
 
+// View displays the job information, either as a one-time view or in interactive polling mode
 func (r *GetCmd) View() {
 	jobList := &ListCmd{Params: chunkify.JobListParams{Id: r.Data.Id}, Data: []chunkify.Job{r.Data}, interactive: r.interactive}
 	if !cmd.Config.JSON && r.interactive {
@@ -33,6 +33,7 @@ func (r *GetCmd) View() {
 	}
 }
 
+// newGetCmd creates a new command for retrieving job information
 func newGetCmd() *cobra.Command {
 	req := GetCmd{}
 

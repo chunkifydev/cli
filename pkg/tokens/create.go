@@ -8,11 +8,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new access token
 type CreateCmd struct {
-	Params chunkify.TokenCreateParams
-	Data   chunkify.Token `json:"-"`
+	Params chunkify.TokenCreateParams // Parameters for token creation
+	Data   chunkify.Token             `json:"-"` // The created token data
 }
 
+// Execute creates a new access token with the specified parameters
 func (r *CreateCmd) Execute() error {
 	token, err := cmd.Config.Client.TokenCreate(r.Params)
 	if err != nil {
@@ -24,6 +26,9 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the created token information
+// If JSON output is enabled, it prints the data in JSON format
+// Otherwise, it displays just the token string
 func (r *CreateCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -38,6 +43,7 @@ func (r *CreateCmd) View() {
 	fmt.Println(r.Data.Token)
 }
 
+// newCreateCmd creates and configures a new cobra command for creating access tokens
 func newCreateCmd() *cobra.Command {
 	req := CreateCmd{}
 

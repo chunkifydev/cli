@@ -8,13 +8,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Command represents the root command for token management
 type Command struct {
-	Command *cobra.Command
-	Config  *config.Config
+	Command *cobra.Command // The cobra command instance
+	Config  *config.Config // Configuration for the command
 }
 
+// Global command instance
 var cmd *Command
 
+// NewCommand creates and configures a new root command for token management
 func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
@@ -24,12 +27,14 @@ func NewCommand(config *config.Config) *Command {
 			Long:  "Manage your Chunkify access tokens",
 		}}
 
-	cmd.Command.AddCommand(newCreateCmd())
-	cmd.Command.AddCommand(newDeleteCmd())
-	cmd.Command.AddCommand(newListCmd())
+	// Add subcommands for token operations
+	cmd.Command.AddCommand(newCreateCmd()) // Create a new token
+	cmd.Command.AddCommand(newDeleteCmd()) // Delete/revoke a token
+	cmd.Command.AddCommand(newListCmd())   // List all tokens
 	return cmd
 }
 
+// printError formats and prints an error message
 func printError(err error) {
 	fmt.Println(styles.Error.Render(err.Error()))
 }

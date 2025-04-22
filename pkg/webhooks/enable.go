@@ -7,10 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// EnableCmd represents the command for enabling a webhook
 type EnableCmd struct {
-	Params chunkify.WebhookUpdateParams
+	Params chunkify.WebhookUpdateParams // Params contains the parameters for updating a webhook
 }
 
+// Execute enables the webhook by setting enabled=true
 func (r *EnableCmd) Execute() error {
 	err := cmd.Config.Client.WebhookUpdate(r.Params)
 	if err != nil {
@@ -20,10 +22,12 @@ func (r *EnableCmd) Execute() error {
 	return nil
 }
 
+// View displays a confirmation message after successful enabling
 func (r *EnableCmd) View() {
 	fmt.Println("Webhook is enabled")
 }
 
+// newEnableCmd creates and returns a new cobra command for webhook enabling
 func newEnableCmd() *cobra.Command {
 	enabled := true
 	req := EnableCmd{Params: chunkify.WebhookUpdateParams{Enabled: &enabled}}

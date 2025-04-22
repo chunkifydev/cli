@@ -1,3 +1,4 @@
+// Package sources provides functionality for managing and interacting with sources
 package sources
 
 import (
@@ -16,41 +17,43 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
+// ListCmd represents the command for listing sources with various filter options
 type ListCmd struct {
-	Offset      int64
-	Limit       int64
-	DurationEq  string
-	DurationGte string
-	DurationGt  string
-	DurationLte string
-	DurationLt  string
-	CreatedGte  string
-	CreatedLte  string
-	WidthEq     int64
-	WidthGte    int64
-	WidthGt     int64
-	WidthLte    int64
-	WidthLt     int64
-	HeightEq    int64
-	HeightGte   int64
-	HeightGt    int64
-	HeightLte   int64
-	HeightLt    int64
-	SizeEq      string
-	SizeGte     string
-	SizeGt      string
-	SizeLte     string
-	SizeLt      string
-	AudioCodec  string
-	VideoCodec  string
-	Device      string
-	CreatedSort string
-	Metadata    []string
+	Offset      int64    // Starting offset for pagination
+	Limit       int64    // Maximum number of items to return
+	DurationEq  string   // Filter for exact duration match
+	DurationGte string   // Filter for duration greater than or equal
+	DurationGt  string   // Filter for duration greater than
+	DurationLte string   // Filter for duration less than or equal
+	DurationLt  string   // Filter for duration less than
+	CreatedGte  string   // Filter for creation date greater than or equal
+	CreatedLte  string   // Filter for creation date less than or equal
+	WidthEq     int64    // Filter for exact width match
+	WidthGte    int64    // Filter for width greater than or equal
+	WidthGt     int64    // Filter for width greater than
+	WidthLte    int64    // Filter for width less than or equal
+	WidthLt     int64    // Filter for width less than
+	HeightEq    int64    // Filter for exact height match
+	HeightGte   int64    // Filter for height greater than or equal
+	HeightGt    int64    // Filter for height greater than
+	HeightLte   int64    // Filter for height less than or equal
+	HeightLt    int64    // Filter for height less than
+	SizeEq      string   // Filter for exact size match
+	SizeGte     string   // Filter for size greater than or equal
+	SizeGt      string   // Filter for size greater than
+	SizeLte     string   // Filter for size less than or equal
+	SizeLt      string   // Filter for size less than
+	AudioCodec  string   // Filter by audio codec
+	VideoCodec  string   // Filter by video codec
+	Device      string   // Filter by device
+	CreatedSort string   // Sort direction for creation date
+	Metadata    []string // Filter by metadata key-value pairs
 
-	interactive bool
-	Data        []chunkify.Source
+	interactive bool              // Enable real-time refresh mode
+	Data        []chunkify.Source // The list of sources retrieved
 }
 
+// toParams converts the ListCmd fields into API parameters
 func (r *ListCmd) toParams() chunkify.SourceListParams {
 	params := chunkify.SourceListParams{}
 
@@ -165,6 +168,7 @@ func (r *ListCmd) toParams() chunkify.SourceListParams {
 	return params
 }
 
+// Execute retrieves the list of sources from the API
 func (r *ListCmd) Execute() error {
 	params := r.toParams()
 	// Convert metadata to the required format
@@ -179,6 +183,7 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the list of sources in either JSON or table format
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -201,6 +206,7 @@ func (r *ListCmd) View() {
 	}
 }
 
+// sourcesTable creates a formatted table displaying source information
 func (r *ListCmd) sourcesTable() *table.Table {
 	rightCols := []int{2, 3, 6, 8, 9}
 	centerCols := []int{4, 5, 7}
@@ -234,6 +240,7 @@ func (r *ListCmd) sourcesTable() *table.Table {
 	return table
 }
 
+// sourcesListToRows converts source data into formatted table rows
 func sourcesListToRows(sources []chunkify.Source) [][]string {
 	rows := make([][]string, len(sources))
 	for i, source := range sources {
@@ -252,6 +259,7 @@ func sourcesListToRows(sources []chunkify.Source) [][]string {
 	return rows
 }
 
+// newListCmd creates and configures a new cobra command for listing sources
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 

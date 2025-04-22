@@ -6,10 +6,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// DeleteCmd represents the command for deleting a webhook
 type DeleteCmd struct {
-	Id string
+	Id string // Id of the webhook to delete
 }
 
+// Execute deletes the webhook with the specified ID
 func (r *DeleteCmd) Execute() error {
 	err := cmd.Config.Client.WebhookDelete(r.Id)
 	if err != nil {
@@ -19,10 +21,12 @@ func (r *DeleteCmd) Execute() error {
 	return nil
 }
 
+// View displays a confirmation message after successful deletion
 func (r *DeleteCmd) View() {
 	fmt.Println("Webhook deleted")
 }
 
+// newDeleteCmd creates and returns a new cobra command for webhook deletion
 func newDeleteCmd() *cobra.Command {
 	req := DeleteCmd{}
 

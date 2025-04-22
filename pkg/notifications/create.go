@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new notification
 type CreateCmd struct {
-	Params chunkify.NotificationCreateParams
-
-	Data chunkify.Notification `json:"-"`
+	Params chunkify.NotificationCreateParams // Parameters to use when creating the notification
+	Data   chunkify.Notification             `json:"-"` // The created notification data
 }
 
+// Execute creates a new notification using the provided parameters
 func (r *CreateCmd) Execute() error {
 	notification, err := cmd.Config.Client.NotificationCreate(r.Params)
 	if err != nil {
@@ -22,14 +23,15 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the newly created notification by showing the notifications list
+// filtered to the associated job ID
 func (r *CreateCmd) View() {
 	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: "asc", JobId: r.Params.JobId}}
 	notifList.Execute()
-
 	notifList.View()
-
 }
 
+// newCreateCmd creates and configures a new cobra command for notification creation
 func newCreateCmd() *cobra.Command {
 	req := CreateCmd{}
 
@@ -46,6 +48,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
+	// Configure required command flags
 	cmd.Flags().StringVar(&req.Params.JobId, "job-id", "", "The job id (required)")
 	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "The webhook id (required)")
 	cmd.Flags().StringVar(&req.Params.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")

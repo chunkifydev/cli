@@ -5,11 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new webhook
 type CreateCmd struct {
-	Params chunkify.WebhookCreateParams
-	Data   chunkify.WebhookWithSecretKey `json:"-"`
+	Params chunkify.WebhookCreateParams  // Params contains the parameters for creating a webhook
+	Data   chunkify.WebhookWithSecretKey `json:"-"` // Data contains the created webhook response including the secret key
 }
 
+// Execute creates a new webhook using the provided parameters
 func (r *CreateCmd) Execute() error {
 	webhook, err := cmd.Config.Client.WebhookCreate(r.Params)
 	if err != nil {
@@ -21,11 +23,13 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the created webhook in a formatted table
 func (r *CreateCmd) View() {
 	webhooksList := ListCmd{Data: []chunkify.Webhook{r.Data.Webhook}}
 	webhooksList.View()
 }
 
+// newCreateCmd creates and returns a new cobra command for webhook creation
 func newCreateCmd() *cobra.Command {
 	req := CreateCmd{}
 
@@ -42,6 +46,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
+	// Add command flags for configuring the webhook
 	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The webhook URL (required)")
 	cmd.Flags().BoolVar(&req.Params.Enabled, "enabled", true, "Enable the webhook")
 	cmd.Flags().StringVar(&req.Params.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")

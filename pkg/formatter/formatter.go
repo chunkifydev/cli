@@ -11,6 +11,7 @@ import (
 	"github.com/chunkifydev/cli/pkg/styles"
 )
 
+// Duration formats a duration in seconds into a human readable string (HH:MM:SS)
 func Duration(duration int64) string {
 	if duration < 60 {
 		return fmt.Sprintf("00:%02d", duration)
@@ -23,6 +24,7 @@ func Duration(duration int64) string {
 	return fmt.Sprintf("%02d:%02d:%02d", duration/3600, (duration%3600)/60, duration%60)
 }
 
+// Size formats a size in bytes into a human readable string (B, KB, MB, GB)
 func Size(size int64) string {
 	if size < 1024 {
 		return fmt.Sprintf("%dB", size)
@@ -38,6 +40,7 @@ func Size(size int64) string {
 	return fmt.Sprintf("%.2fGB", float64(size)/1024/1024/1024)
 }
 
+// Bitrate formats a bitrate in bytes into a human readable string (KB/s, MB/s)
 func Bitrate(size int64) string {
 	if size < 1024 {
 		return "N/A"
@@ -50,6 +53,7 @@ func Bitrate(size int64) string {
 	return fmt.Sprintf("%.fMB/s", float64(size)/1024/1024)
 }
 
+// JobStatus formats a job status with appropriate styling
 func JobStatus(status string) string {
 	switch status {
 	case "finished":
@@ -61,6 +65,7 @@ func JobStatus(status string) string {
 	}
 }
 
+// LogLevel formats a log level with appropriate styling
 func LogLevel(level string) string {
 	switch level {
 	case "WARN", "DEBUG":
@@ -72,6 +77,7 @@ func LogLevel(level string) string {
 	}
 }
 
+// LogService formats a service name, handling special case for transcoder services
 func LogService(service string) string {
 	if strings.HasPrefix(service, "transcoder") {
 		parts := strings.Split(service, "#")
@@ -86,6 +92,7 @@ func LogService(service string) string {
 	return service
 }
 
+// HttpCode formats an HTTP status code with appropriate styling
 func HttpCode(status int) string {
 	statusStr := fmt.Sprintf("%d %s", status, http.StatusText(status))
 
@@ -96,6 +103,7 @@ func HttpCode(status int) string {
 	return styles.Error.Render(statusStr)
 }
 
+// Bool formats a boolean value as "yes"/"no" with appropriate styling
 func Bool(b bool) string {
 	if b {
 		return styles.Important.Render("yes")
@@ -104,6 +112,7 @@ func Bool(b bool) string {
 	return styles.Error.Render("no")
 }
 
+// BoolDefaultColor formats a boolean value as "yes"/"no" with default styling
 func BoolDefaultColor(b bool) string {
 	if b {
 		return styles.DefaultText.Render("yes")
@@ -112,6 +121,7 @@ func BoolDefaultColor(b bool) string {
 	return styles.DefaultText.Render("no")
 }
 
+// TimeDiff calculates and formats the duration between two timestamps
 func TimeDiff(start, end time.Time) string {
 	if start.IsZero() || end.IsZero() {
 		return ""
@@ -125,6 +135,8 @@ func TimeDiff(start, end time.Time) string {
 	return Duration(int64(duration))
 }
 
+// ParseFileSize parses a human readable file size string (e.g., "1.5GB") into bytes
+// Supports B, KB/K/KiB, MB/M/MiB, GB/G/GiB, TB/T/TiB units
 func ParseFileSize(sizeStr string) (int64, error) {
 	const (
 		_   = iota

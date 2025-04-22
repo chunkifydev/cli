@@ -14,10 +14,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListCmd represents the command for listing webhooks
 type ListCmd struct {
-	Data []chunkify.Webhook
+	Data []chunkify.Webhook // Data contains the list of webhooks
 }
 
+// Execute retrieves the list of webhooks
 func (r *ListCmd) Execute() error {
 	webhooks, err := cmd.Config.Client.WebhookList()
 	if err != nil {
@@ -29,6 +31,7 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the webhooks list either in JSON or table format
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -51,6 +54,7 @@ func (r *ListCmd) View() {
 	}
 }
 
+// webhooksTable creates and returns a formatted table of webhooks
 func (r *ListCmd) webhooksTable() *table.Table {
 	rightCols := []int{}
 	centerCols := []int{2, 3}
@@ -84,6 +88,7 @@ func (r *ListCmd) webhooksTable() *table.Table {
 	return table
 }
 
+// webhooksListToRows converts webhook data into string rows for table display
 func webhooksListToRows(webhooks []chunkify.Webhook) [][]string {
 	rows := make([][]string, len(webhooks))
 	for i, webhook := range webhooks {
@@ -97,6 +102,7 @@ func webhooksListToRows(webhooks []chunkify.Webhook) [][]string {
 	return rows
 }
 
+// newListCmd creates and returns a new cobra command for listing webhooks
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 

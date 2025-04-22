@@ -1,3 +1,4 @@
+// Package jobs provides functionality for managing and monitoring transcoding jobs
 package jobs
 
 import (
@@ -15,20 +16,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// progressBarColor defines the color used for progress bars
 var progressBarColor = "#7ce4a1"
 
+// progressModel represents the state and data needed for the progress view
 type progressModel struct {
-	cmd                *logs.ListCmd
-	ch                 chan []chunkify.Log
-	transcoderProgress map[string]chunkify.LogAttrs
-	progressBars       map[string]progress.Model
+	cmd                *logs.ListCmd                // Command for listing logs
+	ch                 chan []chunkify.Log          // Channel for receiving log updates
+	transcoderProgress map[string]chunkify.LogAttrs // Map of logs attributes
+	progressBars       map[string]progress.Model    // Map of progress bar models
 }
 
+// Init initializes the progress model and starts the update loop
 func (m *progressModel) Init() tea.Cmd {
 	m.progressBars = map[string]progress.Model{}
 	return tea.Batch(tickCmd(), logs.ListenToLogsChan(m.ch))
 }
 
+// Update handles incoming messages and updates the model state
 func (m *progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -46,6 +51,7 @@ func (m *progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// getLastProgressLines processes log data to extract the latest progress information
 func (m *progressModel) getLastProgressLines(logs []chunkify.Log) {
 	transcoders := map[string]chunkify.LogAttrs{}
 
@@ -66,6 +72,7 @@ func (m *progressModel) getLastProgressLines(logs []chunkify.Log) {
 	m.transcoderProgress = transcoders
 }
 
+// View renders the current progress state as a string
 func (m *progressModel) View() string {
 	s := ""
 	transcoders := make([]chunkify.LogAttrs, 50)
@@ -131,6 +138,7 @@ func (m *progressModel) View() string {
 	return s
 }
 
+// StartTranscoderProgressTailing starts monitoring transcoder progress in real-time
 func StartTranscoderProgressTailing(r *logs.ListCmd) {
 	ch := make(chan []chunkify.Log)
 	go logs.LogsPolling(r, ch)
@@ -148,6 +156,7 @@ func StartTranscoderProgressTailing(r *logs.ListCmd) {
 	}
 }
 
+// newTranscoderProgressCmd creates a new command for monitoring transcoder progress
 func newTranscoderProgressCmd() *cobra.Command {
 	req := logs.ListCmd{Params: chunkify.JobListLogsParams{Service: "transcoder"}}
 

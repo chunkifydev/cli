@@ -16,16 +16,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListCmd represents the command for listing and filtering logs
 type ListCmd struct {
-	Params         chunkify.JobListLogsParams
-	Id             string
-	Levels         []string
-	IgnoreProgress bool
-	Tail           bool
-	FfmpegDebug    bool
-	Data           []chunkify.Log
+	Params         chunkify.JobListLogsParams // Parameters for filtering logs
+	Id             string                     // Job ID to get logs for
+	Levels         []string                   // Log levels to filter by
+	IgnoreProgress bool                       // Whether to hide progress logs
+	Tail           bool                       // Whether to continuously tail logs
+	FfmpegDebug    bool                       // Whether to show ffmpeg debug output
+	Data           []chunkify.Log             // The log data retrieved
 }
 
+// Execute fetches logs based on the command parameters
 func (r *ListCmd) Execute() error {
 	logs, err := cmd.Config.Client.JobListLogs(r.Params)
 	if err != nil {
@@ -37,6 +39,7 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the logs in the requested format (JSON or table)
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -64,6 +67,7 @@ func (r *ListCmd) View() {
 	fmt.Println(r.logsTable())
 }
 
+// printFfmpegDebug formats and prints ffmpeg debug output with error highlighting
 func printFfmpegDebug(stderr string) {
 	for _, l := range strings.Split(stderr, "\n") {
 		if strings.Contains(l, "Error") || strings.Contains(l, "Invalid") || strings.Contains(l, "Unable") || strings.Contains(l, "Undefined") {
@@ -74,6 +78,7 @@ func printFfmpegDebug(stderr string) {
 	}
 }
 
+// logsTable creates a formatted table of logs
 func (r *ListCmd) logsTable() *table.Table {
 	rows := logsListToRows(r)
 
@@ -110,6 +115,7 @@ func (r *ListCmd) logsTable() *table.Table {
 	return table
 }
 
+// logsListToRows converts log entries into formatted table rows
 func logsListToRows(r *ListCmd) [][]string {
 	rows := [][]string{}
 	var duration float64
@@ -173,6 +179,7 @@ func logsListToRows(r *ListCmd) [][]string {
 	return rows
 }
 
+// newListCmd creates and configures the logs list command
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 
@@ -217,6 +224,7 @@ func newListCmd() *cobra.Command {
 	return cmd
 }
 
+// AttributesString returns a string representation of a log's attributes
 func AttributesString(l chunkify.Log) string {
 	if l.Attributes == nil {
 		return ""
@@ -224,6 +232,7 @@ func AttributesString(l chunkify.Log) string {
 	return String(l.Attributes)
 }
 
+// String converts log attributes to a sorted, formatted string
 func String(a chunkify.LogAttrs) string {
 	attrs := []string{}
 	keys := make([]string, 0, len(a))

@@ -5,11 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CreateCmd represents the command for creating a new project
 type CreateCmd struct {
-	Params chunkify.ProjectCreateParams
-	Data   chunkify.Project `json:"-"`
+	Params chunkify.ProjectCreateParams // Parameters to create the project
+	Data   chunkify.Project             `json:"-"` // The created project data
 }
 
+// Execute creates a new project using the provided parameters
 func (r *CreateCmd) Execute() error {
 	project, err := cmd.Config.Client.ProjectCreate(r.Params)
 
@@ -22,11 +24,13 @@ func (r *CreateCmd) Execute() error {
 	return nil
 }
 
+// View displays the newly created project data
 func (r *CreateCmd) View() {
 	projectList := ListCmd{Data: []chunkify.Project{r.Data}}
 	projectList.View()
 }
 
+// newCreateCmd creates and configures a new cobra command for creating projects
 func newCreateCmd() *cobra.Command {
 	req := CreateCmd{}
 

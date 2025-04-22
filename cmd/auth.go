@@ -19,14 +19,19 @@ import (
 	"golang.org/x/term"
 )
 
+// ChunkifyAuthUrl is the base URL for the authentication endpoint
 const ChunkifyAuthUrl = "https://chunkify.dev/auth/cli"
 
 var (
-	authUrl   string
+	// authUrl stores the authentication URL, can be overridden via CHUNKIFY_AUTH_URL env var
+	authUrl string
+	// noBrowser flag determines if browser-based auth should be skipped
 	noBrowser = false
+	// teamToken stores the authentication token received from the server
 	teamToken chunkify.Token
 )
 
+// newAuthCmd creates the root auth command that contains login/logout subcommands
 func newAuthCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
@@ -40,6 +45,7 @@ func newAuthCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
+// newLoginCmd creates the login subcommand that handles user authentication
 func newLoginCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login",
@@ -64,6 +70,7 @@ func newLoginCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
+// newLogoutCmd creates the logout subcommand that handles user deauthentication
 func newLogoutCmd(cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logout",
@@ -77,6 +84,7 @@ func newLogoutCmd(cfg *config.Config) *cobra.Command {
 	return cmd
 }
 
+// login handles the authentication flow, either via browser or manual token entry
 func login(cfg *config.Config) {
 	// Clear any existing login data
 	logout(cfg)
@@ -100,7 +108,7 @@ func login(cfg *config.Config) {
 		openbrowser(fmt.Sprintf("%s?url=%s&name=%s", authUrl, localUrl, hostname))
 		t := time.NewTicker(1 * time.Second)
 
-		// Wait for authentication to complete or timeout
+		// Wait for authentication to complete or timeout after 5 minutes
 		for range t.C {
 			if teamToken.Token != "" {
 				t.Stop()
@@ -116,7 +124,7 @@ func login(cfg *config.Config) {
 
 	cfg.TeamToken = teamToken.Token
 
-	//Init client with team token for the account check.
+	// Initialize client with the received team token
 	client := chunkify.NewClientWithConfig(chunkify.Config{
 		AccessTokens: chunkify.AccessTokens{
 			TeamToken: cfg.TeamToken,
@@ -147,6 +155,7 @@ func login(cfg *config.Config) {
 	fmt.Println("All good. Run `chunkify help` for help")
 }
 
+// getAllProjects fetches all projects accessible to the authenticated user
 func getAllProjects(config *config.Config) ([]chunkify.Project, error) {
 	projects, err := config.Client.ProjectList()
 	if err != nil {
@@ -156,6 +165,7 @@ func getAllProjects(config *config.Config) ([]chunkify.Project, error) {
 	return projects, nil
 }
 
+// revokeToken revokes a specific token from the server
 func revokeToken(config *config.Config, tokenId string) error {
 	err := config.Client.TokenRevoke(tokenId)
 	if err != nil {
@@ -165,8 +175,9 @@ func revokeToken(config *config.Config, tokenId string) error {
 	return nil
 }
 
+// logout handles the deauthentication process by revoking all tokens and clearing local config
 func logout(cfg *config.Config) {
-	// revoke all project tokens
+	// Revoke all project tokens
 	projects, err := getAllProjects(cfg)
 	if err == nil {
 		for _, project := range projects {
@@ -178,7 +189,7 @@ func logout(cfg *config.Config) {
 		}
 	}
 
-	// revoke account token
+	// Revoke account token
 	tokId, _, _ := config.GetToken("TeamToken")
 	if tokId != "" {
 		fmt.Println("Revoke team token")
@@ -191,10 +202,12 @@ func logout(cfg *config.Config) {
 	}
 }
 
+// printError formats and prints error messages
 func printError(err error) {
 	fmt.Println(styles.Error.Render(err.Error()))
 }
 
+// authHandler processes the authentication callback from the server
 func authHandler(w http.ResponseWriter, r *http.Request) {
 	tok := r.URL.Query().Get("token")
 	token := strings.Split(tok, ":")
@@ -204,10 +217,12 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/auth/ok", http.StatusFound)
 }
 
+// authOkHandler displays success message after successful authentication
 func authOkHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Connection established. You can close this window.")
 }
 
+// startHttpServer starts a local HTTP server to handle authentication callback
 func startHttpServer() string {
 	http.HandleFunc("/auth", authHandler)
 	http.HandleFunc("/auth/ok", authOkHandler)
@@ -226,6 +241,7 @@ func startHttpServer() string {
 	return fmt.Sprintf("http://localhost:%d/auth", port)
 }
 
+// openbrowser opens the system browser based on the operating system
 func openbrowser(url string) {
 	var err error
 

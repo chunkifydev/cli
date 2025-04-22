@@ -13,10 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListCmd represents the command for listing access tokens
 type ListCmd struct {
-	Data []chunkify.Token
+	Data []chunkify.Token // List of tokens
 }
 
+// Execute retrieves the list of access tokens
 func (r *ListCmd) Execute() error {
 	tokens, err := cmd.Config.Client.TokenList()
 	if err != nil {
@@ -28,6 +30,9 @@ func (r *ListCmd) Execute() error {
 	return nil
 }
 
+// View displays the list of access tokens
+// If JSON output is enabled, it prints the data in JSON format
+// Otherwise, it displays the data in a formatted table
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -50,6 +55,7 @@ func (r *ListCmd) View() {
 	}
 }
 
+// tokensTable creates and configures a table for displaying token information
 func (r *ListCmd) tokensTable() *table.Table {
 	rightCols := []int{}
 	centerCols := []int{4}
@@ -83,6 +89,7 @@ func (r *ListCmd) tokensTable() *table.Table {
 	return table
 }
 
+// tokensListToRows converts token data into string rows for table display
 func tokensListToRows(tokens []chunkify.Token) [][]string {
 	rows := make([][]string, len(tokens))
 	for i, token := range tokens {
@@ -97,6 +104,7 @@ func tokensListToRows(tokens []chunkify.Token) [][]string {
 	return rows
 }
 
+// newListCmd creates and configures a new cobra command for listing access tokens
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 

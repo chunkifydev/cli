@@ -15,12 +15,14 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
+// FilesListCmd represents the command for listing files associated with a job
 type FilesListCmd struct {
-	Id      string `json:"id"`
-	presign bool
-	Data    []chunkify.File
+	Id      string          `json:"id"` // ID of the job to list files for
+	presign bool            // Whether to return presigned URLs for the files
+	Data    []chunkify.File // List of files returned from the API
 }
 
+// Execute retrieves the list of files for the specified job ID
 func (r *FilesListCmd) Execute() error {
 	files, err := cmd.Config.Client.JobListFiles(r.Id)
 	if err != nil {
@@ -32,6 +34,7 @@ func (r *FilesListCmd) Execute() error {
 	return nil
 }
 
+// View displays the list of files in either JSON or table format
 func (r *FilesListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -68,6 +71,7 @@ func (r *FilesListCmd) View() {
 	}
 }
 
+// filesTable creates and returns a formatted table of files
 func (r *FilesListCmd) filesTable() *table.Table {
 	rightCols := []int{4}
 	centerCols := []int{1}
@@ -101,6 +105,7 @@ func (r *FilesListCmd) filesTable() *table.Table {
 	return table
 }
 
+// filesListToRows converts a slice of files into rows for table display
 func filesListToRows(files []chunkify.File) [][]string {
 	rows := make([][]string, len(files))
 	for i, file := range files {
@@ -115,6 +120,7 @@ func filesListToRows(files []chunkify.File) [][]string {
 	return rows
 }
 
+// newFilesListCmd creates a new command for listing files of a job
 func newFilesListCmd() *cobra.Command {
 	req := FilesListCmd{}
 

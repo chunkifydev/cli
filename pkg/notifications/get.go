@@ -8,25 +8,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GetCmd represents the command for retrieving a single notification
 type GetCmd struct {
-	Id      string `json:"id"`
-	payload bool
-
-	Data chunkify.Notification
+	Id      string                `json:"id"` // ID of the notification to retrieve
+	payload bool                  // Whether to return just the webhook payload
+	Data    chunkify.Notification // The retrieved notification data
 }
 
+// Execute fetches a notification by ID from the API
 func (r *GetCmd) Execute() error {
-
 	notifications, err := cmd.Config.Client.Notification(r.Id)
 	if err != nil {
 		return err
 	}
 
 	r.Data = notifications
-
 	return nil
 }
 
+// View displays the notification data in the requested format
 func (r *GetCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -47,6 +47,7 @@ func (r *GetCmd) View() {
 	notificationsList.View()
 }
 
+// newGetCmd creates and configures a new cobra command for retrieving notifications
 func newGetCmd() *cobra.Command {
 	req := GetCmd{}
 

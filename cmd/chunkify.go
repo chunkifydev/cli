@@ -18,23 +18,29 @@ import (
 	"github.com/chunkifydev/chunkify-go"
 )
 
+// ChunkifyApiEndpoint is the default API endpoint URL for Chunkify
 const (
 	ChunkifyApiEndpoint = "https://api.chunkify.dev/v1"
 )
 
+// cfg holds the global configuration for the CLI defined in config pkg
 var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
 
+// Commander defines the interface for command execution and view generation
 type Commander interface {
 	execute() error
 	view() string
 }
 
+// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "chunkify",
 	Short: "chunkify is a command line interface for Chunkify API",
 	Long:  `chunkify is a command line interface for Chunkify API.`,
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	rootCmd.PersistentPreRun = checkAccountSetup
 	if err := rootCmd.Execute(); err != nil {
@@ -42,6 +48,11 @@ func Execute() {
 	}
 }
 
+// checkAccountSetup verifies and sets up authentication tokens based on the command being executed.
+// It handles different authentication requirements for various command types:
+// - auth commands may work without tokens
+// - projects and tokens commands require team token
+// - other commands require project token
 func checkAccountSetup(cmd *cobra.Command, args []string) {
 	// Early return if no parent command (shouldn't happen, but safer)
 	if cmd.Parent() == nil {
@@ -91,6 +102,7 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 	cfg.Client = &client
 }
 
+// init initializes the CLI by setting up configuration and registering all available commands
 func init() {
 	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
 		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
