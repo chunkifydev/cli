@@ -6,7 +6,7 @@ set -e
 main() {
     os=$(uname -s | tr '[:upper:]' '[:lower:]')  # Converts OS to lowercase
     arch=$(uname -m | tr '[:upper:]' '[:lower:]')  # Converts architecture to lowercase
-    version="v0.2.0"
+    version=$(curl -s https://api.github.com/repos/chunkifydev/cli/releases/latest | grep tag_name | awk '{print $2}' | tr -d '",')
 
     # Define installation directory
     chunkify_install="${CHUNKIFY_INSTALL:-$HOME/.chunkify}"
