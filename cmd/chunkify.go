@@ -12,6 +12,7 @@ import (
 	"github.com/chunkifydev/cli/pkg/sources"
 	"github.com/chunkifydev/cli/pkg/storages"
 	"github.com/chunkifydev/cli/pkg/tokens"
+	"github.com/chunkifydev/cli/pkg/uploads"
 	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 
@@ -112,6 +113,7 @@ func init() {
 	rootCmd.AddCommand(storages.NewCommand(cfg).Command)
 	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
 	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
+	rootCmd.AddCommand(uploads.NewCommand(cfg).Command)
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
