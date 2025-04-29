@@ -44,18 +44,27 @@ type ProxyCmd struct {
 
 // WebhookPayload represents the structure of webhook notification payloads
 type WebhookPayload struct {
-	Event string             `json:"event"` // Type of event
-	Date  time.Time          `json:"date"`  // When the event occurred
-	Data  WebhookPayloadData `json:"data"`  // Event-specific data
+	Event string    `json:"event"` // Type of event
+	Date  time.Time `json:"date"`  // When the event occurred
+	Data  any       `json:"data"`  // Event-specific data
 }
 
-// WebhookPayloadData contains the detailed data for a webhook notification
-type WebhookPayloadData struct {
+// WebhookJobPayloadData contains the detailed data for a webhook notification
+type WebhookJobPayloadData struct {
 	JobId    string          `json:"job_id"`    // ID of the associated job
+	Status   string          `json:"status"`    // Status of the job
 	Metadata any             `json:"metadata"`  // Additional metadata
 	SourceId string          `json:"source_id"` // ID of the source
 	Error    *string         `json:"error"`     // Error message if any
 	Files    []chunkify.File `json:"files"`     // Associated files
+}
+
+// WebhookUploadPayloadData contains the detailed data for a webhook notification
+type WebhookUploadPayloadData struct {
+	UploadId string `json:"upload_id"` // ID of the associated upload
+	Status   string `json:"status"`    // Status of the upload
+	Metadata any    `json:"metadata"`  // Additional metadata
+	SourceId string `json:"source_id"` // ID of the source
 }
 
 // model represents the state for the bubbletea TUI
@@ -93,7 +102,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tickCmd()
 		case "t":
-			testNotif := generateTestNotification()
+			testNotif := generateTestJobNotification()
+			m.cmd.Data = []chunkify.Notification{testNotif}
+			m.cmd.httpProxy(testNotif)
+			return m, tickCmd()
+		case "u":
+			testNotif := generateTestUploadNotification()
 			m.cmd.Data = []chunkify.Notification{testNotif}
 			m.cmd.httpProxy(testNotif)
 			return m, tickCmd()
@@ -264,13 +278,13 @@ func deleteLocalDevWebhook(webhookId string) error {
 	return nil
 }
 
-// generateTestNotification creates a sample notification for testing
-func generateTestNotification() chunkify.Notification {
+// generateTestJobNotification creates a sample notification for testing
+func generateTestJobNotification() chunkify.Notification {
 	jobId := uuid.NewString()
 	payload := WebhookPayload{
 		Event: "job.completed",
 		Date:  time.Now(),
-		Data: WebhookPayloadData{
+		Data: WebhookJobPayloadData{
 			JobId:    jobId,
 			Metadata: map[string]any{"VideoId": uuid.NewString()},
 			SourceId: uuid.NewString(),
@@ -297,11 +311,42 @@ func generateTestNotification() chunkify.Notification {
 
 	notif := chunkify.Notification{
 		Id:                 uuid.NewString(),
-		JobId:              jobId,
+		ObjectId:           jobId,
 		CreatedAt:          time.Now(),
 		Payload:            string(payloadBytes),
 		ResponseStatusCode: 200,
 		Event:              "job.completed",
+	}
+
+	return notif
+}
+
+// generateTestUploadNotification creates a sample notification for testing
+func generateTestUploadNotification() chunkify.Notification {
+	uploadId := uuid.NewString()
+	payload := WebhookPayload{
+		Event: "upload.completed",
+		Date:  time.Now(),
+		Data: WebhookUploadPayloadData{
+			UploadId: uploadId,
+			Status:   "completed",
+			Metadata: map[string]any{"VideoId": uuid.NewString()},
+			SourceId: uuid.NewString(),
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		log("Couldn't not marshal json")
+		return chunkify.Notification{}
+	}
+
+	notif := chunkify.Notification{
+		Id:                 uuid.NewString(),
+		ObjectId:           uploadId,
+		CreatedAt:          time.Now(),
+		Payload:            string(payloadBytes),
+		ResponseStatusCode: 200,
+		Event:              "upload.completed",
 	}
 
 	return notif
@@ -356,7 +401,7 @@ func newProxyCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed")
+	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed, upload.completed")
 	cmd.Flags().StringVar(&req.secretKey, "secret-key", "", "Use the given secret key to sign the notifications. If not provided, a random secret key will be used")
 
 	return cmd

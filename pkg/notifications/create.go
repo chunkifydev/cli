@@ -26,7 +26,7 @@ func (r *CreateCmd) Execute() error {
 // View displays the newly created notification by showing the notifications list
 // filtered to the associated job ID
 func (r *CreateCmd) View() {
-	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: "asc", JobId: r.Params.JobId}}
+	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: "asc", ObjectId: r.Params.ObjectId}}
 	notifList.Execute()
 	notifList.View()
 }
@@ -49,11 +49,11 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Configure required command flags
-	cmd.Flags().StringVar(&req.Params.JobId, "job-id", "", "The job id (required)")
+	cmd.Flags().StringVar(&req.Params.ObjectId, "object-id", "", "The object id (required)")
 	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "The webhook id (required)")
 	cmd.Flags().StringVar(&req.Params.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
 
-	cmd.MarkFlagRequired("job-id")
+	cmd.MarkFlagRequired("object-id")
 	cmd.MarkFlagRequired("webhook-id")
 	cmd.MarkFlagRequired("event")
 

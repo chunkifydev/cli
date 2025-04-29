@@ -127,7 +127,7 @@ func newListCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&req.payload, "payload", "p", false, "Return the webhook payload in JSON")
 
-	cmd.Flags().StringVar(&req.Params.JobId, "job-id", "", "Return all sent notifications for the job Id")
+	cmd.Flags().StringVar(&req.Params.ObjectId, "object-id", "", "Return all sent notifications for the object Id")
 	cmd.Flags().StringArrayVar(&req.Params.Events, "event", nil, "Return all sent notifications with the given event. Event can be *, job.* or job.completed")
 	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
 
