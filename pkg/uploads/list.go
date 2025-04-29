@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 )
@@ -116,7 +117,7 @@ func uploadsListToRows(uploads []chunkify.Upload) [][]string {
 			upload.CreatedAt.Format(time.RFC822),
 			upload.Id,
 			sourceId,
-			styles.Important.Render(upload.Status),
+			formatter.UploadStatus(upload.Status),
 		}
 	}
 	return rows

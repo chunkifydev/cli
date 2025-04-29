@@ -65,6 +65,18 @@ func JobStatus(status string) string {
 	}
 }
 
+// UploadStatus formats an upload status with appropriate styling
+func UploadStatus(status string) string {
+	switch status {
+	case "completed":
+		return styles.Important.Render(status)
+	case "error", "expired":
+		return styles.Error.Render(status)
+	default:
+		return styles.Working.Render(status)
+	}
+}
+
 // LogLevel formats a log level with appropriate styling
 func LogLevel(level string) string {
 	switch level {
