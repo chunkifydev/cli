@@ -146,7 +146,7 @@ func newListCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
 	cmd.Flags().StringVar(&req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().StringVar(&req.Params.Status, "status", "", "Upload's status: finished, processing, error")
+	cmd.Flags().StringVar(&req.Params.Status, "status", "", "Upload's status: completed, waiting, failed, expired")
 
 	cmd.Flags().StringVar(&req.Params.SourceId, "source-id", "", "List uploads by source Id")
 
