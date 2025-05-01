@@ -80,7 +80,7 @@ func (r *ListCmd) uploadsTable() *table.Table {
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Upload ID", "Source ID", "Status").
+		Headers("Date", "Upload ID", "Source ID", "Status", "Expires At").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -118,6 +118,7 @@ func uploadsListToRows(uploads []chunkify.Upload) [][]string {
 			upload.Id,
 			sourceId,
 			formatter.UploadStatus(upload.Status),
+			upload.ExpiresAt.Format(time.RFC822),
 		}
 	}
 	return rows
