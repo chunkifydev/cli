@@ -79,6 +79,7 @@ func newCreateCmd() *cobra.Command {
 
 	// Define flags for upload creation
 	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
+	cmd.Flags().Int64Var(&req.Params.Timeout, "timeout", 1800, "Optional timeout in seconds, default is 1800 seconds")
 	cmd.Flags().StringVar(&path, "path", "", "Path to the video file to upload")
 
 	return cmd
