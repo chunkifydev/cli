@@ -31,6 +31,7 @@ func (r *CreateCmd) View() {
 
 // newCreateCmd creates and returns a new cobra command for webhook creation
 func newCreateCmd() *cobra.Command {
+	var enabled bool
 	req := CreateCmd{}
 
 	cmd := &cobra.Command{
@@ -38,6 +39,7 @@ func newCreateCmd() *cobra.Command {
 		Short: "Create a new webhook for your current project",
 		Long:  `Create a new webhook for your current project`,
 		Run: func(cmd *cobra.Command, args []string) {
+			req.Params.Enabled = &enabled
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
@@ -48,7 +50,7 @@ func newCreateCmd() *cobra.Command {
 
 	// Add command flags for configuring the webhook
 	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The webhook URL (required)")
-	cmd.Flags().BoolVar(&req.Params.Enabled, "enabled", true, "Enable the webhook")
+	cmd.Flags().BoolVar(&enabled, "enabled", true, "Enable the webhook")
 	cmd.Flags().StringVar(&req.Params.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
 	cmd.MarkFlagRequired("url")
 
