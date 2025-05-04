@@ -51,7 +51,7 @@ func newCreateCmd() *cobra.Command {
 	// Add command flags for configuring the webhook
 	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The webhook URL (required)")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "Enable the webhook")
-	cmd.Flags().StringVar(&req.Params.Events, "events", "*", "Create a webhook that will trigger for specific events. *, job.* or job.completed")
+	cmd.Flags().StringArrayVar(&req.Params.Events, "events", []string{"*"}, "Create a webhook that will trigger for specific events. *, job.*, job.completed, job.failed, upload.* upload.completed, upload.failed, upload.expired")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

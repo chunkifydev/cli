@@ -28,12 +28,11 @@ func NewCommand(config *config.Config) *Command {
 		}}
 
 	// Add all subcommands for webhook management
-	cmd.Command.AddCommand(newCreateCmd())  // Create a new webhook
-	cmd.Command.AddCommand(newEnableCmd())  // Enable a webhook
-	cmd.Command.AddCommand(newDisableCmd()) // Disable a webhook
-	cmd.Command.AddCommand(newDeleteCmd())  // Delete a webhook
-	cmd.Command.AddCommand(newGetCmd())     // Get a webhook
-	cmd.Command.AddCommand(newListCmd())    // List all webhooks
+	cmd.Command.AddCommand(newCreateCmd()) // Create a new webhook
+	cmd.Command.AddCommand(newDeleteCmd()) // Delete a webhook
+	cmd.Command.AddCommand(newGetCmd())    // Get a webhook
+	cmd.Command.AddCommand(newListCmd())   // List all webhooks
+	cmd.Command.AddCommand(newUpdateCmd()) // Update webhook
 
 	return cmd
 }

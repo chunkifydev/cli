@@ -259,7 +259,7 @@ func prettyRenderJSONPayload(payload string) string {
 func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
 	log(fmt.Sprintln("Setting up localdev webhook..."))
 	enabled := true
-	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: "*", Enabled: &enabled}}
+	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: []string{"*"}, Enabled: &enabled}}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return chunkify.WebhookWithSecretKey{}, err
