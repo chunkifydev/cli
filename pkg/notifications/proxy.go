@@ -20,7 +20,6 @@ import (
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/chunkifydev/cli/pkg/webhooks"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +28,6 @@ var (
 	mut                     sync.Mutex             // Mutex for thread-safe access to shared resources
 	lastProxiedNotification *chunkify.Notification // Tracks the most recently proxied notification
 	logs                    []string               // Stores log messages
-	startTime               time.Time              // Records when proxy started
 )
 
 // ProxyCmd represents the command for proxying notifications to a local URL
@@ -40,31 +38,6 @@ type ProxyCmd struct {
 	Events     []string                // List of event types to proxy
 	CreatedGte time.Time               // Filter for notifications created after this time
 	Data       []chunkify.Notification // The notifications data
-}
-
-// WebhookPayload represents the structure of webhook notification payloads
-type WebhookPayload struct {
-	Event string    `json:"event"` // Type of event
-	Date  time.Time `json:"date"`  // When the event occurred
-	Data  any       `json:"data"`  // Event-specific data
-}
-
-// WebhookJobPayloadData contains the detailed data for a webhook notification
-type WebhookJobPayloadData struct {
-	JobId    string          `json:"job_id"`    // ID of the associated job
-	Status   string          `json:"status"`    // Status of the job
-	Metadata any             `json:"metadata"`  // Additional metadata
-	SourceId string          `json:"source_id"` // ID of the source
-	Error    *string         `json:"error"`     // Error message if any
-	Files    []chunkify.File `json:"files"`     // Associated files
-}
-
-// WebhookUploadPayloadData contains the detailed data for a webhook notification
-type WebhookUploadPayloadData struct {
-	UploadId string `json:"upload_id"` // ID of the associated upload
-	Status   string `json:"status"`    // Status of the upload
-	Metadata any    `json:"metadata"`  // Additional metadata
-	SourceId string `json:"source_id"` // ID of the source
 }
 
 // model represents the state for the bubbletea TUI
@@ -100,16 +73,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if lastProxiedNotification != nil {
 				m.cmd.httpProxy(*lastProxiedNotification)
 			}
-			return m, tickCmd()
-		case "t":
-			testNotif := generateTestJobNotification()
-			m.cmd.Data = []chunkify.Notification{testNotif}
-			m.cmd.httpProxy(testNotif)
-			return m, tickCmd()
-		case "u":
-			testNotif := generateTestUploadNotification()
-			m.cmd.Data = []chunkify.Notification{testNotif}
-			m.cmd.httpProxy(testNotif)
 			return m, tickCmd()
 		case "v":
 			if lastProxiedNotification != nil {
@@ -152,7 +115,7 @@ func tickCmd() tea.Cmd {
 func (m model) View() string {
 	s := strings.Join(logs, "\n")
 	s += "\n\n"
-	s += styles.Debug.Render("[T] Send a test notification\n[V] View last notification payload\n[R] Replay the last notification\n[Q] Exit\n")
+	s += styles.Debug.Render("[R] Replay the last notification\n[V] View last notification payload\n[Q] Exit\n")
 
 	return s
 }
@@ -161,12 +124,11 @@ func (m model) View() string {
 func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
 	params := chunkify.NotificationListParams{
 		WebhookId: r.WebhookId,
+		Limit:     10,
 	}
 
 	if lastProxiedNotification != nil {
 		params.CreatedGte = lastProxiedNotification.CreatedAt.Add(1 * time.Second).Format(time.RFC3339)
-	} else {
-		params.CreatedGte = startTime.Format(time.RFC3339)
 	}
 
 	return params
@@ -180,7 +142,7 @@ func (r *ProxyCmd) Execute() error {
 	}
 
 	// we filter the notifications by the given events
-	if len(r.Events) > 0 && !slices.Contains(r.Events, "*") {
+	if len(r.Events) > 0 {
 		filteredNotifications := []chunkify.Notification{}
 		for _, notif := range notifications.Items {
 			if slices.Contains(r.Events, notif.Event) {
@@ -203,7 +165,14 @@ func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
 	}
 
 	mut.Lock()
-	lastProxiedNotification = &notif
+	lastProxiedNotification = &chunkify.Notification{
+		Id:                 notif.Id,
+		ObjectId:           notif.ObjectId,
+		CreatedAt:          notif.CreatedAt,
+		Payload:            notif.Payload,
+		Event:              notif.Event,
+		ResponseStatusCode: notif.ResponseStatusCode,
+	}
 	mut.Unlock()
 
 	buf := bytes.NewBufferString(notif.Payload)
@@ -239,10 +208,10 @@ func generateSignature(payloadString string, secretKey string) string {
 
 // prettyRenderJSONPayload formats a JSON payload string for display
 func prettyRenderJSONPayload(payload string) string {
-	var payloadStruct WebhookPayload
+	var payloadStruct chunkify.NotificationPayload
 
 	if err := json.Unmarshal([]byte(payload), &payloadStruct); err != nil {
-		log("Couldn't not pretty render JSON payload")
+		log("Couldn't not pretty render JSON payload: " + err.Error())
 		return ""
 	}
 
@@ -259,7 +228,7 @@ func prettyRenderJSONPayload(payload string) string {
 func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
 	log(fmt.Sprintln("Setting up localdev webhook..."))
 	enabled := true
-	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: []string{"*"}, Enabled: &enabled}}
+	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: chunkify.NotificationEventsAll, Enabled: &enabled}}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return chunkify.WebhookWithSecretKey{}, err
@@ -279,80 +248,6 @@ func deleteLocalDevWebhook(webhookId string) error {
 	return nil
 }
 
-// generateTestJobNotification creates a sample notification for testing
-func generateTestJobNotification() chunkify.Notification {
-	jobId := uuid.NewString()
-	payload := WebhookPayload{
-		Event: "job.completed",
-		Date:  time.Now(),
-		Data: WebhookJobPayloadData{
-			JobId:    jobId,
-			Metadata: map[string]any{"VideoId": uuid.NewString()},
-			SourceId: uuid.NewString(),
-			Error:    nil,
-			Files: []chunkify.File{
-				{
-					Id:        uuid.NewString(),
-					JobId:     jobId,
-					StorageId: "stor_aws_xxx",
-					Path:      "/tmp/test.mp4",
-					Size:      1024,
-					MimeType:  "video/mp4",
-					CreatedAt: time.Now(),
-					Url:       "http://localhost:8080/tmp/test.mp4",
-				},
-			},
-		},
-	}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		log("Couldn't not marshal json")
-		return chunkify.Notification{}
-	}
-
-	notif := chunkify.Notification{
-		Id:                 uuid.NewString(),
-		ObjectId:           jobId,
-		CreatedAt:          time.Now(),
-		Payload:            string(payloadBytes),
-		ResponseStatusCode: 200,
-		Event:              "job.completed",
-	}
-
-	return notif
-}
-
-// generateTestUploadNotification creates a sample notification for testing
-func generateTestUploadNotification() chunkify.Notification {
-	uploadId := uuid.NewString()
-	payload := WebhookPayload{
-		Event: "upload.completed",
-		Date:  time.Now(),
-		Data: WebhookUploadPayloadData{
-			UploadId: uploadId,
-			Status:   "completed",
-			Metadata: map[string]any{"VideoId": uuid.NewString()},
-			SourceId: uuid.NewString(),
-		},
-	}
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		log("Couldn't not marshal json")
-		return chunkify.Notification{}
-	}
-
-	notif := chunkify.Notification{
-		Id:                 uuid.NewString(),
-		ObjectId:           uploadId,
-		CreatedAt:          time.Now(),
-		Payload:            string(payloadBytes),
-		ResponseStatusCode: 200,
-		Event:              "upload.completed",
-	}
-
-	return notif
-}
-
 // log adds a message to the log list
 func log(l string) {
 	logs = append(logs, l)
@@ -368,7 +263,6 @@ func newProxyCmd() *cobra.Command {
 		Long:  `Proxy notifications to local HTTP URL`,
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			startTime = time.Now()
 			log("chunkify proxy\n")
 			req.localUrl = args[0]
 
@@ -385,7 +279,7 @@ func newProxyCmd() *cobra.Command {
 			}
 			log(fmt.Sprintf("Secret key: %s\n", req.secretKey))
 
-			log(fmt.Sprintf("Start proxying notifications matching '%s' to %s", strings.Join(req.Events, ","), styles.Important.Render(req.localUrl)))
+			log(fmt.Sprintf("Start proxying notifications to %s\n\nEvents:\n%s", styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n")))
 
 			ch := make(chan []chunkify.Notification)
 			m := model{
@@ -402,7 +296,7 @@ func newProxyCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&req.Events, "event", []string{"*"}, "Proxy all notifications with the given event. Event can be *, job.completed, upload.completed")
+	cmd.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
 	cmd.Flags().StringVar(&req.secretKey, "secret-key", "", "Use the given secret key to sign the notifications. If not provided, a random secret key will be used")
 
 	return cmd
