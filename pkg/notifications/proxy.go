@@ -20,6 +20,7 @@ import (
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/chunkifydev/cli/pkg/webhooks"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -225,10 +226,11 @@ func prettyRenderJSONPayload(payload string) string {
 }
 
 // createLocaldevWebhook sets up a webhook for local development
-func createLocaldevWebhook() (chunkify.WebhookWithSecretKey, error) {
-	log(fmt.Sprintln("Setting up localdev webhook..."))
+func createLocaldevWebhook(webhookUrl string) (chunkify.WebhookWithSecretKey, error) {
+	log(fmt.Sprintf("Setting up localdev webhook for %s", webhookUrl))
+
 	enabled := true
-	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: "http://localdev", Events: chunkify.NotificationEventsAll, Enabled: &enabled}}
+	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled}}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return chunkify.WebhookWithSecretKey{}, err
@@ -255,6 +257,7 @@ func log(l string) {
 
 // newProxyCmd creates and configures a new cobra command for proxying notifications
 func newProxyCmd() *cobra.Command {
+	var hostname string
 	req := ProxyCmd{}
 
 	cmd := &cobra.Command{
@@ -266,7 +269,14 @@ func newProxyCmd() *cobra.Command {
 			log("chunkify proxy\n")
 			req.localUrl = args[0]
 
-			webhook, err := createLocaldevWebhook()
+			if hostname == "" {
+				hostname, _ = os.Hostname()
+				if hostname == "" {
+					hostname = uuid.New().String()
+				}
+			}
+
+			webhook, err := createLocaldevWebhook(fmt.Sprintf("http://%s.chunkify.local", hostname))
 			if err != nil {
 				return
 			}
@@ -298,6 +308,6 @@ func newProxyCmd() *cobra.Command {
 
 	cmd.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
 	cmd.Flags().StringVar(&req.secretKey, "secret-key", "", "Use the given secret key to sign the notifications. If not provided, a random secret key will be used")
-
+	cmd.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
 	return cmd
 }
