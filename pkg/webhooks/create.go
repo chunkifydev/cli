@@ -7,8 +7,8 @@ import (
 
 // CreateCmd represents the command for creating a new webhook
 type CreateCmd struct {
-	Params chunkify.WebhookCreateParams  // Params contains the parameters for creating a webhook
-	Data   chunkify.WebhookWithSecretKey `json:"-"` // Data contains the created webhook response including the secret key
+	Params chunkify.WebhookCreateParams // Params contains the parameters for creating a webhook
+	Data   chunkify.Webhook             `json:"-"` // Data contains the created webhook response
 }
 
 // Execute creates a new webhook using the provided parameters
@@ -25,7 +25,7 @@ func (r *CreateCmd) Execute() error {
 
 // View displays the created webhook in a formatted table
 func (r *CreateCmd) View() {
-	webhooksList := ListCmd{Data: []chunkify.Webhook{r.Data.Webhook}}
+	webhooksList := ListCmd{Data: []chunkify.Webhook{r.Data}}
 	webhooksList.View()
 }
 

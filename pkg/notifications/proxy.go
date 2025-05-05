@@ -33,12 +33,12 @@ var (
 
 // ProxyCmd represents the command for proxying notifications to a local URL
 type ProxyCmd struct {
-	localUrl   string                  // Target URL to proxy notifications to
-	secretKey  string                  // Key used to sign proxied notifications
-	WebhookId  string                  // ID of the webhook receiving notifications
-	Events     []string                // List of event types to proxy
-	CreatedGte time.Time               // Filter for notifications created after this time
-	Data       []chunkify.Notification // The notifications data
+	localUrl      string                  // Target URL to proxy notifications to
+	webhookSecret string                  // Key used to sign proxied notifications
+	WebhookId     string                  // ID of the webhook receiving notifications
+	Events        []string                // List of event types to proxy
+	CreatedGte    time.Time               // Filter for notifications created after this time
+	Data          []chunkify.Notification // The notifications data
 }
 
 // model represents the state for the bubbletea TUI
@@ -186,7 +186,7 @@ func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "chunkify-cli/proxy")
 
-	signature := generateSignature(notif.Payload, r.secretKey)
+	signature := generateSignature(notif.Payload, r.webhookSecret)
 	req.Header.Set("X-Chunkify-Signature", signature)
 
 	// Make the HTTP request
@@ -226,14 +226,14 @@ func prettyRenderJSONPayload(payload string) string {
 }
 
 // createLocaldevWebhook sets up a webhook for local development
-func createLocaldevWebhook(webhookUrl string) (chunkify.WebhookWithSecretKey, error) {
+func createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
 	log(fmt.Sprintf("Setting up localdev webhook for %s", webhookUrl))
 
 	enabled := true
 	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled}}
 	if err := cmd.Execute(); err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
-		return chunkify.WebhookWithSecretKey{}, err
+		return chunkify.Webhook{}, err
 	}
 
 	return cmd.Data, nil
@@ -284,10 +284,7 @@ func newProxyCmd() *cobra.Command {
 			defer deleteLocalDevWebhook(webhook.Id)
 
 			req.WebhookId = webhook.Id
-			if req.secretKey == "" {
-				req.secretKey = webhook.SecretKey
-			}
-			log(fmt.Sprintf("Secret key: %s\n", req.secretKey))
+			log(fmt.Sprintf("Secret key: %s\n", req.webhookSecret))
 
 			log(fmt.Sprintf("Start proxying notifications to %s\n\nEvents:\n%s", styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n")))
 
@@ -307,7 +304,10 @@ func newProxyCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
-	cmd.Flags().StringVar(&req.secretKey, "secret-key", "", "Use the given secret key to sign the notifications. If not provided, a random secret key will be used")
+	cmd.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
 	cmd.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
+
+	cmd.MarkFlagRequired("webhook-secret")
+
 	return cmd
 }
