@@ -32,6 +32,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newCreateCmd()) // Create a new upload
 	cmd.Command.AddCommand(newListCmd())   // List all uploads
 	cmd.Command.AddCommand(newGetCmd())    // Get an upload by ID
+	cmd.Command.AddCommand(newDeleteCmd()) // Delete an upload by ID
 	return cmd
 }
 
