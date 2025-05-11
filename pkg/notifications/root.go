@@ -33,6 +33,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newGetCmd())    // Get a single notification
 	cmd.Command.AddCommand(newCreateCmd()) // Create a new notification
 	cmd.Command.AddCommand(newProxyCmd())  // Proxy notifications to a local URL
+	cmd.Command.AddCommand(newDeleteCmd()) // Delete a notification
 	return cmd
 }
 
