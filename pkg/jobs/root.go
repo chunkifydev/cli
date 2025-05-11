@@ -28,12 +28,11 @@ func NewCommand(config *config.Config) *Command {
 		}}
 
 	// Add all subcommands
-	cmd.Command.AddCommand(newCreateCmd())             // Create new jobs
-	cmd.Command.AddCommand(newGetCmd())                // Get details of a specific job
-	cmd.Command.AddCommand(newListCmd())               // List all jobs
-	cmd.Command.AddCommand(newFilesListCmd())          // List files associated with jobs
-	cmd.Command.AddCommand(newTranscoderProgressCmd()) // Monitor transcoding progress
-
+	cmd.Command.AddCommand(newCreateCmd())    // Create new jobs
+	cmd.Command.AddCommand(newGetCmd())       // Get details of a specific job
+	cmd.Command.AddCommand(newListCmd())      // List all jobs
+	cmd.Command.AddCommand(newFilesListCmd()) // List files associated with jobs
+	cmd.Command.AddCommand(newDeleteCmd())    // Delete a job
 	return cmd
 }
 
