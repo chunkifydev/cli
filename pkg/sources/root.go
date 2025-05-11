@@ -32,6 +32,7 @@ func NewCommand(config *config.Config) *Command {
 	cmd.Command.AddCommand(newCreateCmd()) // Create a new source
 	cmd.Command.AddCommand(newGetCmd())    // Get information about a source
 	cmd.Command.AddCommand(newListCmd())   // List all sources
+	cmd.Command.AddCommand(newDeleteCmd()) // Delete a source
 	return cmd
 }
 
