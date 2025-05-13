@@ -26,9 +26,9 @@ import (
 
 // Global variables used across the proxy functionality
 var (
-	mut                     sync.Mutex             // Mutex for thread-safe access to shared resources
-	lastProxiedNotification *chunkify.Notification // Tracks the most recently proxied notification
-	logs                    []string               // Stores log messages
+	mut                      sync.Mutex              // Mutex for thread-safe access to shared resources
+	lastProxiedNotifications []chunkify.Notification // Tracks the 10 last proxied notifications
+	logs                     []string                // Stores log messages
 )
 
 // ProxyCmd represents the command for proxying notifications to a local URL
@@ -71,13 +71,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "r":
-			if lastProxiedNotification != nil {
-				m.cmd.httpProxy(*lastProxiedNotification)
+			if len(lastProxiedNotifications) > 0 {
+				m.cmd.httpProxy(lastProxiedNotifications[len(lastProxiedNotifications)-1])
 			}
 			return m, tickCmd()
 		case "v":
-			if lastProxiedNotification != nil {
-				prettyJson := prettyRenderJSONPayload(lastProxiedNotification.Payload)
+			if len(lastProxiedNotifications) > 0 {
+				prettyJson := prettyRenderJSONPayload(lastProxiedNotifications[len(lastProxiedNotifications)-1].Payload)
 				log(styles.Debug.Render(prettyJson) + "\n")
 			}
 			return m, tickCmd()
@@ -128,8 +128,8 @@ func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
 		Limit:     10,
 	}
 
-	if lastProxiedNotification != nil {
-		params.CreatedGte = lastProxiedNotification.CreatedAt.Add(1 * time.Second).Format(time.RFC3339)
+	if len(lastProxiedNotifications) > 0 {
+		params.CreatedGte = lastProxiedNotifications[len(lastProxiedNotifications)-1].CreatedAt.Format(time.RFC3339)
 	}
 
 	return params
@@ -159,22 +159,29 @@ func (r *ProxyCmd) Execute() error {
 	return nil
 }
 
-// httpProxy forwards a notification to the configured local URL
-func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
-	if lastProxiedNotification != nil && lastProxiedNotification.CreatedAt.After(notif.CreatedAt) {
-		return
+func shouldProxy(notif chunkify.Notification) bool {
+	mut.Lock()
+	defer mut.Unlock()
+
+	for _, n := range lastProxiedNotifications {
+		if n.Id == notif.Id {
+			return false
+		}
 	}
 
-	mut.Lock()
-	lastProxiedNotification = &chunkify.Notification{
-		Id:                 notif.Id,
-		ObjectId:           notif.ObjectId,
-		CreatedAt:          notif.CreatedAt,
-		Payload:            notif.Payload,
-		Event:              notif.Event,
-		ResponseStatusCode: notif.ResponseStatusCode,
+	// Add this notification to the list
+	lastProxiedNotifications = append(lastProxiedNotifications, notif)
+	if len(lastProxiedNotifications) > 10 {
+		lastProxiedNotifications = lastProxiedNotifications[1:]
 	}
-	mut.Unlock()
+	return true
+}
+
+// httpProxy forwards a notification to the configured local URL
+func (r *ProxyCmd) httpProxy(notif chunkify.Notification) {
+	if !shouldProxy(notif) {
+		return
+	}
 
 	buf := bytes.NewBufferString(notif.Payload)
 	req, err := http.NewRequest("POST", r.localUrl, buf)
