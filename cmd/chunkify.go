@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/files"
 	"github.com/chunkifydev/cli/pkg/jobs"
 	"github.com/chunkifydev/cli/pkg/logs"
 	"github.com/chunkifydev/cli/pkg/notifications"
@@ -116,6 +117,7 @@ func init() {
 	rootCmd.AddCommand(uploads.NewCommand(cfg).Command)
 	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
 	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
+	rootCmd.AddCommand(files.NewCommand(cfg).Command)
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)

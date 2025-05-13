@@ -1,62 +1,62 @@
-// Package sources provides functionality for managing and interacting with sources
-package sources
+package files
 
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
-
-	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
-// ListCmd represents the command for listing sources with various filter options
+// ListCmd represents the command for listing files with various filter options
 type ListCmd struct {
-	Id          string   // Filter by source ID
-	Offset      int64    // Starting offset for pagination
-	Limit       int64    // Maximum number of items to return
-	DurationEq  string   // Filter for exact duration match
-	DurationGte string   // Filter for duration greater than or equal
-	DurationGt  string   // Filter for duration greater than
-	DurationLte string   // Filter for duration less than or equal
-	DurationLt  string   // Filter for duration less than
-	CreatedGte  string   // Filter for creation date greater than or equal
-	CreatedLte  string   // Filter for creation date less than or equal
-	WidthEq     int64    // Filter for exact width match
-	WidthGte    int64    // Filter for width greater than or equal
-	WidthGt     int64    // Filter for width greater than
-	WidthLte    int64    // Filter for width less than or equal
-	WidthLt     int64    // Filter for width less than
-	HeightEq    int64    // Filter for exact height match
-	HeightGte   int64    // Filter for height greater than or equal
-	HeightGt    int64    // Filter for height greater than
-	HeightLte   int64    // Filter for height less than or equal
-	HeightLt    int64    // Filter for height less than
-	SizeEq      string   // Filter for exact size match
-	SizeGte     string   // Filter for size greater than or equal
-	SizeGt      string   // Filter for size greater than
-	SizeLte     string   // Filter for size less than or equal
-	SizeLt      string   // Filter for size less than
-	AudioCodec  string   // Filter by audio codec
-	VideoCodec  string   // Filter by video codec
-	Device      string   // Filter by device
-	CreatedSort string   // Sort direction for creation date
-	Metadata    []string // Filter by metadata key-value pairs
+	Id          string // Filter by file ID
+	Offset      int64  // Starting offset for pagination
+	Limit       int64  // Maximum number of items to return
+	DurationEq  string // Filter for exact duration match
+	DurationGte string // Filter for duration greater than or equal
+	DurationGt  string // Filter for duration greater than
+	DurationLte string // Filter for duration less than or equal
+	DurationLt  string // Filter for duration less than
+	CreatedGte  string // Filter for creation date greater than or equal
+	CreatedLte  string // Filter for creation date less than or equal
+	WidthEq     int64  // Filter for exact width match
+	WidthGte    int64  // Filter for width greater than or equal
+	WidthGt     int64  // Filter for width greater than
+	WidthLte    int64  // Filter for width less than or equal
+	WidthLt     int64  // Filter for width less than
+	HeightEq    int64  // Filter for exact height match
+	HeightGte   int64  // Filter for height greater than or equal
+	HeightGt    int64  // Filter for height greater than
+	HeightLte   int64  // Filter for height less than or equal
+	HeightLt    int64  // Filter for height less than
+	SizeEq      string // Filter for exact size match
+	SizeGte     string // Filter for size greater than or equal
+	SizeGt      string // Filter for size greater than
+	SizeLte     string // Filter for size less than or equal
+	SizeLt      string // Filter for size less than
+	AudioCodec  string // Filter by audio codec
+	VideoCodec  string // Filter by video codec
+	CreatedSort string // Sort direction for creation date
+	MimeType    string // Filter by mime type
+	JobId       string // Filter by job id
+	StorageId   string // Filter by storage id
+	PathEq      string // Filter by exact path
+	PathILike   string // Filter by matching path
 
-	interactive bool              // Enable real-time refresh mode
-	Data        []chunkify.Source // The list of sources retrieved
+	Data []chunkify.File // The list of sources retrieved
 }
 
 // toParams converts the ListCmd fields into API parameters
-func (r *ListCmd) toParams() chunkify.SourceListParams {
-	params := chunkify.SourceListParams{}
+func (r *ListCmd) toParams() chunkify.FileListParams {
+	params := chunkify.FileListParams{}
 
 	if r.DurationEq != "" {
 		dur, err := time.ParseDuration(r.DurationEq)
@@ -148,44 +148,36 @@ func (r *ListCmd) toParams() chunkify.SourceListParams {
 			params.SizeLt = bytes
 		}
 	}
-
-	var metadata [][]string
-	if len(r.Metadata) > 0 {
-		md := []string{}
-		for _, m := range r.Metadata {
-			md = append(md, strings.Replace(m, "=", ":", -1))
-		}
-		metadata = [][]string{md}
-	}
-
 	params.Id = r.Id
-	params.Metadata = metadata
 	params.Offset = r.Offset
 	params.Limit = r.Limit
 	params.CreatedSort = r.CreatedSort
 	params.AudioCodec = r.AudioCodec
 	params.VideoCodec = r.VideoCodec
-	params.Device = r.Device
+	params.MimeType = r.MimeType
+	params.JobId = r.JobId
+	params.StorageId = r.StorageId
+	params.PathEq = r.PathEq
+	params.PathILike = r.PathILike
 
 	return params
 }
 
-// Execute retrieves the list of sources from the API
+// Execute retrieves the list of storage configurations
 func (r *ListCmd) Execute() error {
-	params := r.toParams()
-	// Convert metadata to the required format
-
-	sources, err := cmd.Config.Client.SourceList(params)
+	files, err := cmd.Config.Client.FileList(r.toParams())
 	if err != nil {
 		return err
 	}
 
-	r.Data = sources.Items
+	r.Data = files.Items
 
 	return nil
 }
 
-// View displays the list of sources in either JSON or table format
+// View displays the list of upload configurations
+// If JSON output is enabled, it prints the data in JSON format
+// Otherwise, it displays the data in a formatted table
 func (r *ListCmd) View() {
 	if cmd.Config.JSON {
 		dataBytes, err := json.MarshalIndent(r.Data, "", "  ")
@@ -198,26 +190,26 @@ func (r *ListCmd) View() {
 	}
 
 	if len(r.Data) == 0 {
-		fmt.Println(styles.DefaultText.Render("No source found."))
+		fmt.Println(styles.DefaultText.Render("No files found."))
 		return
 	}
 
-	fmt.Println(r.sourcesTable())
+	fmt.Println(r.filesTable())
 	if len(r.Data) > 1 {
 		fmt.Println(styles.Debug.MarginTop(1).Render(fmt.Sprintf("Total: %d\n", len(r.Data))))
 	}
 }
 
-// sourcesTable creates a formatted table displaying source information
-func (r *ListCmd) sourcesTable() *table.Table {
-	rightCols := []int{2, 3, 6, 8, 9}
+// filesTable creates a formatted table displaying file information
+func (r *ListCmd) filesTable() *table.Table {
+	rightCols := []int{3, 6, 8}
 	centerCols := []int{4, 5, 7}
 
 	table := table.New().
 		BorderRow(true).
 		BorderColumn(false).
 		BorderStyle(styles.Border).
-		Headers("Date", "Id", "Duration", "Size", "WxH", "Video", "Bitrate", "Audio", "Bitrate").
+		Headers("Date", "File ID", "Filename", "Duration", "Size", "WxH", "Video", "Bitrate", "Audio", "Bitrate", "Job ID").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			switch {
 			case row == 0:
@@ -237,55 +229,54 @@ func (r *ListCmd) sourcesTable() *table.Table {
 				return styles.TableSpacing
 			}
 		}).
-		Rows(sourcesListToRows(r.Data)...)
+		Rows(filesListToRows(r.Data)...)
 
 	return table
 }
 
-// sourcesListToRows converts source data into formatted table rows
-func sourcesListToRows(sources []chunkify.Source) [][]string {
-	rows := make([][]string, len(sources))
-	for i, source := range sources {
+// filesListToRows converts file data into formatted table rows
+func filesListToRows(files []chunkify.File) [][]string {
+	rows := make([][]string, len(files))
+	for i, file := range files {
 		rows[i] = []string{
-			source.CreatedAt.Format(time.RFC822),
-			styles.Id.Render(source.Id),
-			formatter.Duration(source.Duration),
-			formatter.Size(source.Size),
-			fmt.Sprintf("%dx%d", source.Width, source.Height),
-			styles.Important.Render(source.VideoCodec),
-			formatter.Bitrate(source.VideoBitrate),
-			source.AudioCodec,
-			formatter.Bitrate(source.AudioBitrate),
+			file.CreatedAt.Format(time.RFC822),
+			styles.Id.Render(file.Id),
+			path.Base(file.Path),
+			formatter.Duration(file.Duration),
+			formatter.Size(file.Size),
+			fmt.Sprintf("%dx%d", file.Width, file.Height),
+			styles.Important.Render(file.VideoCodec),
+			formatter.Bitrate(file.VideoBitrate),
+			file.AudioCodec,
+			formatter.Bitrate(file.AudioBitrate),
+			styles.Id.Render(file.JobId),
 		}
 	}
 	return rows
 }
 
-// newListCmd creates and configures a new cobra command for listing sources
+// newListCmd creates and configures a new cobra command for listing file configurations
 func newListCmd() *cobra.Command {
 	req := ListCmd{}
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "list all sources",
-		Long:  `list all sources`,
+		Short: "list all files",
+		Long:  `list all files`,
 		Run: func(_ *cobra.Command, args []string) {
 			if err := req.Execute(); err != nil {
 				printError(err)
 				return
 			}
-			if !cmd.Config.JSON && req.interactive {
-				StartPolling(&req)
-			} else {
-				req.View()
-			}
+			req.View()
 		},
 	}
 
 	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
 	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.Id, "id", "", "Source ID")
+	cmd.Flags().StringVar(&req.Id, "id", "", "File ID")
+
 	cmd.Flags().StringVar(&req.DurationEq, "duration.eq", "", "Duration Equals")
 	cmd.Flags().StringVar(&req.DurationGte, "duration.gte", "", "Duration Greater or Equal")
 	cmd.Flags().StringVar(&req.DurationGt, "duration.gt", "", "Duration Greater")
@@ -315,12 +306,14 @@ func newListCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&req.AudioCodec, "audio-codec", "", "Audio Codec")
 	cmd.Flags().StringVar(&req.VideoCodec, "video-codec", "", "Video Codec")
-	cmd.Flags().StringVar(&req.Device, "device", "", "Device")
 
 	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort")
 
-	cmd.Flags().StringArrayVar(&req.Metadata, "metadata", nil, "Metadata")
-	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the sources in real time")
+	cmd.Flags().StringVar(&req.MimeType, "mime-type", "", "Mime Type")
+	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Job ID")
+	cmd.Flags().StringVar(&req.StorageId, "storage-id", "", "Storage ID")
+	cmd.Flags().StringVar(&req.PathEq, "path.eq", "", "Path Equals")
+	cmd.Flags().StringVar(&req.PathILike, "path.ilike", "", "Path iLike")
 
 	return cmd
 }
