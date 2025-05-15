@@ -6,6 +6,7 @@ import (
 
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/files"
+	"github.com/chunkifydev/cli/pkg/get"
 	"github.com/chunkifydev/cli/pkg/jobs"
 	"github.com/chunkifydev/cli/pkg/logs"
 	"github.com/chunkifydev/cli/pkg/notifications"
@@ -123,4 +124,5 @@ func init() {
 	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
+	rootCmd.AddCommand(get.NewCommand(cfg))
 }
