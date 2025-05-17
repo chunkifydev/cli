@@ -37,7 +37,7 @@ func (r *CreateCmd) Execute() error {
 
 	if r.body != nil {
 		if err := cmd.Config.Client.UploadBlob(r.body, upload); err != nil {
-			r.Data.Status = chunkify.UploadStatusError
+			r.Data.Status = chunkify.UploadStatusFailed
 			return err
 		}
 	}
