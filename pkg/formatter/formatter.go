@@ -9,6 +9,8 @@ import (
 	"unicode"
 
 	"github.com/chunkifydev/cli/pkg/styles"
+
+	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 // Duration formats a duration in seconds into a human readable string (HH:MM:SS)
@@ -56,9 +58,25 @@ func Bitrate(size int64) string {
 // JobStatus formats a job status with appropriate styling
 func JobStatus(status string) string {
 	switch status {
-	case "finished":
+	case chunkify.JobStatusCompleted:
 		return styles.Important.Render(status)
-	case "error":
+	case chunkify.JobStatusFailed:
+		return styles.Error.Render(status)
+	default:
+		return styles.Working.Render(status)
+	}
+}
+
+// TranscoderStatus formats a transcoder status with appropriate styling
+func TranscoderStatus(status string) string {
+	switch status {
+	case chunkify.TranscoderStatusCompleted:
+		return styles.Important.Render(status)
+	case chunkify.TranscoderStatusStarting:
+		return styles.Id.Render(status)
+	case chunkify.TranscoderStatusPending:
+		return styles.Pending.Render(status)
+	case chunkify.TranscoderStatusFailed:
 		return styles.Error.Render(status)
 	default:
 		return styles.Working.Render(status)
@@ -68,9 +86,9 @@ func JobStatus(status string) string {
 // UploadStatus formats an upload status with appropriate styling
 func UploadStatus(status string) string {
 	switch status {
-	case "completed":
+	case chunkify.UploadStatusCompleted:
 		return styles.Important.Render(status)
-	case "error", "expired":
+	case chunkify.UploadStatusFailed, chunkify.UploadStatusExpired:
 		return styles.Error.Render(status)
 	default:
 		return styles.Working.Render(status)

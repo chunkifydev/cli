@@ -44,6 +44,9 @@ var (
 	// Warning style for warning messages
 	Warning = Base.Foreground(WarningColor)
 
+	// Starting style for starting messages
+	Pending = Base.Foreground(DarkGrayColor)
+
 	// Hint style with custom foreground and background colors
 	Hint = Base.Foreground(HintForegroundColor).Background(HintBackgroundColor)
 
@@ -51,6 +54,7 @@ var (
 	BorderColor         = lipgloss.AdaptiveColor{Light: "#dddddd", Dark: "#353535"}
 	TextColor           = lipgloss.AdaptiveColor{Light: "#2b2b2b", Dark: "#d2d2d2"}
 	GrayColor           = lipgloss.AdaptiveColor{Light: "#373636", Dark: "#949494"}
+	DarkGrayColor       = lipgloss.AdaptiveColor{Light: "#666666", Dark: "#555555"}
 	ErrorColor          = lipgloss.AdaptiveColor{Light: "#c63f48", Dark: "#f58c93"}
 	WorkingColor        = lipgloss.AdaptiveColor{Light: "#d7b237", Dark: "#ffe89b"}
 	GreenColor          = lipgloss.AdaptiveColor{Light: "#309352", Dark: "#37b965"}
