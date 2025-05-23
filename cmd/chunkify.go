@@ -14,6 +14,7 @@ import (
 	"github.com/chunkifydev/cli/pkg/sources"
 	"github.com/chunkifydev/cli/pkg/storages"
 	"github.com/chunkifydev/cli/pkg/tokens"
+	"github.com/chunkifydev/cli/pkg/transcoders"
 	"github.com/chunkifydev/cli/pkg/uploads"
 	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
@@ -122,6 +123,7 @@ func init() {
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
+	rootCmd.AddCommand(transcoders.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
 	rootCmd.AddCommand(get.NewCommand(cfg))
