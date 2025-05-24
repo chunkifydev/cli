@@ -13,25 +13,25 @@ import (
 
 // model represents the state and data needed for the interactive jobs list view
 type model struct {
-	cmd                     *ListCmd                         // Command for listing jobs
-	ch                      chan chunkify.TranscoderStatuses // Channel for receiving job updates
-	transcoderStatusesTable *table.Table                     // Table for displaying jobs
+	cmd              *ListCmd                         // Command for listing jobs
+	ch               chan []chunkify.TranscoderStatus // Channel for receiving job updates
+	transcodersTable *table.Table                     // Table for displaying jobs
 }
 
 // tickMsg represents a tick event for periodic updates
 type tickMsg time.Time
 
-// listenToTranscoderStatusesChan creates a tea.Cmd that listens for job updates on a channel
-func listenToTranscoderStatusesChan(ch chan chunkify.TranscoderStatuses) tea.Cmd {
+// listenToTranscodersChan creates a tea.Cmd that listens for job updates on a channel
+func listenToTranscodersChan(ch chan []chunkify.TranscoderStatus) tea.Cmd {
 	return func() tea.Msg {
-		transcoderStatuses := <-ch
-		return transcoderStatuses
+		transcoders := <-ch
+		return transcoders
 	}
 }
 
 // Init initializes the model and starts the update loop
 func (m model) Init() tea.Cmd {
-	return tea.Batch(tickCmd(), listenToTranscoderStatusesChan(m.ch))
+	return tea.Batch(tickCmd(), listenToTranscodersChan(m.ch))
 }
 
 // Update handles incoming messages and updates the model state
@@ -42,11 +42,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q":
 			return m, tea.Quit
 		}
-	case chunkify.TranscoderStatuses:
+	case []chunkify.TranscoderStatus:
 		m.cmd.Data = msg
-		return m, listenToTranscoderStatusesChan(m.ch)
+		return m, listenToTranscodersChan(m.ch)
 	case tickMsg:
-		m.transcoderStatusesTable.Data(table.NewStringData(transcoderStatusesListToRows(m.cmd.Data.TranscoderStatuses)...))
+		m.transcodersTable.Data(table.NewStringData(transcoderStatusesListToRows(m.cmd.Data)...))
 		return m, tickCmd()
 	}
 	return m, nil
@@ -61,14 +61,14 @@ func tickCmd() tea.Cmd {
 
 // View renders the current state as a string
 func (m model) View() string {
-	s := m.transcoderStatusesTable.String()
+	s := m.transcodersTable.String()
 	s += "\n\n"
 	s += styles.Debug.Render("[Q] Exit\n")
 	return s
 }
 
 // polling periodically fetches updated job data and sends it on a channel
-func polling(r *ListCmd, ch chan chunkify.TranscoderStatuses) {
+func polling(r *ListCmd, ch chan []chunkify.TranscoderStatus) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
@@ -83,13 +83,13 @@ func polling(r *ListCmd, ch chan chunkify.TranscoderStatuses) {
 
 // StartPolling initializes and runs the interactive jobs list view
 func StartPolling(r *ListCmd) {
-	ch := make(chan chunkify.TranscoderStatuses)
+	ch := make(chan []chunkify.TranscoderStatus)
 	go polling(r, ch)
 
 	m := model{
-		cmd:                     r,
-		ch:                      ch,
-		transcoderStatusesTable: r.transcoderStatusesTable(),
+		cmd:              r,
+		ch:               ch,
+		transcodersTable: r.transcodersTable(),
 	}
 
 	p := tea.NewProgram(m)
