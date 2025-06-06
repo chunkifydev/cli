@@ -122,11 +122,11 @@ func newX264Cmd(req *CreateCmd) *cobra.Command {
 	x264Config := &chunkify.FfmpegX264{}
 
 	cmd := &cobra.Command{
-		Use:   "mp4/x264",
+		Use:   string(chunkify.FormatMp4H264),
 		Short: "Create a job with x264 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "mp4/x264"
+			req.Params.Format.Name = chunkify.FormatMp4H264
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &x264Config.FfmpegVideo)
@@ -159,11 +159,11 @@ func newX265Cmd(req *CreateCmd) *cobra.Command {
 	x265Config := &chunkify.FfmpegX265{}
 
 	cmd := &cobra.Command{
-		Use:   "mp4/x265",
+		Use:   string(chunkify.FormatMp4H265),
 		Short: "Create a job with x265 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "mp4/x265"
+			req.Params.Format.Name = chunkify.FormatMp4H265
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &x265Config.FfmpegVideo)
@@ -196,11 +196,11 @@ func newAv1Cmd(req *CreateCmd) *cobra.Command {
 	av1Config := &chunkify.FfmpegAv1{}
 
 	cmd := &cobra.Command{
-		Use:   "mp4/av1",
+		Use:   string(chunkify.FormatMp4Av1),
 		Short: "Create a job with av1 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "mp4/av1"
+			req.Params.Format.Name = chunkify.FormatMp4Av1
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &av1Config.FfmpegVideo)
@@ -233,11 +233,11 @@ func newVp9Cmd(req *CreateCmd) *cobra.Command {
 	vp9Config := &chunkify.FfmpegVp9{}
 
 	cmd := &cobra.Command{
-		Use:   "webm/vp9",
+		Use:   string(chunkify.FormatWebmVp9),
 		Short: "Create a job with vp9 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "webm/vp9"
+			req.Params.Format.Name = chunkify.FormatWebmVp9
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &vp9Config.FfmpegVideo)
@@ -270,11 +270,11 @@ func newHlsX264Cmd(req *CreateCmd) *cobra.Command {
 	hlsX264Config := &chunkify.FfmpegHlsX264{}
 
 	cmd := &cobra.Command{
-		Use:   "hls/x264",
+		Use:   string(chunkify.FormatHlsH264),
 		Short: "Create a job with hls x264 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "hls/x264"
+			req.Params.Format.Name = chunkify.FormatHlsH264
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &hlsX264Config.FfmpegVideo)
@@ -310,11 +310,11 @@ func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
 	hlsX265Config := &chunkify.FfmpegHlsX265{}
 
 	cmd := &cobra.Command{
-		Use:   "hls/x265",
+		Use:   string(chunkify.FormatHlsH265),
 		Short: "Create a job with hls x265 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "hls/x265"
+			req.Params.Format.Name = chunkify.FormatHlsH265
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &hlsX265Config.FfmpegVideo)
@@ -350,11 +350,11 @@ func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 	hlsAv1Config := &chunkify.FfmpegHlsAv1{}
 
 	cmd := &cobra.Command{
-		Use:   "hls/av1",
+		Use:   string(chunkify.FormatHlsAv1),
 		Short: "Create a job with hls av1 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "hls/av1"
+			req.Params.Format.Name = chunkify.FormatHlsAv1
 
 			// Parse bitrates
 			setBitrate(req.videoBitrate, req.audioBitrate, &hlsAv1Config.FfmpegVideo)
@@ -390,11 +390,11 @@ func newJpgCmd(req *CreateCmd) *cobra.Command {
 	jpgConfig := &chunkify.FfmpegJpg{}
 
 	cmd := &cobra.Command{
-		Use:   "jpg",
+		Use:   string(chunkify.FormatJpg),
 		Short: "Create a job with jpg encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set the template name for x264
-			req.Params.Format.Name = "jpg"
+			req.Params.Format.Name = chunkify.FormatJpg
 
 			// Set the config
 			req.Params.Format.Config = jpgConfig
