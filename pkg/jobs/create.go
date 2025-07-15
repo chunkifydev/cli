@@ -100,12 +100,12 @@ func newCreateCmd() *cobra.Command {
 	cmd.PersistentFlags().StringVar(&req.audioBitrate, "ab", "", "ffmpeg config: AudioBitrate")
 
 	// Add subcommands for different encoding formats
-	cmd.AddCommand(newX264Cmd(req))
-	cmd.AddCommand(newX265Cmd(req))
-	cmd.AddCommand(newAv1Cmd(req))
-	cmd.AddCommand(newVp9Cmd(req))
-	cmd.AddCommand(newHlsX264Cmd(req))
-	cmd.AddCommand(newHlsX265Cmd(req))
+	cmd.AddCommand(newMp4H264Cmd(req))
+	cmd.AddCommand(newMp4H265Cmd(req))
+	cmd.AddCommand(newMp4Av1Cmd(req))
+	cmd.AddCommand(newWebmVp9Cmd(req))
+	cmd.AddCommand(newHlsH264Cmd(req))
+	cmd.AddCommand(newHlsH265Cmd(req))
 	cmd.AddCommand(newHlsAv1Cmd(req))
 	cmd.AddCommand(newJpgCmd(req))
 
@@ -116,20 +116,20 @@ func newCreateCmd() *cobra.Command {
 	return cmd
 }
 
-// newX264Cmd creates a new command for x264 encoding
-func newX264Cmd(req *CreateCmd) *cobra.Command {
+// newMp4H264Cmd creates a new command for x264 encoding
+func newMp4H264Cmd(req *CreateCmd) *cobra.Command {
 	// Create x264 config
-	x264Config := &chunkify.FfmpegX264{}
+	h264Config := &chunkify.H264{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatMp4H264),
 		Short: "Create a job with x264 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &x264Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &h264Config.Video)
 
 			// Set the config
-			req.Params.Format.Mp4H264 = x264Config
+			req.Params.Format.Mp4H264 = h264Config
 			// Execute the job creation
 			if err := req.Execute(); err != nil {
 				return err
@@ -140,30 +140,29 @@ func newX264Cmd(req *CreateCmd) *cobra.Command {
 		},
 	}
 
-	// Add x264 specific flags
-	setX264Flags(cmd, x264Config)
+	// Add h264 specific flags
+	setH264Flags(cmd, h264Config)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &x264Config.FfmpegVideo)
-	setCommonFlags(cmd, &x264Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &h264Config.Video)
 
 	return cmd
 }
 
-// newX265Cmd creates a new command for x265 encoding
-func newX265Cmd(req *CreateCmd) *cobra.Command {
+// newMp4H265Cmd creates a new command for x265 encoding
+func newMp4H265Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
-	x265Config := &chunkify.FfmpegX265{}
+	h265Config := &chunkify.H265{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatMp4H265),
 		Short: "Create a job with x265 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &x265Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &h265Config.Video)
 
 			// Set the config
-			req.Params.Format.Mp4H265 = x265Config
+			req.Params.Format.Mp4H265 = h265Config
 			// Execute the job creation
 			if err := req.Execute(); err != nil {
 				return err
@@ -175,26 +174,25 @@ func newX265Cmd(req *CreateCmd) *cobra.Command {
 	}
 
 	// Add x264 specific flags
-	setX265Flags(cmd, x265Config)
+	setH265Flags(cmd, h265Config)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &x265Config.FfmpegVideo)
-	setCommonFlags(cmd, &x265Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &h265Config.Video)
 
 	return cmd
 }
 
-// newAv1Cmd creates a new command for AV1 encoding
-func newAv1Cmd(req *CreateCmd) *cobra.Command {
+// newMp4Av1Cmd creates a new command for AV1 encoding
+func newMp4Av1Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
-	av1Config := &chunkify.FfmpegAv1{}
+	av1Config := &chunkify.Av1{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatMp4Av1),
 		Short: "Create a job with av1 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &av1Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &av1Config.Video)
 
 			// Set the config
 			req.Params.Format.Mp4Av1 = av1Config
@@ -212,23 +210,22 @@ func newAv1Cmd(req *CreateCmd) *cobra.Command {
 	setAv1Flags(cmd, av1Config)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &av1Config.FfmpegVideo)
-	setCommonFlags(cmd, &av1Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &av1Config.Video)
 
 	return cmd
 }
 
-// newVp9Cmd creates a new command for VP9 encoding
-func newVp9Cmd(req *CreateCmd) *cobra.Command {
-	// Create x265 config
-	vp9Config := &chunkify.FfmpegVp9{}
+// newWebmVp9Cmd creates a new command for VP9 encoding
+func newWebmVp9Cmd(req *CreateCmd) *cobra.Command {
+	// Create vp9 config
+	vp9Config := &chunkify.Vp9{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatWebmVp9),
 		Short: "Create a job with vp9 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &vp9Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &vp9Config.Video)
 
 			// Set the config
 			req.Params.Format.WebmVp9 = vp9Config
@@ -246,26 +243,25 @@ func newVp9Cmd(req *CreateCmd) *cobra.Command {
 	setVp9Flags(cmd, vp9Config)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &vp9Config.FfmpegVideo)
-	setCommonFlags(cmd, &vp9Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &vp9Config.Video)
 
 	return cmd
 }
 
-// newHlsX264Cmd creates a new command for HLS with x264 encoding
-func newHlsX264Cmd(req *CreateCmd) *cobra.Command {
+// newHlsH264Cmd creates a new command for HLS with x264 encoding
+func newHlsH264Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
-	hlsX264Config := &chunkify.FfmpegHlsX264{}
+	hlsH264Config := &chunkify.HlsH264{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatHlsH264),
 		Short: "Create a job with hls x264 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &hlsX264Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &hlsH264Config.Video)
 
 			// Set the config
-			req.Params.Format.HlsH264 = hlsX264Config
+			req.Params.Format.HlsH264 = hlsH264Config
 			// Execute the job creation
 			if err := req.Execute(); err != nil {
 				return err
@@ -277,32 +273,31 @@ func newHlsX264Cmd(req *CreateCmd) *cobra.Command {
 	}
 
 	// Add HLS specific flags
-	setHLSFlags(cmd, &hlsX264Config.FfmpegHls)
+	setHLSFlags(cmd, &hlsH264Config.Hls)
 
-	// Add x264 specific flags
-	setX264Flags(cmd, &hlsX264Config.FfmpegX264)
+	// Add h264 specific flags
+	setH264Flags(cmd, &hlsH264Config.H264)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &hlsX264Config.FfmpegVideo)
-	setCommonFlags(cmd, &hlsX264Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &hlsH264Config.Video)
 
 	return cmd
 }
 
-// newHlsX265Cmd creates a new command for HLS with x265 encoding
-func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
-	// Create x265 config
-	hlsX265Config := &chunkify.FfmpegHlsX265{}
+// newHlsH265Cmd creates a new command for HLS with x265 encoding
+func newHlsH265Cmd(req *CreateCmd) *cobra.Command {
+	// Create h265 config
+	hlsH265Config := &chunkify.HlsH265{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatHlsH265),
 		Short: "Create a job with hls x265 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &hlsX265Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &hlsH265Config.Video)
 
 			// Set the config
-			req.Params.Format.HlsH265 = hlsX265Config
+			req.Params.Format.HlsH265 = hlsH265Config
 			// Execute the job creation
 			if err := req.Execute(); err != nil {
 				return err
@@ -314,14 +309,13 @@ func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
 	}
 
 	// Add HLS specific flags
-	setHLSFlags(cmd, &hlsX265Config.FfmpegHls)
+	setHLSFlags(cmd, &hlsH265Config.Hls)
 
 	// Add x265 specific flags
-	setX265Flags(cmd, &hlsX265Config.FfmpegX265)
+	setH265Flags(cmd, &hlsH265Config.H265)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &hlsX265Config.FfmpegVideo)
-	setCommonFlags(cmd, &hlsX265Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &hlsH265Config.Video)
 
 	return cmd
 }
@@ -329,14 +323,14 @@ func newHlsX265Cmd(req *CreateCmd) *cobra.Command {
 // newHlsAv1Cmd creates a new command for HLS with AV1 encoding
 func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
-	hlsAv1Config := &chunkify.FfmpegHlsAv1{}
+	hlsAv1Config := &chunkify.HlsAv1{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatHlsAv1),
 		Short: "Create a job with hls av1 encoding",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Parse bitrates
-			setBitrate(req.videoBitrate, req.audioBitrate, &hlsAv1Config.FfmpegVideo)
+			setBitrate(req.videoBitrate, req.audioBitrate, &hlsAv1Config.Video)
 
 			// Set the config
 			req.Params.Format.HlsAv1 = hlsAv1Config
@@ -351,14 +345,13 @@ func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 	}
 
 	// Add HLS specific flags
-	setHLSFlags(cmd, &hlsAv1Config.FfmpegHls)
+	setHLSFlags(cmd, &hlsAv1Config.Hls)
 
 	// Add av1 specific flags
-	setAv1Flags(cmd, &hlsAv1Config.FfmpegAv1)
+	setAv1Flags(cmd, &hlsAv1Config.Av1)
 
 	// Add common video flags
-	setCommonVideoFlags(cmd, &hlsAv1Config.FfmpegVideo)
-	setCommonFlags(cmd, &hlsAv1Config.FfmpegCommon)
+	setCommonVideoFlags(cmd, &hlsAv1Config.Video)
 
 	return cmd
 }
@@ -366,7 +359,7 @@ func newHlsAv1Cmd(req *CreateCmd) *cobra.Command {
 // newJpgCmd creates a new command for JPG encoding
 func newJpgCmd(req *CreateCmd) *cobra.Command {
 	// Create x265 config
-	jpgConfig := &chunkify.FfmpegJpg{}
+	jpgConfig := &chunkify.Jpg{}
 
 	cmd := &cobra.Command{
 		Use:   string(chunkify.FormatJpg),
@@ -390,15 +383,11 @@ func newJpgCmd(req *CreateCmd) *cobra.Command {
 	cmd.Flags().Int64Var(&jpgConfig.Width, "width", 0, "ffmpeg config: Width")
 	cmd.Flags().Int64Var(&jpgConfig.Height, "height", 0, "ffmpeg config: Height")
 	cmd.Flags().Int64Var(&jpgConfig.Interval, "interval", 0, "ffmpeg config: Interval")
-	//cmd.Flags().Int64Var(&jpgConfig.ChunkDuration, "chunk_duration", 0, "ffmpeg config: ChunkDuration")
-	// Add common flags
-	setCommonFlags(cmd, &jpgConfig.FfmpegCommon)
-
 	return cmd
 }
 
 // setCommonVideoFlags adds common video-related flags to the command
-func setCommonVideoFlags(cmd *cobra.Command, videoCommon *chunkify.FfmpegVideo) {
+func setCommonVideoFlags(cmd *cobra.Command, videoCommon *chunkify.Video) {
 	cmd.Flags().Int64Var(&videoCommon.Width, "width", 0, "ffmpeg config: Width")
 	cmd.Flags().Int64Var(&videoCommon.Height, "height", 0, "ffmpeg config: Height")
 	cmd.Flags().Float64Var(&videoCommon.Framerate, "framerate", 0, "ffmpeg config: Framerate")
@@ -409,10 +398,12 @@ func setCommonVideoFlags(cmd *cobra.Command, videoCommon *chunkify.FfmpegVideo) 
 	cmd.Flags().StringVar(&videoCommon.PixFmt, "pixfmt", "", "ffmpeg config: PixFmt")
 	cmd.Flags().BoolVar(&videoCommon.DisableAudio, "an", false, "ffmpeg config: DisableAudio")
 	cmd.Flags().BoolVar(&videoCommon.DisableVideo, "vn", false, "ffmpeg config: DisableVideo")
+	cmd.Flags().Int64Var(&videoCommon.Duration, "duration", 0, "ffmpeg config: Duration")
+	cmd.Flags().Int64Var(&videoCommon.Seek, "seek", 0, "ffmpeg config: Seek")
 }
 
 // setBitrate parses and sets video and audio bitrates
-func setBitrate(vb, ab string, videoCommon *chunkify.FfmpegVideo) {
+func setBitrate(vb, ab string, videoCommon *chunkify.Video) {
 	if vb != "" {
 		if vb, err := formatter.ParseFileSize(vb); err == nil {
 			videoCommon.VideoBitrate = vb
@@ -425,23 +416,17 @@ func setBitrate(vb, ab string, videoCommon *chunkify.FfmpegVideo) {
 	}
 }
 
-// setCommonFlags adds common ffmpeg flags to the command
-func setCommonFlags(cmd *cobra.Command, common *chunkify.FfmpegCommon) {
-	cmd.Flags().Int64Var(&common.Duration, "duration", 0, "ffmpeg config: Duration")
-	cmd.Flags().Int64Var(&common.Seek, "seek", 0, "ffmpeg config: Seek")
+// setH264Flags adds x264-specific encoding flags to the command
+func setH264Flags(cmd *cobra.Command, h264 *chunkify.H264) {
+	cmd.Flags().Int64Var(&h264.X264KeyInt, "x264_keyint", 0, "ffmpeg config: X264KeyInt")
+	cmd.Flags().Int64Var(&h264.Level, "level", 0, "ffmpeg config: Level")
+	cmd.Flags().StringVar(&h264.Profilev, "profilev", "", "ffmpeg config: Profilev")
+	cmd.Flags().Int64Var(&h264.Crf, "crf", 0, "ffmpeg config: Crf")
+	cmd.Flags().StringVar(&h264.Preset, "preset", "", "ffmpeg config: Preset")
 }
 
-// setX264Flags adds x264-specific encoding flags to the command
-func setX264Flags(cmd *cobra.Command, x264 *chunkify.FfmpegX264) {
-	cmd.Flags().Int64Var(&x264.X264KeyInt, "x264_keyint", 0, "ffmpeg config: X264KeyInt")
-	cmd.Flags().Int64Var(&x264.Level, "level", 0, "ffmpeg config: Level")
-	cmd.Flags().StringVar(&x264.Profilev, "profilev", "", "ffmpeg config: Profilev")
-	cmd.Flags().Int64Var(&x264.Crf, "crf", 0, "ffmpeg config: Crf")
-	cmd.Flags().StringVar(&x264.Preset, "preset", "", "ffmpeg config: Preset")
-}
-
-// setX265Flags adds x265-specific encoding flags to the command
-func setX265Flags(cmd *cobra.Command, x265 *chunkify.FfmpegX265) {
+// setH265Flags adds x265-specific encoding flags to the command
+func setH265Flags(cmd *cobra.Command, x265 *chunkify.H265) {
 	cmd.Flags().Int64Var(&x265.X265KeyInt, "x265_keyint", 0, "ffmpeg config: X265KeyInt")
 	cmd.Flags().Int64Var(&x265.Level, "level", 0, "ffmpeg config: Level")
 	cmd.Flags().StringVar(&x265.Profilev, "profilev", "", "ffmpeg config: Profilev")
@@ -450,14 +435,14 @@ func setX265Flags(cmd *cobra.Command, x265 *chunkify.FfmpegX265) {
 }
 
 // setVp9Flags adds VP9-specific encoding flags to the command
-func setVp9Flags(cmd *cobra.Command, vp9 *chunkify.FfmpegVp9) {
+func setVp9Flags(cmd *cobra.Command, vp9 *chunkify.Vp9) {
 	cmd.Flags().Int64Var(&vp9.Crf, "crf", 0, "ffmpeg config: Crf")
 	cmd.Flags().StringVar(&vp9.CpuUsed, "cpu_used", "", "ffmpeg config: CpuUsed")
 	cmd.Flags().StringVar(&vp9.Quality, "quality", "", "ffmpeg config: Quality")
 }
 
 // setAv1Flags adds AV1-specific encoding flags to the command
-func setAv1Flags(cmd *cobra.Command, av1 *chunkify.FfmpegAv1) {
+func setAv1Flags(cmd *cobra.Command, av1 *chunkify.Av1) {
 	cmd.Flags().Int64Var(&av1.Level, "level", 0, "ffmpeg config: Level")
 	cmd.Flags().StringVar(&av1.Profilev, "profilev", "", "ffmpeg config: Profilev")
 	cmd.Flags().Int64Var(&av1.Crf, "crf", 0, "ffmpeg config: Crf")
@@ -465,7 +450,7 @@ func setAv1Flags(cmd *cobra.Command, av1 *chunkify.FfmpegAv1) {
 }
 
 // setHLSFlags adds HLS-specific encoding flags to the command
-func setHLSFlags(cmd *cobra.Command, hls *chunkify.FfmpegHls) {
+func setHLSFlags(cmd *cobra.Command, hls *chunkify.Hls) {
 	cmd.Flags().Int64Var(&hls.HlsTime, "hls_time", 0, "ffmpeg config: HlsTime")
 	cmd.Flags().StringVar(&hls.HlsSegmentType, "hls_segment_type", "", "ffmpeg config: HlsSegmentType")
 	cmd.Flags().BoolVar(&hls.HlsEnc, "hls_enc", false, "ffmpeg config: HlsEnc")
