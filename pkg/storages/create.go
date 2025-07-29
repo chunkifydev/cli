@@ -2,6 +2,7 @@ package storages
 
 import (
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -47,14 +48,14 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Configure command flags for storage parameters
-	cmd.Flags().StringVar(&req.Params.Endpoint, "endpoint", "", "The S3 compatible endpoint of the storage")
-	cmd.Flags().StringVar(&req.Params.AccessKeyId, "access-key-id", "", "The S3 access key id of the storage")
-	cmd.Flags().StringVar(&req.Params.SecretAccessKey, "secret-access-key", "", "The S3 secret access key of the storage")
-	cmd.Flags().StringVar(&req.Params.Bucket, "bucket", "", "The S3 bucket name of the storage")
-	cmd.Flags().StringVar(&req.Params.Provider, "provider", "", "The storage provider: chunkify, aws, cloudflare (required)")
-	cmd.Flags().StringVar(&req.Params.Region, "region", "", "The region of the storage (required)")
-	cmd.Flags().StringVar(&req.Params.Location, "location", "", "The location of the storage: US, EU, ASIA")
-	cmd.Flags().BoolVar(&req.Params.Public, "public", false, "The uploaded files will be publicly available or not")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.Endpoint, "endpoint", "", "The S3 compatible endpoint of the storage")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.Location, "location", "", "The location of the storage: US, EU, ASIA")
+	flags.StringVar(cmd.Flags(), &req.Params.AccessKeyId, "access-key-id", "", "The S3 access key id of the storage")
+	flags.StringVar(cmd.Flags(), &req.Params.SecretAccessKey, "secret-access-key", "", "The S3 secret access key of the storage")
+	flags.StringVar(cmd.Flags(), &req.Params.Bucket, "bucket", "", "The S3 bucket name of the storage")
+	flags.StringVar(cmd.Flags(), &req.Params.Provider, "provider", "", "The storage provider: chunkify, aws, cloudflare (required)")
+	flags.StringVar(cmd.Flags(), &req.Params.Region, "region", "", "The region of the storage (required)")
+	flags.BoolVar(cmd.Flags(), &req.Params.Public, "public", false, "The uploaded files will be publicly available or not")
 
 	// Mark provider flag as required for all storage configurations
 	cmd.MarkFlagRequired("provider")

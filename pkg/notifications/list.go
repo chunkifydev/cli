@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -125,21 +126,21 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVarP(&req.payload, "payload", "p", false, "Return the webhook payload in JSON")
+	flags.BoolVarP(cmd.Flags(), &req.payload, "payload", "p", false, "Return the webhook payload in JSON")
 
-	cmd.Flags().StringVar(&req.Params.ObjectId, "object-id", "", "Return all sent notifications for the object Id")
-	cmd.Flags().StringArrayVar(&req.Params.Events, "events", nil, "Return all sent notifications with the given event. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
-	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.ObjectId, "object-id", "", "Return all sent notifications for the object Id")
+	flags.StringArrayVar(cmd.Flags(), &req.Params.Events, "events", nil, "Return all sent notifications with the given event. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.WebhookId, "webhook-id", "", "Return all sent notifications for a given webhook Id")
 
-	cmd.Flags().Int64Var(&req.Params.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Params.Limit, "limit", 100, "Limit")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.Offset, "offset", 0, "Offset")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().StringVar(&req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
 
-	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the jobs in real time")
+	flags.BoolVarP(cmd.Flags(), &req.interactive, "interactive", "i", false, "Refresh the jobs in real time")
 
 	return cmd
 }

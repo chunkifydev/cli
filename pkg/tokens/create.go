@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -60,9 +61,9 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Params.Name, "name", "", "The name of your access token")
-	cmd.Flags().StringVar(&req.Params.Scope, "scope", "", "The access token scope: team or project (required)")
-	cmd.Flags().StringVar(&req.Params.ProjectId, "project-id", "", "The created access token will have permissions to create jobs for the given project slug")
+	flags.StringVar(cmd.Flags(), &req.Params.Name, "name", "", "The name of your access token")
+	flags.StringVar(cmd.Flags(), &req.Params.Scope, "scope", "", "The access token scope: team or project (required)")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.ProjectId, "project-id", "", "The created access token will have permissions to create jobs for the given project slug")
 
 	cmd.MarkFlagRequired("scope")
 	return cmd

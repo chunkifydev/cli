@@ -25,7 +25,8 @@ func (r *GetCmd) Execute() error {
 
 // View displays the job information, either as a one-time view or in interactive polling mode
 func (r *GetCmd) View() {
-	jobList := &ListCmd{Params: chunkify.JobListParams{Id: r.Data.Id}, Data: []chunkify.Job{r.Data}, interactive: r.interactive}
+	id := r.Data.Id
+	jobList := &ListCmd{Params: chunkify.JobListParams{Id: &id}, Data: []chunkify.Job{r.Data}, interactive: r.interactive}
 	if !cmd.Config.JSON && r.interactive {
 		StartPolling(jobList)
 	} else {

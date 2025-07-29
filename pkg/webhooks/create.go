@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -49,9 +50,9 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Add command flags for configuring the webhook
-	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The webhook URL (required)")
-	cmd.Flags().BoolVar(&enabled, "enabled", true, "Enable the webhook")
-	cmd.Flags().StringArrayVar(&req.Params.Events, "events", chunkify.NotificationEventsAll, "Create a webhook that will trigger for specific events. job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	flags.StringVar(cmd.Flags(), &req.Params.Url, "url", "", "The webhook URL (required)")
+	flags.BoolVar(cmd.Flags(), &enabled, "enabled", true, "Enable the webhook")
+	flags.StringArrayVar(cmd.Flags(), &req.Params.Events, "events", chunkify.NotificationEventsAll, "Create a webhook that will trigger for specific events. job.completed, job.failed, upload.completed, upload.failed, upload.expired")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -26,13 +27,15 @@ type ListCmd struct {
 
 func (r *ListCmd) Execute() error {
 	// Convert metadata to the required format
-	var metadata [][]string
+	var metadata map[string]string
 	if len(r.Metadata) > 0 {
-		md := []string{}
+		metadata = make(map[string]string)
 		for _, m := range r.Metadata {
-			md = append(md, strings.Replace(m, "=", ":", -1))
+			parts := strings.SplitN(m, "=", 2)
+			if len(parts) == 2 {
+				metadata[parts[0]] = parts[1]
+			}
 		}
-		metadata = [][]string{md}
 	}
 	r.Params.Metadata = metadata
 
@@ -155,22 +158,22 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64Var(&req.Params.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Params.Limit, "limit", 100, "Limit")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.Offset, "offset", 0, "Offset")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().StringVar(&req.Params.Status, "status", "", "Job's status: finished, processing, error")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.Status, "status", "", "Job's status: finished, processing, error")
 
-	cmd.Flags().StringVar(&req.Params.SourceId, "source-id", "", "List jobs by source Id")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.SourceId, "source-id", "", "List jobs by source Id")
 
-	cmd.Flags().StringVar(&req.Params.FormatName, "format", "", "List jobs by format name: mp4/x264, mp4/x265, mp4/av1, hls/x264, webm/vp9, jpg")
-	cmd.Flags().StringVar(&req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.FormatName, "format", "", "List jobs by format name: mp4/x264, mp4/x265, mp4/av1, hls/x264, webm/vp9, jpg")
+	flags.StringVarPtr(cmd.Flags(), &req.Params.CreatedSort, "created.sort", "asc", "Created Sort: asc (default), desc")
 
-	cmd.Flags().StringArrayVar(&req.Metadata, "metadata", nil, "Metadata")
+	flags.StringArrayVar(cmd.Flags(), &req.Metadata, "metadata", nil, "Metadata")
 
-	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the jobs in real time")
+	flags.BoolVarP(cmd.Flags(), &req.interactive, "interactive", "i", false, "Refresh the jobs in real time")
 
 	return cmd
 }

@@ -2,6 +2,7 @@ package projects
 
 import (
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +48,7 @@ func newCreateCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Params.Name, "name", "", "The name of your project (required)")
+	flags.StringVar(cmd.Flags(), &req.Params.Name, "name", "", "The name of your project (required)")
 	cmd.MarkFlagRequired("name")
 	cmd.MarkFlagRequired("storage")
 

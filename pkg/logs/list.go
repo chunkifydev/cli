@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -192,7 +193,7 @@ func newListCmd() *cobra.Command {
 				return err
 			}
 
-			if req.Params.Service == "transcoder" && req.Params.TranscoderId == 0 {
+			if req.Params.Service == "transcoder" && (req.Params.TranscoderId == nil || *req.Params.TranscoderId == 0) {
 				err := fmt.Errorf("--id (min 1) is required when --service is set to transcoder")
 				return err
 			}
@@ -214,12 +215,12 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&req.Params.Service, "service", "manager", "Filter by Service name: manager or transcoder (required)")
-	cmd.Flags().Int64Var(&req.Params.TranscoderId, "id", 0, "Filter by transcoder number (min 1)")
-	cmd.Flags().StringArrayVar(&req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
-	cmd.Flags().BoolVar(&req.IgnoreProgress, "ignore-progress", false, "Do not show progress logs")
-	cmd.Flags().BoolVar(&req.Tail, "tail", false, "Tail logs")
-	cmd.Flags().BoolVar(&req.FfmpegDebug, "ffmpeg-debug", false, "Show ffmpeg stderr for debugging")
+	flags.StringVar(cmd.Flags(), &req.Params.Service, "service", "manager", "Filter by Service name: manager or transcoder (required)")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.TranscoderId, "id", 0, "Filter by transcoder number (min 1)")
+	flags.StringArrayVar(cmd.Flags(), &req.Levels, "level", []string{}, "Filter by log level: INFO, DEBUG, WARN, ERROR")
+	flags.BoolVar(cmd.Flags(), &req.IgnoreProgress, "ignore-progress", false, "Do not show progress logs")
+	flags.BoolVar(cmd.Flags(), &req.Tail, "tail", false, "Tail logs")
+	flags.BoolVar(cmd.Flags(), &req.FfmpegDebug, "ffmpeg-debug", false, "Show ffmpeg stderr for debugging")
 
 	return cmd
 }

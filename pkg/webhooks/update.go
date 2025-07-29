@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -65,9 +66,9 @@ func newUpdateCmd() *cobra.Command {
 	}
 
 	// Add command flags for configuring the webhook
-	cmd.Flags().BoolVar(&enable, "enable", true, "Enable the webhook")
-	cmd.Flags().BoolVar(&disable, "disable", true, "Disable the webhook")
-	cmd.Flags().StringArrayVar(&events, "events", []string{"*"}, "Update webhook events. *, job.*, job.completed, job.failed, upload.* upload.completed, upload.failed, upload.expired")
+	flags.BoolVar(cmd.Flags(), &enable, "enable", true, "Enable the webhook")
+	flags.BoolVar(cmd.Flags(), &disable, "disable", true, "Disable the webhook")
+	flags.StringArrayVar(cmd.Flags(), &events, "events", []string{"*"}, "Update webhook events. *, job.*, job.completed, job.failed, upload.* upload.completed, upload.failed, upload.expired")
 
 	cmd.MarkFlagsMutuallyExclusive("enable", "disable")
 	cmd.MarkFlagsOneRequired("enable", "disable", "events")

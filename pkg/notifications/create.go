@@ -2,6 +2,7 @@ package notifications
 
 import (
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +27,8 @@ func (r *CreateCmd) Execute() error {
 // View displays the newly created notification by showing the notifications list
 // filtered to the associated job ID
 func (r *CreateCmd) View() {
-	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: "asc", ObjectId: r.Params.ObjectId}}
+	createdSort := "asc"
+	notifList := &ListCmd{Params: chunkify.NotificationListParams{CreatedSort: &createdSort, ObjectId: &r.Params.ObjectId}}
 	notifList.Execute()
 	notifList.View()
 }
@@ -49,9 +51,9 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Configure required command flags
-	cmd.Flags().StringVar(&req.Params.ObjectId, "object-id", "", "The object id (required)")
-	cmd.Flags().StringVar(&req.Params.WebhookId, "webhook-id", "", "The webhook id (required)")
-	cmd.Flags().StringVar(&req.Params.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
+	flags.StringVar(cmd.Flags(), &req.Params.ObjectId, "object-id", "", "The object id (required)")
+	flags.StringVar(cmd.Flags(), &req.Params.WebhookId, "webhook-id", "", "The webhook id (required)")
+	flags.StringVar(cmd.Flags(), &req.Params.Event, "event", "", "The event associated with the notification. Possible values: job.completed (required)")
 
 	cmd.MarkFlagRequired("object-id")
 	cmd.MarkFlagRequired("webhook-id")

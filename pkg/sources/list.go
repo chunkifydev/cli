@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -19,35 +20,35 @@ import (
 
 // ListCmd represents the command for listing sources with various filter options
 type ListCmd struct {
-	Id          string   // Filter by source ID
-	Offset      int64    // Starting offset for pagination
-	Limit       int64    // Maximum number of items to return
-	DurationEq  string   // Filter for exact duration match
-	DurationGte string   // Filter for duration greater than or equal
-	DurationGt  string   // Filter for duration greater than
-	DurationLte string   // Filter for duration less than or equal
-	DurationLt  string   // Filter for duration less than
-	CreatedGte  string   // Filter for creation date greater than or equal
-	CreatedLte  string   // Filter for creation date less than or equal
-	WidthEq     int64    // Filter for exact width match
-	WidthGte    int64    // Filter for width greater than or equal
-	WidthGt     int64    // Filter for width greater than
-	WidthLte    int64    // Filter for width less than or equal
-	WidthLt     int64    // Filter for width less than
-	HeightEq    int64    // Filter for exact height match
-	HeightGte   int64    // Filter for height greater than or equal
-	HeightGt    int64    // Filter for height greater than
-	HeightLte   int64    // Filter for height less than or equal
-	HeightLt    int64    // Filter for height less than
-	SizeEq      string   // Filter for exact size match
-	SizeGte     string   // Filter for size greater than or equal
-	SizeGt      string   // Filter for size greater than
-	SizeLte     string   // Filter for size less than or equal
-	SizeLt      string   // Filter for size less than
-	AudioCodec  string   // Filter by audio codec
-	VideoCodec  string   // Filter by video codec
-	Device      string   // Filter by device
-	CreatedSort string   // Sort direction for creation date
+	Id          *string  // Filter by source ID
+	Offset      *int64   // Starting offset for pagination
+	Limit       *int64   // Maximum number of items to return
+	DurationEq  *string  // Filter for exact duration match
+	DurationGte *string  // Filter for duration greater than or equal
+	DurationGt  *string  // Filter for duration greater than
+	DurationLte *string  // Filter for duration less than or equal
+	DurationLt  *string  // Filter for duration less than
+	CreatedGte  *string  // Filter for creation date greater than or equal
+	CreatedLte  *string  // Filter for creation date less than or equal
+	WidthEq     *int64   // Filter for exact width match
+	WidthGte    *int64   // Filter for width greater than or equal
+	WidthGt     *int64   // Filter for width greater than
+	WidthLte    *int64   // Filter for width less than or equal
+	WidthLt     *int64   // Filter for width less than
+	HeightEq    *int64   // Filter for exact height match
+	HeightGte   *int64   // Filter for height greater than or equal
+	HeightGt    *int64   // Filter for height greater than
+	HeightLte   *int64   // Filter for height less than or equal
+	HeightLt    *int64   // Filter for height less than
+	SizeEq      *string  // Filter for exact size match
+	SizeGte     *string  // Filter for size greater than or equal
+	SizeGt      *string  // Filter for size greater than
+	SizeLte     *string  // Filter for size less than or equal
+	SizeLt      *string  // Filter for size less than
+	AudioCodec  *string  // Filter by audio codec
+	VideoCodec  *string  // Filter by video codec
+	Device      *string  // Filter by device
+	CreatedSort *string  // Sort direction for creation date
 	Metadata    []string // Filter by metadata key-value pairs
 
 	interactive bool              // Enable real-time refresh mode
@@ -58,104 +59,121 @@ type ListCmd struct {
 func (r *ListCmd) toParams() chunkify.SourceListParams {
 	params := chunkify.SourceListParams{}
 
-	if r.DurationEq != "" {
-		dur, err := time.ParseDuration(r.DurationEq)
+	if r.DurationEq != nil {
+		dur, err := time.ParseDuration(*r.DurationEq)
 		if err == nil {
-			params.DurationEq = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationEq = &seconds
 		}
 	}
-	if r.DurationGte != "" {
-		dur, err := time.ParseDuration(r.DurationGte)
+	if r.DurationGte != nil {
+		dur, err := time.ParseDuration(*r.DurationGte)
 		if err == nil {
-			params.DurationGte = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationGte = &seconds
 		}
 	}
-	if r.DurationGt != "" {
-		dur, err := time.ParseDuration(r.DurationGt)
+	if r.DurationGt != nil {
+		dur, err := time.ParseDuration(*r.DurationGt)
 		if err == nil {
-			params.DurationGt = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationGt = &seconds
 		}
 	}
-	if r.DurationLte != "" {
-		dur, err := time.ParseDuration(r.DurationLte)
+	if r.DurationLte != nil {
+		dur, err := time.ParseDuration(*r.DurationLte)
 		if err == nil {
-			params.DurationLte = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationLte = &seconds
 		}
 	}
-	if r.DurationLt != "" {
-		dur, err := time.ParseDuration(r.DurationLt)
+	if r.DurationLt != nil {
+		dur, err := time.ParseDuration(*r.DurationLt)
 		if err == nil {
-			params.DurationLt = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationLt = &seconds
 		}
 	}
-	if r.WidthEq != -1 {
-		params.WidthEq = r.WidthEq
+	if r.WidthEq != nil {
+		width := int64(*r.WidthEq)
+		params.WidthEq = &width
 	}
-	if r.WidthGte != -1 {
-		params.WidthGte = r.WidthGte
+	if r.WidthGte != nil {
+		width := int64(*r.WidthGte)
+		params.WidthGte = &width
 	}
-	if r.WidthGt != -1 {
-		params.WidthGt = r.WidthGt
+	if r.WidthGt != nil {
+		width := int64(*r.WidthGt)
+		params.WidthGt = &width
 	}
-	if r.WidthLte != -1 {
-		params.WidthLte = r.WidthLte
+	if r.WidthLte != nil {
+		width := int64(*r.WidthLte)
+		params.WidthLte = &width
 	}
-	if r.WidthLt != -1 {
-		params.WidthLt = r.WidthLt
+	if r.WidthLt != nil {
+		width := int64(*r.WidthLt)
+		params.WidthLt = &width
 	}
-	if r.HeightEq != -1 {
-		params.HeightEq = r.HeightEq
+	if r.HeightEq != nil {
+		height := int64(*r.HeightEq)
+		params.HeightEq = &height
 	}
-	if r.HeightGte != -1 {
-		params.HeightGte = r.HeightGte
+	if r.HeightGte != nil {
+		height := int64(*r.HeightGte)
+		params.HeightGte = &height
 	}
-	if r.HeightGt != -1 {
-		params.HeightGt = r.HeightGt
+	if r.HeightGt != nil {
+		height := int64(*r.HeightGt)
+		params.HeightGt = &height
 	}
-	if r.HeightLte != -1 {
-		params.HeightLte = r.HeightLte
+	if r.HeightLte != nil {
+		height := int64(*r.HeightLte)
+		params.HeightLte = &height
 	}
-	if r.HeightLt != -1 {
-		params.HeightLt = r.HeightLt
+	if r.HeightLt != nil {
+		height := int64(*r.HeightLt)
+		params.HeightLt = &height
 	}
-	if r.SizeEq != "" {
-		bytes, err := formatter.ParseFileSize(r.SizeEq)
+	if r.SizeEq != nil {
+		bytes, err := formatter.ParseFileSize(*r.SizeEq)
 		if err == nil {
-			params.SizeEq = bytes
+			params.SizeEq = &bytes
 		}
 	}
-	if r.SizeGte != "" {
-		bytes, err := formatter.ParseFileSize(r.SizeGte)
+	if r.SizeGte != nil {
+		bytes, err := formatter.ParseFileSize(*r.SizeGte)
 		if err == nil {
-			params.SizeGte = bytes
+			params.SizeGte = &bytes
 		}
 	}
-	if r.SizeGt != "" {
-		bytes, err := formatter.ParseFileSize(r.SizeGt)
+	if r.SizeGt != nil {
+		bytes, err := formatter.ParseFileSize(*r.SizeGt)
 		if err == nil {
-			params.SizeGt = bytes
+			params.SizeGt = &bytes
 		}
 	}
-	if r.SizeLte != "" {
-		bytes, err := formatter.ParseFileSize(r.SizeLte)
+	if r.SizeLte != nil {
+		bytes, err := formatter.ParseFileSize(*r.SizeLte)
 		if err == nil {
-			params.SizeLte = bytes
+			params.SizeLte = &bytes
 		}
 	}
-	if r.SizeLt != "" {
-		bytes, err := formatter.ParseFileSize(r.SizeLt)
+	if r.SizeLt != nil {
+		bytes, err := formatter.ParseFileSize(*r.SizeLt)
 		if err == nil {
-			params.SizeLt = bytes
+			params.SizeLt = &bytes
 		}
 	}
 
-	var metadata [][]string
+	var metadata map[string]string
 	if len(r.Metadata) > 0 {
-		md := []string{}
+		metadata = make(map[string]string)
 		for _, m := range r.Metadata {
-			md = append(md, strings.Replace(m, "=", ":", -1))
+			parts := strings.SplitN(m, "=", 2)
+			if len(parts) == 2 {
+				metadata[parts[0]] = parts[1]
+			}
 		}
-		metadata = [][]string{md}
 	}
 
 	params.Id = r.Id
@@ -282,44 +300,44 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
+	flags.Int64VarPtr(cmd.Flags(), &req.Offset, "offset", 0, "Offset")
+	flags.Int64VarPtr(cmd.Flags(), &req.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.Id, "id", "", "Source ID")
-	cmd.Flags().StringVar(&req.DurationEq, "duration.eq", "", "Duration Equals")
-	cmd.Flags().StringVar(&req.DurationGte, "duration.gte", "", "Duration Greater or Equal")
-	cmd.Flags().StringVar(&req.DurationGt, "duration.gt", "", "Duration Greater")
-	cmd.Flags().StringVar(&req.DurationLte, "duration.lte", "", "Duration Less or Equal")
-	cmd.Flags().StringVar(&req.DurationLt, "duration.lt", "", "Duration Less")
+	flags.StringVarPtr(cmd.Flags(), &req.Id, "id", "", "Source ID")
+	flags.StringVarPtr(cmd.Flags(), &req.DurationEq, "duration.eq", "", "Duration Equals")
+	flags.StringVarPtr(cmd.Flags(), &req.DurationGte, "duration.gte", "", "Duration Greater or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.DurationGt, "duration.gt", "", "Duration Greater")
+	flags.StringVarPtr(cmd.Flags(), &req.DurationLte, "duration.lte", "", "Duration Less or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.DurationLt, "duration.lt", "", "Duration Less")
 
-	cmd.Flags().StringVar(&req.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.CreatedLte, "created.lte", "", "Created Less or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().Int64Var(&req.WidthEq, "width.eq", -1, "Width Equals")
-	cmd.Flags().Int64Var(&req.WidthGte, "width.gte", -1, "Width Greater or Equal")
-	cmd.Flags().Int64Var(&req.WidthGt, "width.gt", -1, "Width Greater")
-	cmd.Flags().Int64Var(&req.WidthLte, "width.lte", -1, "Width Less or Equal")
-	cmd.Flags().Int64Var(&req.WidthLt, "width.lt", -1, "Width Less")
+	flags.Int64VarPtr(cmd.Flags(), &req.WidthEq, "width.eq", -1, "Width Equals")
+	flags.Int64VarPtr(cmd.Flags(), &req.WidthGte, "width.gte", -1, "Width Greater or Equal")
+	flags.Int64VarPtr(cmd.Flags(), &req.WidthGt, "width.gt", -1, "Width Greater")
+	flags.Int64VarPtr(cmd.Flags(), &req.WidthLte, "width.lte", -1, "Width Less or Equal")
+	flags.Int64VarPtr(cmd.Flags(), &req.WidthLt, "width.lt", -1, "Width Less")
 
-	cmd.Flags().Int64Var(&req.HeightEq, "height.eq", -1, "Height Equals")
-	cmd.Flags().Int64Var(&req.HeightGte, "height.gte", -1, "Height Greater or Equal")
-	cmd.Flags().Int64Var(&req.HeightGt, "height.gt", -1, "Height Greater")
-	cmd.Flags().Int64Var(&req.HeightLte, "height.lte", -1, "Height Less or Equal")
-	cmd.Flags().Int64Var(&req.HeightLt, "height.lt", -1, "Height Less")
+	flags.Int64VarPtr(cmd.Flags(), &req.HeightEq, "height.eq", -1, "Height Equals")
+	flags.Int64VarPtr(cmd.Flags(), &req.HeightGte, "height.gte", -1, "Height Greater or Equal")
+	flags.Int64VarPtr(cmd.Flags(), &req.HeightGt, "height.gt", -1, "Height Greater")
+	flags.Int64VarPtr(cmd.Flags(), &req.HeightLte, "height.lte", -1, "Height Less or Equal")
+	flags.Int64VarPtr(cmd.Flags(), &req.HeightLt, "height.lt", -1, "Height Less")
 
-	cmd.Flags().StringVar(&req.SizeEq, "size.eq", "", "Size Equals")
-	cmd.Flags().StringVar(&req.SizeGte, "size.gte", "", "Size Greater or Equal")
-	cmd.Flags().StringVar(&req.SizeGt, "size.gt", "", "Size Greater")
-	cmd.Flags().StringVar(&req.SizeLte, "size.lte", "", "Size Less or Equal")
-	cmd.Flags().StringVar(&req.SizeLt, "size.lt", "", "Size Less")
+	flags.StringVarPtr(cmd.Flags(), &req.SizeEq, "size.eq", "", "Size Equals")
+	flags.StringVarPtr(cmd.Flags(), &req.SizeGte, "size.gte", "", "Size Greater or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.SizeGt, "size.gt", "", "Size Greater")
+	flags.StringVarPtr(cmd.Flags(), &req.SizeLte, "size.lte", "", "Size Less or Equal")
+	flags.StringVarPtr(cmd.Flags(), &req.SizeLt, "size.lt", "", "Size Less")
 
-	cmd.Flags().StringVar(&req.AudioCodec, "audio-codec", "", "Audio Codec")
-	cmd.Flags().StringVar(&req.VideoCodec, "video-codec", "", "Video Codec")
-	cmd.Flags().StringVar(&req.Device, "device", "", "Device")
+	flags.StringVarPtr(cmd.Flags(), &req.AudioCodec, "audio-codec", "", "Audio Codec")
+	flags.StringVarPtr(cmd.Flags(), &req.VideoCodec, "video-codec", "", "Video Codec")
+	flags.StringVarPtr(cmd.Flags(), &req.Device, "device", "", "Device")
 
-	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort")
+	flags.StringVarPtr(cmd.Flags(), &req.CreatedSort, "created.sort", "asc", "Created Sort")
 
-	cmd.Flags().StringArrayVar(&req.Metadata, "metadata", nil, "Metadata")
+	flags.StringArrayVar(cmd.Flags(), &req.Metadata, "metadata", nil, "Metadata")
 	cmd.Flags().BoolVarP(&req.interactive, "interactive", "i", false, "Refresh the sources in real time")
 
 	return cmd

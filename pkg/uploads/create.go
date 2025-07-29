@@ -7,6 +7,7 @@ import (
 	"os"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -78,9 +79,9 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Define flags for upload creation
-	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
-	cmd.Flags().Int64Var(&req.Params.Timeout, "timeout", 1800, "Optional timeout in seconds, default is 1800 seconds")
-	cmd.Flags().StringVar(&path, "path", "", "Path to the video file to upload")
+	flags.StringVar(cmd.Flags(), &req.metadata, "metadata", "", "Optional metadata in JSON format")
+	flags.Int64VarPtr(cmd.Flags(), &req.Params.Timeout, "timeout", 1800, "Optional timeout in seconds, default is 1800 seconds")
+	flags.StringVar(cmd.Flags(), &path, "path", "", "Path to the video file to upload")
 
 	return cmd
 }

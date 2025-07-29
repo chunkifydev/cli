@@ -99,7 +99,7 @@ func selectProject(projectId string) {
 
 	// We don't have the token saved
 	// So we generate a token to use this project
-	tokenCreate := tokens.CreateCmd{Params: chunkify.TokenCreateParams{Name: "chunkify-cli", Scope: "project", ProjectId: projectId}}
+	tokenCreate := tokens.CreateCmd{Params: chunkify.TokenCreateParams{Name: "chunkify-cli", Scope: "project", ProjectId: &projectId}}
 	if err := tokenCreate.Execute(); err != nil {
 		printError(fmt.Errorf("couldn't create a token for this project: %s", err))
 		os.Exit(1)

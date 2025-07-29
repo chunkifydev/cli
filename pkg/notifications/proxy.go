@@ -17,6 +17,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/chunkifydev/cli/pkg/webhooks"
@@ -123,13 +124,15 @@ func (m model) View() string {
 
 // toParams converts ProxyCmd fields to NotificationListParams
 func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
+	limit := int64(10)
 	params := chunkify.NotificationListParams{
-		WebhookId: r.WebhookId,
-		Limit:     10,
+		WebhookId: &r.WebhookId,
+		Limit:     &limit,
 	}
 
 	if len(lastProxiedNotifications) > 0 {
-		params.CreatedGte = lastProxiedNotifications[len(lastProxiedNotifications)-1].CreatedAt.Format(time.RFC3339)
+		createdGte := lastProxiedNotifications[len(lastProxiedNotifications)-1].CreatedAt.Format(time.RFC3339)
+		params.CreatedGte = &createdGte
 	}
 
 	return params
@@ -310,9 +313,9 @@ func newProxyCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
-	cmd.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
-	cmd.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
+	flags.StringSliceVar(cmd.Flags(), &req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	flags.StringVar(cmd.Flags(), &req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
+	flags.StringVar(cmd.Flags(), &hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
 
 	cmd.MarkFlagRequired("webhook-secret")
 

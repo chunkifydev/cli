@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
 )
 
@@ -59,8 +60,8 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	// Define flags for source creation
-	cmd.Flags().StringVar(&req.Params.Url, "url", "", "The url of the source (required)")
-	cmd.Flags().StringVar(&req.metadata, "metadata", "", "Optional metadata in JSON format")
+	flags.StringVar(cmd.Flags(), &req.Params.Url, "url", "", "The url of the source (required)")
+	flags.StringVar(cmd.Flags(), &req.metadata, "metadata", "", "Optional metadata in JSON format")
 	cmd.MarkFlagRequired("url")
 
 	return cmd

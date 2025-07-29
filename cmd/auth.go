@@ -13,6 +13,7 @@ import (
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/flags"
 	projectsCmd "github.com/chunkifydev/cli/pkg/projects"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -61,7 +62,7 @@ func newLoginCmd(cfg *config.Config) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Don't open the browser to authorize the cli")
+	flags.BoolVar(cmd.Flags(), &noBrowser, "no-browser", false, "Don't open the browser to authorize the cli")
 	if os.Getenv("CHUNKIFY_AUTH_URL") != "" {
 		authUrl = os.Getenv("CHUNKIFY_AUTH_URL")
 	} else {

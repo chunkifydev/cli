@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
@@ -61,104 +62,137 @@ func (r *ListCmd) toParams() chunkify.FileListParams {
 	if r.DurationEq != "" {
 		dur, err := time.ParseDuration(r.DurationEq)
 		if err == nil {
-			params.DurationEq = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationEq = &seconds
 		}
 	}
 	if r.DurationGte != "" {
 		dur, err := time.ParseDuration(r.DurationGte)
 		if err == nil {
-			params.DurationGte = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationGte = &seconds
 		}
 	}
 	if r.DurationGt != "" {
 		dur, err := time.ParseDuration(r.DurationGt)
 		if err == nil {
-			params.DurationGt = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationGt = &seconds
 		}
 	}
 	if r.DurationLte != "" {
 		dur, err := time.ParseDuration(r.DurationLte)
 		if err == nil {
-			params.DurationLte = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationLte = &seconds
 		}
 	}
 	if r.DurationLt != "" {
 		dur, err := time.ParseDuration(r.DurationLt)
 		if err == nil {
-			params.DurationLt = dur.Seconds()
+			seconds := dur.Seconds()
+			params.DurationLt = &seconds
 		}
 	}
 	if r.WidthEq != -1 {
-		params.WidthEq = r.WidthEq
+		width := int64(r.WidthEq)
+		params.WidthEq = &width
 	}
 	if r.WidthGte != -1 {
-		params.WidthGte = r.WidthGte
+		width := int64(r.WidthGte)
+		params.WidthGte = &width
 	}
 	if r.WidthGt != -1 {
-		params.WidthGt = r.WidthGt
+		width := int64(r.WidthGt)
+		params.WidthGt = &width
 	}
 	if r.WidthLte != -1 {
-		params.WidthLte = r.WidthLte
+		width := int64(r.WidthLte)
+		params.WidthLte = &width
 	}
 	if r.WidthLt != -1 {
-		params.WidthLt = r.WidthLt
+		width := int64(r.WidthLt)
+		params.WidthLt = &width
 	}
 	if r.HeightEq != -1 {
-		params.HeightEq = r.HeightEq
+		height := int64(r.HeightEq)
+		params.HeightEq = &height
 	}
 	if r.HeightGte != -1 {
-		params.HeightGte = r.HeightGte
+		height := int64(r.HeightGte)
+		params.HeightGte = &height
 	}
 	if r.HeightGt != -1 {
-		params.HeightGt = r.HeightGt
+		height := int64(r.HeightGt)
+		params.HeightGt = &height
 	}
 	if r.HeightLte != -1 {
-		params.HeightLte = r.HeightLte
+		height := int64(r.HeightLte)
+		params.HeightLte = &height
 	}
 	if r.HeightLt != -1 {
-		params.HeightLt = r.HeightLt
+		height := int64(r.HeightLt)
+		params.HeightLt = &height
 	}
 	if r.SizeEq != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeEq)
 		if err == nil {
-			params.SizeEq = bytes
+			params.SizeEq = &bytes
 		}
 	}
 	if r.SizeGte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGte)
 		if err == nil {
-			params.SizeGte = bytes
+			params.SizeGte = &bytes
 		}
 	}
 	if r.SizeGt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeGt)
 		if err == nil {
-			params.SizeGt = bytes
+			params.SizeGt = &bytes
 		}
 	}
 	if r.SizeLte != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLte)
 		if err == nil {
-			params.SizeLte = bytes
+			params.SizeLte = &bytes
 		}
 	}
 	if r.SizeLt != "" {
 		bytes, err := formatter.ParseFileSize(r.SizeLt)
 		if err == nil {
-			params.SizeLt = bytes
+			params.SizeLt = &bytes
 		}
 	}
-	params.Id = r.Id
-	params.Offset = r.Offset
-	params.Limit = r.Limit
-	params.CreatedSort = r.CreatedSort
-	params.AudioCodec = r.AudioCodec
-	params.VideoCodec = r.VideoCodec
-	params.MimeType = r.MimeType
-	params.JobId = r.JobId
-	params.StorageId = r.StorageId
-	params.PathEq = r.PathEq
-	params.PathILike = r.PathILike
+	id := r.Id
+	params.Id = &id
+
+	offset := r.Offset
+	params.Offset = &offset
+
+	limit := r.Limit
+	params.Limit = &limit
+
+	createdSort := r.CreatedSort
+	params.CreatedSort = &createdSort
+
+	audioCodec := r.AudioCodec
+	params.AudioCodec = &audioCodec
+
+	videoCodec := r.VideoCodec
+	params.VideoCodec = &videoCodec
+
+	jobId := r.JobId
+	params.JobId = &jobId
+
+	storageId := r.StorageId
+	params.StorageId = &storageId
+
+	pathEq := r.PathEq
+	params.PathEq = &pathEq
+
+	pathILike := r.PathILike
+	params.PathILike = &pathILike
 
 	return params
 }
@@ -272,48 +306,48 @@ func newListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Int64Var(&req.Offset, "offset", 0, "Offset")
-	cmd.Flags().Int64Var(&req.Limit, "limit", 100, "Limit")
+	flags.Int64Var(cmd.Flags(), &req.Offset, "offset", 0, "Offset")
+	flags.Int64Var(cmd.Flags(), &req.Limit, "limit", 100, "Limit")
 
-	cmd.Flags().StringVar(&req.Id, "id", "", "File ID")
+	flags.StringVar(cmd.Flags(), &req.Id, "id", "", "File ID")
 
-	cmd.Flags().StringVar(&req.DurationEq, "duration.eq", "", "Duration Equals")
-	cmd.Flags().StringVar(&req.DurationGte, "duration.gte", "", "Duration Greater or Equal")
-	cmd.Flags().StringVar(&req.DurationGt, "duration.gt", "", "Duration Greater")
-	cmd.Flags().StringVar(&req.DurationLte, "duration.lte", "", "Duration Less or Equal")
-	cmd.Flags().StringVar(&req.DurationLt, "duration.lt", "", "Duration Less")
+	flags.StringVar(cmd.Flags(), &req.DurationEq, "duration.eq", "", "Duration Equals")
+	flags.StringVar(cmd.Flags(), &req.DurationGte, "duration.gte", "", "Duration Greater or Equal")
+	flags.StringVar(cmd.Flags(), &req.DurationGt, "duration.gt", "", "Duration Greater")
+	flags.StringVar(cmd.Flags(), &req.DurationLte, "duration.lte", "", "Duration Less or Equal")
+	flags.StringVar(cmd.Flags(), &req.DurationLt, "duration.lt", "", "Duration Less")
 
-	cmd.Flags().StringVar(&req.CreatedGte, "created.gte", "", "Created Greater or Equal")
-	cmd.Flags().StringVar(&req.CreatedLte, "created.lte", "", "Created Less or Equal")
+	flags.StringVar(cmd.Flags(), &req.CreatedGte, "created.gte", "", "Created Greater or Equal")
+	flags.StringVar(cmd.Flags(), &req.CreatedLte, "created.lte", "", "Created Less or Equal")
 
-	cmd.Flags().Int64Var(&req.WidthEq, "width.eq", -1, "Width Equals")
-	cmd.Flags().Int64Var(&req.WidthGte, "width.gte", -1, "Width Greater or Equal")
-	cmd.Flags().Int64Var(&req.WidthGt, "width.gt", -1, "Width Greater")
-	cmd.Flags().Int64Var(&req.WidthLte, "width.lte", -1, "Width Less or Equal")
-	cmd.Flags().Int64Var(&req.WidthLt, "width.lt", -1, "Width Less")
+	flags.Int64Var(cmd.Flags(), &req.WidthEq, "width.eq", -1, "Width Equals")
+	flags.Int64Var(cmd.Flags(), &req.WidthGte, "width.gte", -1, "Width Greater or Equal")
+	flags.Int64Var(cmd.Flags(), &req.WidthGt, "width.gt", -1, "Width Greater")
+	flags.Int64Var(cmd.Flags(), &req.WidthLte, "width.lte", -1, "Width Less or Equal")
+	flags.Int64Var(cmd.Flags(), &req.WidthLt, "width.lt", -1, "Width Less")
 
-	cmd.Flags().Int64Var(&req.HeightEq, "height.eq", -1, "Height Equals")
-	cmd.Flags().Int64Var(&req.HeightGte, "height.gte", -1, "Height Greater or Equal")
-	cmd.Flags().Int64Var(&req.HeightGt, "height.gt", -1, "Height Greater")
-	cmd.Flags().Int64Var(&req.HeightLte, "height.lte", -1, "Height Less or Equal")
-	cmd.Flags().Int64Var(&req.HeightLt, "height.lt", -1, "Height Less")
+	flags.Int64Var(cmd.Flags(), &req.HeightEq, "height.eq", -1, "Height Equals")
+	flags.Int64Var(cmd.Flags(), &req.HeightGte, "height.gte", -1, "Height Greater or Equal")
+	flags.Int64Var(cmd.Flags(), &req.HeightGt, "height.gt", -1, "Height Greater")
+	flags.Int64Var(cmd.Flags(), &req.HeightLte, "height.lte", -1, "Height Less or Equal")
+	flags.Int64Var(cmd.Flags(), &req.HeightLt, "height.lt", -1, "Height Less")
 
-	cmd.Flags().StringVar(&req.SizeEq, "size.eq", "", "Size Equals")
-	cmd.Flags().StringVar(&req.SizeGte, "size.gte", "", "Size Greater or Equal")
-	cmd.Flags().StringVar(&req.SizeGt, "size.gt", "", "Size Greater")
-	cmd.Flags().StringVar(&req.SizeLte, "size.lte", "", "Size Less or Equal")
-	cmd.Flags().StringVar(&req.SizeLt, "size.lt", "", "Size Less")
+	flags.StringVar(cmd.Flags(), &req.SizeEq, "size.eq", "", "Size Equals")
+	flags.StringVar(cmd.Flags(), &req.SizeGte, "size.gte", "", "Size Greater or Equal")
+	flags.StringVar(cmd.Flags(), &req.SizeGt, "size.gt", "", "Size Greater")
+	flags.StringVar(cmd.Flags(), &req.SizeLte, "size.lte", "", "Size Less or Equal")
+	flags.StringVar(cmd.Flags(), &req.SizeLt, "size.lt", "", "Size Less")
 
-	cmd.Flags().StringVar(&req.AudioCodec, "audio-codec", "", "Audio Codec")
-	cmd.Flags().StringVar(&req.VideoCodec, "video-codec", "", "Video Codec")
+	flags.StringVar(cmd.Flags(), &req.AudioCodec, "audio-codec", "", "Audio Codec")
+	flags.StringVar(cmd.Flags(), &req.VideoCodec, "video-codec", "", "Video Codec")
 
-	cmd.Flags().StringVar(&req.CreatedSort, "created.sort", "asc", "Created Sort")
+	flags.StringVar(cmd.Flags(), &req.CreatedSort, "created.sort", "asc", "Created Sort")
 
-	cmd.Flags().StringVar(&req.MimeType, "mime-type", "", "Mime Type")
-	cmd.Flags().StringVar(&req.JobId, "job-id", "", "Job ID")
-	cmd.Flags().StringVar(&req.StorageId, "storage-id", "", "Storage ID")
-	cmd.Flags().StringVar(&req.PathEq, "path.eq", "", "Path Equals")
-	cmd.Flags().StringVar(&req.PathILike, "path.ilike", "", "Path iLike")
+	flags.StringVar(cmd.Flags(), &req.MimeType, "mime-type", "", "Mime Type")
+	flags.StringVar(cmd.Flags(), &req.JobId, "job-id", "", "Job ID")
+	flags.StringVar(cmd.Flags(), &req.StorageId, "storage-id", "", "Storage ID")
+	flags.StringVar(cmd.Flags(), &req.PathEq, "path.eq", "", "Path Equals")
+	flags.StringVar(cmd.Flags(), &req.PathILike, "path.ilike", "", "Path iLike")
 
 	return cmd
 }
