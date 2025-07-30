@@ -414,7 +414,7 @@ func newJpgCmd(req *CreateCmd) *cobra.Command {
 	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Frames, "frames", 0, "Generate only the number of given frames")
 	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Width, "width", 0, "ffmpeg config: Width")
 	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Height, "height", 0, "ffmpeg config: Height")
-	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Interval, "interval", 0, "ffmpeg config: Interval")
+	flags.Int64Var(cmd.Flags(), &jpgConfig.Interval, "interval", 0, "ffmpeg config: Interval")
 	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Duration, "duration", 0, "ffmpeg config: Duration")
 	flags.Int64VarPtr(cmd.Flags(), &jpgConfig.Seek, "seek", 0, "ffmpeg config: Seek")
 
