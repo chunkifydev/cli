@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
 
@@ -38,10 +39,12 @@ type TUI struct {
 	Done             bool
 	Ctx              context.Context
 	CancelFunc       context.CancelFunc
+
+	Spinner spinner.Model
 }
 
 func (t TUI) Init() tea.Cmd {
-	return tea.Batch(tickCmd())
+	return tea.Batch(tickCmd(), t.Spinner.Tick)
 }
 
 type Progress struct {
@@ -78,10 +81,13 @@ func NewProgress() *Progress {
 
 // NewTUI creates a new TUI instance with the given progress tracker
 func NewTUI() TUI {
+	s := spinner.New()
+	s.Spinner = spinner.Dot
 	return TUI{
 		Status:   Starting,
 		Progress: NewProgress(),
 		Done:     false,
+		Spinner:  s,
 	}
 }
 
@@ -113,6 +119,10 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check for updates from channels (non-blocking)
 		t = t.checkChannels()
 		return t, tickCmd()
+	default:
+		var cmd tea.Cmd
+		t.Spinner, cmd = t.Spinner.Update(msg)
+		return t, cmd
 	}
 
 	return t, nil
@@ -200,7 +210,7 @@ func (t TUI) View() string {
 
 	view += fmt.Sprintf("\n%s\n\n", chunkifyBanner)
 	// Display current status
-	view += fmt.Sprintf("Status: %s\n", t.getStatusString())
+	view += fmt.Sprintf("%s %s\n", t.Spinner.View(), t.getStatusString())
 
 	// Display error if any
 	if t.Error != nil {
