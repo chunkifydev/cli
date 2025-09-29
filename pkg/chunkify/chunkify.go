@@ -9,9 +9,11 @@ import (
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/google/uuid"
-	"github.com/spf13/cobra"
+)
+
+const (
+	ProgressUpdateInterval = 1 * time.Second
 )
 
 type ChunkifyCommand struct {
@@ -28,128 +30,10 @@ type ChunkifyCommand struct {
 	Progress        *Progress
 }
 
-// Common video flags
-var (
-	width        *int64
-	height       *int64
-	framerate    *float64
-	gop          *int64
-	channels     *int64
-	maxrate      *int64
-	bufsize      *int64
-	pixfmt       *string
-	disableAudio *bool
-	disableVideo *bool
-	duration     *int64
-	seek         *int64
-)
-
-// h264, h265 and av1 flags
-var (
-	crf        *int64
-	preset     *string
-	profilev   *string
-	level      *int64
-	x264KeyInt *int64
-	x265KeyInt *int64
-)
-
 var chunkifyCmd = ChunkifyCommand{}
 
-// BindFlags attaches root-level flags used by the root command
-func BindFlags(rcmd *cobra.Command, cfg *config.Config) {
-	chunkifyCmd = ChunkifyCommand{Config: cfg, Progress: NewProgress()}
-
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Video file or URL to process")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file or directory")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", "mp4_h264", "chunkify format: mp4_h264, mp4_h265 or mp4_av1")
-	flags.Int64VarPtr(rcmd.Flags(), &chunkifyCmd.Transcoders, "transcoders", 0, "chunkify transcoder quantity: Transcoders")
-	flags.Int64VarPtr(rcmd.Flags(), &chunkifyCmd.TranscoderVcpu, "vcpu", 8, "chunkify transcoder vCPU: 4, 8 or 16")
-
-	// format settings
-	flags.Int64VarPtr(rcmd.Flags(), &width, "width", 0, "ffmpeg config: Width")
-	flags.Int64VarPtr(rcmd.Flags(), &height, "height", 0, "ffmpeg config: Height")
-	flags.Float64VarPtr(rcmd.Flags(), &framerate, "framerate", 0, "ffmpeg config: Framerate")
-	flags.Int64VarPtr(rcmd.Flags(), &gop, "gop", 0, "ffmpeg config: Gop")
-	flags.Int64VarPtr(rcmd.Flags(), &channels, "channels", 0, "ffmpeg config: Channels")
-	flags.Int64VarPtr(rcmd.Flags(), &maxrate, "maxrate", 0, "ffmpeg config: Maxrate")
-	flags.Int64VarPtr(rcmd.Flags(), &bufsize, "bufsize", 0, "ffmpeg config: Bufsize")
-	flags.StringVarPtr(rcmd.Flags(), &pixfmt, "pixfmt", "", "ffmpeg config: PixFmt")
-	flags.BoolVarPtr(rcmd.Flags(), &disableAudio, "an", false, "ffmpeg config: DisableAudio")
-	flags.BoolVarPtr(rcmd.Flags(), &disableVideo, "vn", false, "ffmpeg config: DisableVideo")
-	flags.Int64VarPtr(rcmd.Flags(), &duration, "duration", 0, "ffmpeg config: Duration")
-	flags.Int64VarPtr(rcmd.Flags(), &seek, "seek", 0, "ffmpeg config: Seek")
-
-	flags.Int64VarPtr(rcmd.Flags(), &crf, "crf", 0, "ffmpeg config: Crf")
-	flags.StringVarPtr(rcmd.Flags(), &preset, "preset", "", "ffmpeg config: Preset")
-	flags.StringVarPtr(rcmd.Flags(), &profilev, "profilev", "", "ffmpeg config: Profilev")
-	flags.Int64VarPtr(rcmd.Flags(), &level, "level", 0, "ffmpeg config: Level")
-	flags.Int64VarPtr(rcmd.Flags(), &x264KeyInt, "x264keyint", 0, "ffmpeg config: X264KeyInt")
-	flags.Int64VarPtr(rcmd.Flags(), &x265KeyInt, "x265keyint", 0, "ffmpeg config: X265KeyInt")
-}
-
-type Progress struct {
-	JobProgress      chan chunkify.Job
-	JobTranscoders   chan []chunkify.TranscoderStatus
-	JobCompleted     chan bool
-	UploadProgress   chan chunkify.UploadProgressChannel
-	DownloadProgress chan DownloadProgress
-	Error            chan error
-}
-
-type DownloadProgress struct {
-	Progress     float64
-	TotalBytes   int64
-	BytesWritten int64
-	Eta          time.Duration
-	Speed        float64
-}
-
-func NewProgress() *Progress {
-	return &Progress{
-		JobProgress:      make(chan chunkify.Job, 100),
-		JobTranscoders:   make(chan []chunkify.TranscoderStatus, 100),
-		JobCompleted:     make(chan bool),
-		UploadProgress:   make(chan chunkify.UploadProgressChannel),
-		DownloadProgress: make(chan DownloadProgress, 100),
-		Error:            make(chan error),
-	}
-}
-
-func (p *Progress) Render() {
-	for {
-		select {
-		case job, ok := <-p.JobProgress:
-			if ok {
-				fmt.Printf("Job progress: %s (%f%%)\n", job.Status, job.Progress)
-			}
-			if job.Status == chunkify.JobStatusCompleted || job.Status == chunkify.JobStatusFailed || job.Status == chunkify.JobStatusCancelled {
-				return
-			}
-		case transcoders, ok := <-p.JobTranscoders:
-			if ok {
-				for _, transcoder := range transcoders {
-					fmt.Printf("[%d] %f%%\n", transcoder.ChunkNumber, transcoder.Progress)
-				}
-
-			}
-		case uploadProgress, ok := <-p.UploadProgress:
-			if ok {
-				fmt.Printf("Upload progress: %f%%\n", uploadProgress.Progress)
-			}
-		case downloadProgress, ok := <-p.DownloadProgress:
-			if ok {
-				fmt.Printf("Download progress: %f%%\n", downloadProgress.Progress)
-			}
-		case err := <-p.Error:
-			fmt.Printf("Error: %s\n", err)
-			p.JobCompleted <- true
-			return
-		}
-	}
-}
-
-func Execute() error {
+func Execute(cfg *config.Config) error {
+	chunkifyCmd.Config = cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -215,7 +99,7 @@ func (c *ChunkifyCommand) InitJobFormatParams() {
 	}
 
 	switch c.Format {
-	case "mp4_h264":
+	case string(chunkify.FormatMp4H264):
 		h264Params := &chunkify.H264{
 			Video:      videoCommon,
 			Crf:        crf,
@@ -225,7 +109,7 @@ func (c *ChunkifyCommand) InitJobFormatParams() {
 			X264KeyInt: x264KeyInt,
 		}
 		c.JobFormatParams.Mp4H264 = h264Params
-	case "mp4_h265":
+	case string(chunkify.FormatMp4H265):
 		h265Params := &chunkify.H265{
 			Video:      videoCommon,
 			Crf:        crf,
@@ -235,7 +119,7 @@ func (c *ChunkifyCommand) InitJobFormatParams() {
 			X265KeyInt: x265KeyInt,
 		}
 		c.JobFormatParams.Mp4H265 = h265Params
-	case "mp4_av1":
+	case string(chunkify.FormatMp4Av1):
 		av1Params := &chunkify.Av1{
 			Video:    videoCommon,
 			Crf:      crf,
@@ -372,7 +256,7 @@ func (c *ChunkifyCommand) GetJobTranscoders() ([]chunkify.TranscoderStatus, erro
 }
 
 func (c *ChunkifyCommand) StartJobProgress() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(ProgressUpdateInterval)
 	defer ticker.Stop()
 
 	for {

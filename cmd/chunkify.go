@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 	Short: "chunkify is a command line interface for Chunkify API",
 	Long:  `chunkify is a command line interface for Chunkify API.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return chunkifyCmd.Execute()
+		return chunkifyCmd.Execute(cfg)
 	},
 }
 
@@ -115,7 +115,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
 
 	// Bind root flags coming from the chunkify package
-	chunkifyCmd.BindFlags(rootCmd, cfg)
+	chunkifyCmd.BindFlags(rootCmd)
 
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
