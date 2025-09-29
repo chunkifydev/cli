@@ -9,7 +9,7 @@ require (
 	golang.org/x/term v0.24.0
 )
 
-//replace github.com/chunkifydev/chunkify-go => ../chunkify-go
+replace github.com/chunkifydev/chunkify-go => ../chunkify-go
 
 require (
 	github.com/alessio/shellescape v1.4.2 // indirect

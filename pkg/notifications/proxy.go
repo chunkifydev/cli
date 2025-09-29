@@ -17,10 +17,10 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/styles"
-	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -31,6 +31,35 @@ var (
 	lastProxiedNotifications []chunkify.Notification // Tracks the 10 last proxied notifications
 	logs                     []string                // Stores log messages
 )
+
+// Command represents the root notifications command and configuration
+type Command struct {
+	Command *cobra.Command // The root cobra command for notifications
+	Config  *config.Config // Configuration for the notifications command
+}
+
+// cmd is a package-level variable holding the current Command instance
+var cmd *Command
+
+// NewCommand creates and configures a new notifications root command
+func NewCommand(config *config.Config) *Command {
+	cmd = &Command{
+		Config: config,
+		Command: &cobra.Command{
+			Use:   "notifications",
+			Short: "Manage your notifications",
+			Long:  "Manage your notifications",
+		}}
+
+	// Add all subcommands
+	cmd.Command.AddCommand(newProxyCmd()) // Proxy notifications to a local URL
+	return cmd
+}
+
+// printError formats and prints an error message using the error style
+func printError(err error) {
+	fmt.Println(styles.Error.Render(err.Error()))
+}
 
 // ProxyCmd represents the command for proxying notifications to a local URL
 type ProxyCmd struct {
@@ -240,19 +269,18 @@ func createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
 	log(fmt.Sprintf("Setting up localdev webhook for %s", webhookUrl))
 
 	enabled := true
-	cmd := &webhooks.CreateCmd{Params: chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled}}
-	if err := cmd.Execute(); err != nil {
+	wh, err := cmd.Config.Client.WebhookCreate(chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled})
+	if err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return chunkify.Webhook{}, err
 	}
 
-	return cmd.Data, nil
+	return wh, nil
 }
 
 // deleteLocalDevWebhook removes the local development webhook
 func deleteLocalDevWebhook(webhookId string) error {
-	cmd := webhooks.DeleteCmd{Id: webhookId}
-	if err := cmd.Execute(); err != nil {
+	if err := cmd.Config.Client.WebhookDelete(webhookId); err != nil {
 		fmt.Printf("Couldn't delete localdev webhook. You need to manually delete it. webhookId: %s, error: %s\n", webhookId, err)
 		return err
 	}

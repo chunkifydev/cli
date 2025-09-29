@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -14,7 +16,6 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/flags"
-	projectsCmd "github.com/chunkifydev/cli/pkg/projects"
 	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -136,12 +137,11 @@ func login(cfg *config.Config) {
 
 	// Verify the team token by fetching projects
 	fmt.Println("Checking your account...")
-	list := projectsCmd.ListCmd{}
-	if err := list.Execute(); err != nil {
+	projects, err := client.ProjectList()
+	if err != nil {
 		printError(fmt.Errorf("team token is invalid"))
 		os.Exit(1)
 	}
-	projects := list.Data
 
 	// Save the team token to configuration
 	if err := config.SetToken(teamToken.Id, "TeamToken", teamToken.Token); err != nil {
@@ -150,7 +150,7 @@ func login(cfg *config.Config) {
 	}
 
 	// Prompt user to select a project
-	projectsCmd.SelectProjectPrompt(projects)
+	SelectProjectPrompt(cfg, projects)
 
 	fmt.Println()
 	fmt.Println("All good. Run `chunkify help` for help")
@@ -166,9 +166,77 @@ func getAllProjects(config *config.Config) ([]chunkify.Project, error) {
 	return projects, nil
 }
 
+// SelectProjectPrompt displays an interactive prompt for selecting a project
+func SelectProjectPrompt(cfg *config.Config, projects []chunkify.Project) {
+	// Handle case when no projects exist
+	if len(projects) == 0 {
+		fmt.Println("You don't have any project. You can create a new project by running `chunkify projects create --name 'Project name'`")
+		return
+	}
+
+	// Display numbered list of projects
+	fmt.Println("What project do you want to use?")
+	for i, project := range projects {
+		fmt.Printf("%d. %s\n", i+1, project.Name)
+	}
+
+	// Get user input for project selection
+	fmt.Printf("Please enter the project number: ")
+	reader := bufio.NewReader(os.Stdin)
+	projectNumberStr, _ := reader.ReadString('\n')
+	projectNumber, err := strconv.Atoi(strings.TrimSpace(projectNumberStr))
+	if err != nil {
+		printError(fmt.Errorf("project number is not valid number %s", err))
+		os.Exit(1)
+	}
+
+	// Validate project number is within range
+	projectIndex := projectNumber - 1
+	if projectIndex < 0 || projectIndex > len(projects) {
+		printError(fmt.Errorf("project number is not valid"))
+		os.Exit(1)
+	}
+
+	selectProject(cfg, projects[projectIndex].Id)
+}
+
+// selectProject sets the given project as default and ensures a valid token exists
+func selectProject(cfg *config.Config, projectId string) {
+	// Check if we already have a token for this project
+	_, err := config.Get("project:" + projectId)
+	if err == nil {
+		// If token exists, just set as default project
+		if err := config.Set("DefaultProject", projectId); err != nil {
+			printError(fmt.Errorf("couldn't set the project for all future commands: %s", err))
+			os.Exit(1)
+		}
+		return
+	}
+
+	// We don't have the token saved
+	// So we generate a token to use this project
+	tok, err := cfg.Client.TokenCreate(chunkify.TokenCreateParams{Name: "chunkify-cli", Scope: "project", ProjectId: &projectId})
+	if err != nil {
+		printError(fmt.Errorf("couldn't create a token for this project: %s", err))
+		os.Exit(1)
+	}
+
+	// Save the new token
+	if err := config.SetToken(tok.Id, projectId, tok.Token); err != nil {
+		printError(fmt.Errorf("couldn't save the token: %s", err))
+		os.Exit(1)
+	}
+
+	// Set as default project
+	if err := config.Set("DefaultProject", projectId); err != nil {
+		printError(fmt.Errorf("couldn't set the project for all future commands: %s", err))
+		os.Exit(1)
+	}
+}
+
 // revokeToken revokes a specific token from the server
-func revokeToken(config *config.Config, tokenId string) error {
-	err := config.Client.TokenRevoke(tokenId)
+func revokeToken(cfg *config.Config, tokenId string) error {
+	err := cfg.Client.TokenRevoke(tokenId)
 	if err != nil {
 		return err
 	}

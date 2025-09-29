@@ -5,18 +5,9 @@ import (
 	"os"
 
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/files"
-	"github.com/chunkifydev/cli/pkg/get"
-	"github.com/chunkifydev/cli/pkg/jobs"
-	"github.com/chunkifydev/cli/pkg/logs"
+	"github.com/chunkifydev/cli/pkg/flags"
+
 	"github.com/chunkifydev/cli/pkg/notifications"
-	"github.com/chunkifydev/cli/pkg/projects"
-	"github.com/chunkifydev/cli/pkg/sources"
-	"github.com/chunkifydev/cli/pkg/storages"
-	"github.com/chunkifydev/cli/pkg/tokens"
-	"github.com/chunkifydev/cli/pkg/transcoders"
-	"github.com/chunkifydev/cli/pkg/uploads"
-	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 
 	"github.com/chunkifydev/chunkify-go"
@@ -30,6 +21,9 @@ const (
 // cfg holds the global configuration for the CLI defined in config pkg
 var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
 
+// someParam is an example flag bound to the root command
+var someParam int64
+
 // Commander defines the interface for command execution and view generation
 type Commander interface {
 	execute() error
@@ -41,15 +35,25 @@ var rootCmd = &cobra.Command{
 	Use:   "chunkify",
 	Short: "chunkify is a command line interface for Chunkify API",
 	Long:  `chunkify is a command line interface for Chunkify API.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Place root command logic here. For demonstration, this simply
+		// acknowledges the flag value when provided.
+		if cmd.Flags().Changed("some-param") {
+			fmt.Println("some-param:", someParam)
+		}
+		return nil
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	rootCmd.PersistentPreRun = checkAccountSetup
+	//if len(os.Args) == 1 {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+	//}
 }
 
 // checkAccountSetup verifies and sets up authentication tokens based on the command being executed.
@@ -111,20 +115,15 @@ func init() {
 	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
 		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
 	}
-
+	hostname := ""
+	flags.StringVar(rootCmd.Flags(), &hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
 	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
-	rootCmd.AddCommand(storages.NewCommand(cfg).Command)
-	rootCmd.AddCommand(projects.NewCommand(cfg).Command)
-	rootCmd.AddCommand(sources.NewCommand(cfg).Command)
-	rootCmd.AddCommand(uploads.NewCommand(cfg).Command)
-	rootCmd.AddCommand(jobs.NewCommand(cfg).Command)
-	rootCmd.AddCommand(logs.NewCommand(cfg).Command)
-	rootCmd.AddCommand(files.NewCommand(cfg).Command)
-	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
+
+	// Root-level flag to support running without a subcommand
+	flags.Int64Var(rootCmd.Flags(), &someParam, "some-param", 0, "Example parameter for root command execution")
+
 	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
-	rootCmd.AddCommand(tokens.NewCommand(cfg).Command)
-	rootCmd.AddCommand(transcoders.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
-	rootCmd.AddCommand(get.NewCommand(cfg))
+
 }
