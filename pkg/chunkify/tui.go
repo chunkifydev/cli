@@ -1,6 +1,7 @@
 package chunkify
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -35,6 +36,8 @@ type TUI struct {
 	DownloadProgress DownloadProgress
 	Error            error
 	Done             bool
+	Ctx              context.Context
+	CancelFunc       context.CancelFunc
 }
 
 func (t TUI) Init() tea.Cmd {
@@ -65,7 +68,7 @@ func NewProgress() *Progress {
 		Status:           make(chan int, 1),
 		JobProgress:      make(chan chunkify.Job, 100),
 		JobTranscoders:   make(chan []chunkify.TranscoderStatus, 100),
-		JobCompleted:     make(chan bool),
+		JobCompleted:     make(chan bool, 1),
 		UploadProgress:   make(chan chunkify.UploadProgressChannel, 100),
 		DownloadProgress: make(chan DownloadProgress, 100),
 		Source:           make(chan *chunkify.Source, 1),
@@ -97,6 +100,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
+			fmt.Println("Quitting...")
+			t.CancelFunc()
+			// Send JobCompleted to unblock the main goroutine
+			select {
+			case t.Progress.JobCompleted <- true:
+			default:
+			}
 			return t, tea.Quit
 		}
 	case tickMsg:
@@ -172,6 +182,13 @@ func (t TUI) checkChannels() TUI {
 	case err := <-t.Progress.Error:
 		t.Error = err
 		t.Progress.JobCompleted <- true
+	default:
+	}
+
+	select {
+	case <-t.Ctx.Done():
+		t.Status = Cancelled
+		t.Done = true
 	default:
 	}
 

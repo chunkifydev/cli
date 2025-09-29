@@ -34,14 +34,16 @@ type ChunkifyCommand struct {
 var chunkifyCmd = ChunkifyCommand{}
 
 func Execute(cfg *config.Config) error {
-	tui := NewTUI()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	tui := NewTUI()
+	tui.Ctx = ctx
+	tui.CancelFunc = cancel
 	chunkifyCmd.Tui = &tui
 
 	chunkifyCmd.Tui.Progress.Status <- Starting
 	chunkifyCmd.Config = cfg
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		//fmt.Println("Starting TUI", tui)
@@ -75,12 +77,19 @@ func Execute(cfg *config.Config) error {
 	chunkifyCmd.Tui.Job = job
 	// fmt.Println("Job created:", job)
 
-	go chunkifyCmd.StartJobProgress(job.Id)
+	go chunkifyCmd.StartJobProgress(ctx, job.Id)
 
 	<-chunkifyCmd.Tui.Progress.JobCompleted
-	// fmt.Println("Job completed with status:", chunkifyCmd.Job.Status)
+	// fmt.Println("Job completed with status:", chunkifyCmd.Tui.Job.Status)
 
-	if chunkifyCmd.Tui.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Tui.Job.Status == chunkify.JobStatusCancelled {
+	// Check if context was cancelled
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("operation cancelled")
+	default:
+	}
+
+	if chunkifyCmd.Tui.Job != nil && (chunkifyCmd.Tui.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Tui.Job.Status == chunkify.JobStatusCancelled) {
 		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Tui.Job.Status, chunkifyCmd.Tui.Job.Error.Message)
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
@@ -98,6 +107,12 @@ func Execute(cfg *config.Config) error {
 	if chunkifyCmd.Output != "" {
 		chunkifyCmd.Tui.Progress.Status <- Downloading
 		for _, file := range files {
+			// Check if context was cancelled before each download
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("download cancelled")
+			default:
+			}
 			// fmt.Printf("Downloading file: %s\n", file.Url)
 			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
 		}
@@ -217,7 +232,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 	}
 	defer file.Close()
 
-	if err := c.Config.Client.UploadBlobWithProgress(file, upload, c.Tui.Progress.UploadProgress); err != nil {
+	if err := c.Config.Client.UploadBlobWithProgressAndContext(c.Tui.Ctx, file, upload, c.Tui.Progress.UploadProgress); err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
 	}
 
@@ -288,29 +303,35 @@ func (c *ChunkifyCommand) GetJobTranscoders(jobId string) ([]chunkify.Transcoder
 	return transcoders, nil
 }
 
-func (c *ChunkifyCommand) StartJobProgress(jobId string) {
+func (c *ChunkifyCommand) StartJobProgress(ctx context.Context, jobId string) {
 	ticker := time.NewTicker(ProgressUpdateInterval)
 	defer ticker.Stop()
 
 	for {
-		<-ticker.C
-		job, err := c.GetJobProgress(jobId)
-		if err != nil {
-			return
-		}
-		c.Tui.Job = &job
 
-		c.Tui.Progress.JobProgress <- job
-		if job.Status == chunkify.JobStatusCompleted || job.Status == chunkify.JobStatusFailed || job.Status == chunkify.JobStatusCancelled {
+		select {
+		case <-ctx.Done():
 			c.Tui.Progress.JobCompleted <- true
-			break
-		}
-
-		transcoders, err := c.GetJobTranscoders(job.Id)
-		if err != nil {
 			return
+		case <-ticker.C:
+			job, err := c.GetJobProgress(jobId)
+			if err != nil {
+				return
+			}
+			c.Tui.Job = &job
+
+			c.Tui.Progress.JobProgress <- job
+			if job.Status == chunkify.JobStatusCompleted || job.Status == chunkify.JobStatusFailed || job.Status == chunkify.JobStatusCancelled {
+				c.Tui.Progress.JobCompleted <- true
+				break
+			}
+
+			transcoders, err := c.GetJobTranscoders(job.Id)
+			if err != nil {
+				return
+			}
+			c.Tui.Progress.JobTranscoders <- transcoders
 		}
-		c.Tui.Progress.JobTranscoders <- transcoders
 	}
 }
 
@@ -321,25 +342,3 @@ func (c *ChunkifyCommand) GetFiles(jobId string) ([]chunkify.File, error) {
 	}
 	return files, nil
 }
-
-// func DownloadFile(file chunkify.File, output string) error {
-// 	resp, err := http.Get(file.Url)
-// 	if err != nil {
-// 		return fmt.Errorf("error downloading file: %s", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	body, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		return fmt.Errorf("error reading file: %s", err)
-// 	}
-
-// 	err = os.WriteFile(output, body, 0644)
-// 	if err != nil {
-// 		return fmt.Errorf("error writing file: %s", err)
-// 	}
-
-// 	// fmt.Printf("File downloaded to: %s\n", output)
-
-// 	return nil
-// }
