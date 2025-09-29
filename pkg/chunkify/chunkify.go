@@ -43,7 +43,7 @@ func Execute(cfg *config.Config) error {
 	defer cancel()
 
 	go func() {
-		fmt.Println("Starting TUI", tui)
+		//fmt.Println("Starting TUI", tui)
 		p := tea.NewProgram(tui)
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Alas, there's been an error: %v", err)
@@ -53,16 +53,16 @@ func Execute(cfg *config.Config) error {
 
 	chunkifyCmd.Id = uuid.New().String()
 
-	source, err := chunkifyCmd.CreateSource()
+	_, err := chunkifyCmd.CreateSource()
 	if err != nil {
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error creating source: %s", err)
 	}
-	fmt.Println("Source created:", source)
+	// fmt.Println("Source created:", source)
 
 	chunkifyCmd.InitJobFormatParams()
-	fmt.Printf("format: %#+v\n", chunkifyCmd.JobFormatParams)
+	// fmt.Printf("format: %#+v\n", chunkifyCmd.JobFormatParams)
 
 	job, err := chunkifyCmd.CreateJob()
 	if err != nil {
@@ -71,12 +71,12 @@ func Execute(cfg *config.Config) error {
 		return fmt.Errorf("error creating job: %s", err)
 	}
 	chunkifyCmd.Job = job
-	fmt.Println("Job created:", job)
+	// fmt.Println("Job created:", job)
 
 	go chunkifyCmd.StartJobProgress()
 
 	<-chunkifyCmd.Tui.Progress.JobCompleted
-	fmt.Println("Job completed with status:", chunkifyCmd.Job.Status)
+	// fmt.Println("Job completed with status:", chunkifyCmd.Job.Status)
 
 	if chunkifyCmd.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Job.Status == chunkify.JobStatusCancelled {
 		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Job.Status, chunkifyCmd.Job.Error.Message)
@@ -91,12 +91,12 @@ func Execute(cfg *config.Config) error {
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error getting files: %s", err)
 	}
-	fmt.Printf("Files: %#+v\n", files)
+	// fmt.Printf("Files: %#+v\n", files)
 
 	if chunkifyCmd.Output != "" {
 		chunkifyCmd.Tui.Progress.Status <- Downloading
 		for _, file := range files {
-			fmt.Printf("Downloading file: %s\n", file.Url)
+			// fmt.Printf("Downloading file: %s\n", file.Url)
 			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
 		}
 	}
@@ -173,7 +173,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 		return nil, fmt.Errorf("file not found: %s", c.Input)
 	}
 
-	fmt.Println("Creating source directly from file")
+	// fmt.Println("Creating source directly from file")
 	source, err := c.CreateSourceFromFile()
 	if err != nil {
 		return nil, fmt.Errorf("error creating source: %s", err)
@@ -230,7 +230,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 			return nil, fmt.Errorf("error listing sources: %s", err)
 		}
 		for _, source := range results.Items {
-			fmt.Printf("metadata: %#+v\n", source.Metadata)
+			// fmt.Printf("metadata: %#+v\n", source.Metadata)
 			if v, ok := source.Metadata.(map[string]any); ok && v["chunkify_execution_id"] == c.Id {
 				found = true
 				return &source, nil
@@ -334,7 +334,7 @@ func (c *ChunkifyCommand) GetFiles() ([]chunkify.File, error) {
 // 		return fmt.Errorf("error writing file: %s", err)
 // 	}
 
-// 	fmt.Printf("File downloaded to: %s\n", output)
+// 	// fmt.Printf("File downloaded to: %s\n", output)
 
 // 	return nil
 // }

@@ -51,12 +51,12 @@ func (pw *progressWriter) print(now time.Time) {
 		percent := float64(pw.written) * 100 / float64(pw.total)
 		pr.Progress = percent
 		pr.Eta = eta.Truncate(time.Second)
-		fmt.Printf("\r%.1f%%  %s / %s  —  %s/s  ETA %s",
-			percent, humanBytes(pw.written), humanBytes(pw.total), humanBytes(int64(speed)), eta.Truncate(time.Second))
+		//fmt.Printf("\r%.1f%%  %s / %s  —  %s/s  ETA %s",
+		//percent, humanBytes(pw.written), humanBytes(pw.total), humanBytes(int64(speed)), eta.Truncate(time.Second))
 	} else {
 		// unknown length
-		fmt.Printf("\r%s downloaded  —  %s/s",
-			humanBytes(pw.written), humanBytes(int64(speed)))
+		//fmt.Printf("\r%s downloaded  —  %s/s",
+		//humanBytes(pw.written), humanBytes(int64(speed)))
 	}
 
 	pw.progressChan <- pr
@@ -130,14 +130,14 @@ func DownloadFile(ctx context.Context, url, output string, progressChan chan Dow
 
 	// Stream copy with progress
 	if _, err = io.Copy(pw, resp.Body); err != nil {
-		fmt.Println() // end progress line
+		//fmt.Println() // end progress line
 		return fmt.Errorf("download copy: %w", err)
 	}
 
 	// Final progress line
 	pw.print(time.Now())
 
-	fmt.Println()
+	//fmt.Println()
 
 	// Close file before rename to ensure flush
 	if err := out.Close(); err != nil {
@@ -149,6 +149,6 @@ func DownloadFile(ctx context.Context, url, output string, progressChan chan Dow
 		return fmt.Errorf("rename %q -> %q: %w", tmp, output, err)
 	}
 
-	fmt.Printf("Saved to %s\n", output)
+	//fmt.Printf("Saved to %s\n", output)
 	return nil
 }
