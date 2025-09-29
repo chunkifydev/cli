@@ -161,7 +161,7 @@ func (c *ChunkifyCommand) CreateSourceFromUrl() (*chunkify.Source, error) {
 	source, err := c.Config.Client.SourceCreate(chunkify.SourceCreateParams{
 		Url: c.Input,
 		Metadata: chunkify.SourceCreateParamsMetadata{
-			"cli_execution_id": c.Id,
+			"chunkify_execution_id": c.Id,
 		},
 	})
 	if err != nil {
@@ -173,7 +173,7 @@ func (c *ChunkifyCommand) CreateSourceFromUrl() (*chunkify.Source, error) {
 func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 	upload, err := c.Config.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
-			"cli_execution_id": c.Id,
+			"chunkify_execution_id": c.Id,
 		},
 	})
 	if err != nil {
@@ -196,7 +196,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 	for !found && retry < maxRetries {
 		results, err := c.Config.Client.SourceList(chunkify.SourceListParams{
 			Metadata: map[string]string{
-				"cli_execution_id": c.Id,
+				"chunkify_execution_id": c.Id,
 			},
 		})
 		if err != nil {
@@ -204,7 +204,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 		}
 		for _, source := range results.Items {
 			fmt.Printf("metadata: %#+v\n", source.Metadata)
-			if v, ok := source.Metadata.(map[string]any); ok && v["cli_execution_id"] == c.Id {
+			if v, ok := source.Metadata.(map[string]any); ok && v["chunkify_execution_id"] == c.Id {
 				found = true
 				return &source, nil
 			}
@@ -229,7 +229,7 @@ func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
 		Format:     c.JobFormatParams,
 		Transcoder: t,
 		Metadata: chunkify.JobCreateParamsMetadata{
-			"cli_execution_id": c.Id,
+			"chunkify_execution_id": c.Id,
 		},
 	})
 
