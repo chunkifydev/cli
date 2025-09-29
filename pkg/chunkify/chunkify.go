@@ -102,6 +102,9 @@ func Execute(cfg *config.Config) error {
 	}
 	chunkifyCmd.Tui.Progress.Status <- Completed
 
+	// Give the TUI time to display the completion message
+	time.Sleep(3 * time.Second)
+
 	return nil
 }
 

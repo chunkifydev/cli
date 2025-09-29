@@ -108,23 +108,38 @@ func (t TUI) checkChannels() TUI {
 		if ok {
 			t.JobProgress = job
 		}
+	default:
+	}
 
+	// Check transcoder status
+	select {
 	case transcoders, ok := <-t.Progress.JobTranscoders:
 		if ok {
 			t.JobTranscoders = transcoders
 		}
+	default:
+	}
 
+	// Check upload progress
+	select {
 	case uploadProgress, ok := <-t.Progress.UploadProgress:
 		if ok {
-			fmt.Printf("Upload progress: %#+v\n", uploadProgress)
 			t.UploadProgress = uploadProgress
 		}
+	default:
+	}
 
+	// Check download progress
+	select {
 	case downloadProgress, ok := <-t.Progress.DownloadProgress:
 		if ok {
 			t.DownloadProgress = downloadProgress
 		}
+	default:
+	}
 
+	// Check status
+	select {
 	case status, ok := <-t.Progress.Status:
 		if ok {
 			t.Status = status
@@ -132,7 +147,11 @@ func (t TUI) checkChannels() TUI {
 				t.Done = true
 			}
 		}
+	default:
+	}
 
+	// Check for errors
+	select {
 	case err := <-t.Progress.Error:
 		t.Error = err
 		t.Progress.JobCompleted <- true
