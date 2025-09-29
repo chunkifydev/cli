@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
@@ -24,11 +25,8 @@ type TUI struct {
 	Progress *Progress
 }
 
-func (t *TUI) Init() {
-	*t = TUI{
-		Status:   Starting,
-		Progress: NewProgress(),
-	}
+func (t TUI) Init() tea.Cmd {
+	return tea.Batch(tickCmd())
 }
 
 type Progress struct {
@@ -61,7 +59,31 @@ func NewProgress() *Progress {
 	}
 }
 
-func (t *TUI) View() {
+// tickMsg represents a tick event for periodic updates
+type tickMsg time.Time
+
+// tickCmd creates a tea.Cmd that sends tick events periodically
+func tickCmd() tea.Cmd {
+	return tea.Tick(time.Second*5, func(t time.Time) tea.Msg {
+		return tickMsg(t)
+	})
+}
+
+func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return t, tea.Quit
+		}
+	case tickMsg:
+		return t, tickCmd()
+	}
+
+	return t, nil
+}
+
+func (t TUI) View() string {
 	done := false
 	for {
 		select {
@@ -97,7 +119,8 @@ func (t *TUI) View() {
 		}
 		if done {
 			fmt.Println("Done")
-			return
+			return ""
 		}
 	}
+	return ""
 }

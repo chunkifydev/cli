@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/google/uuid"
@@ -33,8 +34,7 @@ type ChunkifyCommand struct {
 var chunkifyCmd = ChunkifyCommand{}
 
 func Execute(cfg *config.Config) error {
-	tui := TUI{}
-	tui.Init()
+	tui := TUI{Status: Starting, Progress: NewProgress()}
 	chunkifyCmd.Tui = &tui
 
 	chunkifyCmd.Tui.Progress.Status <- Starting
@@ -42,8 +42,14 @@ func Execute(cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	fmt.Println("Starting TUI", tui)
-	go tui.View()
+	go func() {
+		fmt.Println("Starting TUI", tui)
+		p := tea.NewProgram(tui)
+		if _, err := p.Run(); err != nil {
+			fmt.Printf("Alas, there's been an error: %v", err)
+			os.Exit(1)
+		}
+	}()
 
 	chunkifyCmd.Id = uuid.New().String()
 
