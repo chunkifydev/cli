@@ -33,6 +33,7 @@ type ChunkifyCommand struct {
 var chunkifyCmd = ChunkifyCommand{}
 
 func Execute(cfg *config.Config) error {
+	chunkifyCmd.Progress.Status <- Starting
 	chunkifyCmd.Config = cfg
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -43,6 +44,7 @@ func Execute(cfg *config.Config) error {
 
 	source, err := chunkifyCmd.CreateSource()
 	if err != nil {
+		chunkifyCmd.Progress.Status <- Failed
 		chunkifyCmd.Progress.Error <- err
 		return fmt.Errorf("error creating source: %s", err)
 	}
@@ -53,6 +55,7 @@ func Execute(cfg *config.Config) error {
 
 	job, err := chunkifyCmd.CreateJob()
 	if err != nil {
+		chunkifyCmd.Progress.Status <- Failed
 		chunkifyCmd.Progress.Error <- err
 		return fmt.Errorf("error creating job: %s", err)
 	}
@@ -62,20 +65,31 @@ func Execute(cfg *config.Config) error {
 	go chunkifyCmd.StartJobProgress()
 
 	<-chunkifyCmd.Progress.JobCompleted
-	fmt.Println("Job completed")
+	fmt.Println("Job completed with status:", chunkifyCmd.Job.Status)
+
+	if chunkifyCmd.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Job.Status == chunkify.JobStatusCancelled {
+		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Job.Status, chunkifyCmd.Job.Error.Message)
+		chunkifyCmd.Progress.Status <- Failed
+		chunkifyCmd.Progress.Error <- err
+		return err
+	}
 
 	files, err := chunkifyCmd.GetFiles()
 	if err != nil {
+		chunkifyCmd.Progress.Status <- Failed
+		chunkifyCmd.Progress.Error <- err
 		return fmt.Errorf("error getting files: %s", err)
 	}
 	fmt.Printf("Files: %#+v\n", files)
 
 	if chunkifyCmd.Output != "" {
+		chunkifyCmd.Progress.Status <- Downloading
 		for _, file := range files {
 			fmt.Printf("Downloading file: %s\n", file.Url)
 			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Progress.DownloadProgress)
 		}
 	}
+	chunkifyCmd.Progress.Status <- Completed
 
 	return nil
 }
@@ -158,6 +172,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 }
 
 func (c *ChunkifyCommand) CreateSourceFromUrl() (*chunkify.Source, error) {
+	c.Progress.Status <- UploadingFromUrl
 	source, err := c.Config.Client.SourceCreate(chunkify.SourceCreateParams{
 		Url: c.Input,
 		Metadata: chunkify.SourceCreateParamsMetadata{
@@ -171,6 +186,7 @@ func (c *ChunkifyCommand) CreateSourceFromUrl() (*chunkify.Source, error) {
 }
 
 func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
+	c.Progress.Status <- UploadingFromFile
 	upload, err := c.Config.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
 			"chunkify_execution_id": c.Id,
@@ -217,6 +233,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 }
 
 func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
+	c.Progress.Status <- Transcoding
 	t := &chunkify.JobCreateTranscoderParams{}
 
 	if c.Transcoders != nil && *c.Transcoders > 0 {

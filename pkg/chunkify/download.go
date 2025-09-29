@@ -41,7 +41,7 @@ func (pw *progressWriter) print(now time.Time) {
 
 	pr := DownloadProgress{
 		TotalBytes:   pw.total,
-		BytesWritten: pw.written,
+		WrittenBytes: pw.written,
 		Speed:        speed,
 	}
 
