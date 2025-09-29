@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	_ "embed"
+
 	tea "github.com/charmbracelet/bubbletea"
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
@@ -22,8 +24,6 @@ type ChunkifyCommand struct {
 	Config          *config.Config
 	Input           string
 	Output          string
-	Source          chunkify.Source
-	Job             chunkify.Job
 	Format          string
 	JobFormatParams chunkify.JobCreateFormatParams
 	Transcoders     *int64
@@ -34,7 +34,8 @@ type ChunkifyCommand struct {
 var chunkifyCmd = ChunkifyCommand{}
 
 func Execute(cfg *config.Config) error {
-	tui := TUI{Status: Starting, Progress: NewProgress()}
+	tui := NewTUI()
+
 	chunkifyCmd.Tui = &tui
 
 	chunkifyCmd.Tui.Progress.Status <- Starting
@@ -53,39 +54,40 @@ func Execute(cfg *config.Config) error {
 
 	chunkifyCmd.Id = uuid.New().String()
 
-	_, err := chunkifyCmd.CreateSource()
+	source, err := chunkifyCmd.CreateSource()
 	if err != nil {
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error creating source: %s", err)
 	}
+	chunkifyCmd.Tui.Progress.Source <- source
 	// fmt.Println("Source created:", source)
 
 	chunkifyCmd.InitJobFormatParams()
 	// fmt.Printf("format: %#+v\n", chunkifyCmd.JobFormatParams)
 
-	job, err := chunkifyCmd.CreateJob()
+	job, err := chunkifyCmd.CreateJob(source)
 	if err != nil {
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error creating job: %s", err)
 	}
-	chunkifyCmd.Job = job
+	chunkifyCmd.Tui.Job = job
 	// fmt.Println("Job created:", job)
 
-	go chunkifyCmd.StartJobProgress()
+	go chunkifyCmd.StartJobProgress(job.Id)
 
 	<-chunkifyCmd.Tui.Progress.JobCompleted
 	// fmt.Println("Job completed with status:", chunkifyCmd.Job.Status)
 
-	if chunkifyCmd.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Job.Status == chunkify.JobStatusCancelled {
-		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Job.Status, chunkifyCmd.Job.Error.Message)
+	if chunkifyCmd.Tui.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Tui.Job.Status == chunkify.JobStatusCancelled {
+		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Tui.Job.Status, chunkifyCmd.Tui.Job.Error.Message)
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return err
 	}
 
-	files, err := chunkifyCmd.GetFiles()
+	files, err := chunkifyCmd.GetFiles(job.Id)
 	if err != nil {
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
@@ -103,7 +105,7 @@ func Execute(cfg *config.Config) error {
 	chunkifyCmd.Tui.Progress.Status <- Completed
 
 	// Give the TUI time to display the completion message
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	return nil
 }
@@ -167,7 +169,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating source: %s", err)
 		}
-		c.Source = *source
+
 		return source, nil
 	}
 
@@ -181,7 +183,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating source: %s", err)
 	}
-	c.Source = *source
+
 	return source, nil
 }
 
@@ -246,7 +248,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 	return nil, fmt.Errorf("source not found")
 }
 
-func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
+func (c *ChunkifyCommand) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 	c.Tui.Progress.Status <- Transcoding
 	t := &chunkify.JobCreateTranscoderParams{}
 
@@ -256,7 +258,7 @@ func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
 	}
 
 	job, err := c.Config.Client.JobCreate(chunkify.JobCreateParams{
-		SourceId:   c.Source.Id,
+		SourceId:   source.Id,
 		Format:     c.JobFormatParams,
 		Transcoder: t,
 		Metadata: chunkify.JobCreateParamsMetadata{
@@ -265,38 +267,38 @@ func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
 	})
 
 	if err != nil {
-		return chunkify.Job{}, fmt.Errorf("error creating job: %s", err)
+		return nil, fmt.Errorf("error creating job: %s", err)
 	}
-	return job, nil
+	return &job, nil
 }
 
-func (c *ChunkifyCommand) GetJobProgress() (chunkify.Job, error) {
-	job, err := c.Config.Client.Job(c.Job.Id)
+func (c *ChunkifyCommand) GetJobProgress(jobId string) (chunkify.Job, error) {
+	job, err := c.Config.Client.Job(jobId)
 	if err != nil {
 		return chunkify.Job{}, fmt.Errorf("error getting job: %s", err)
 	}
 	return job, nil
 }
 
-func (c *ChunkifyCommand) GetJobTranscoders() ([]chunkify.TranscoderStatus, error) {
-	transcoders, err := c.Config.Client.JobListTranscoders(c.Job.Id)
+func (c *ChunkifyCommand) GetJobTranscoders(jobId string) ([]chunkify.TranscoderStatus, error) {
+	transcoders, err := c.Config.Client.JobListTranscoders(jobId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting job: %s", err)
 	}
 	return transcoders, nil
 }
 
-func (c *ChunkifyCommand) StartJobProgress() {
+func (c *ChunkifyCommand) StartJobProgress(jobId string) {
 	ticker := time.NewTicker(ProgressUpdateInterval)
 	defer ticker.Stop()
 
 	for {
 		<-ticker.C
-		job, err := c.GetJobProgress()
+		job, err := c.GetJobProgress(jobId)
 		if err != nil {
 			return
 		}
-		c.Job = job
+		c.Tui.Job = &job
 
 		c.Tui.Progress.JobProgress <- job
 		if job.Status == chunkify.JobStatusCompleted || job.Status == chunkify.JobStatusFailed || job.Status == chunkify.JobStatusCancelled {
@@ -304,7 +306,7 @@ func (c *ChunkifyCommand) StartJobProgress() {
 			break
 		}
 
-		transcoders, err := c.GetJobTranscoders()
+		transcoders, err := c.GetJobTranscoders(job.Id)
 		if err != nil {
 			return
 		}
@@ -312,8 +314,8 @@ func (c *ChunkifyCommand) StartJobProgress() {
 	}
 }
 
-func (c *ChunkifyCommand) GetFiles() ([]chunkify.File, error) {
-	files, err := c.Config.Client.JobListFiles(c.Job.Id)
+func (c *ChunkifyCommand) GetFiles(jobId string) ([]chunkify.File, error) {
+	files, err := c.Config.Client.JobListFiles(jobId)
 	if err != nil {
 		return nil, fmt.Errorf("error getting files: %s", err)
 	}

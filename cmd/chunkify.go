@@ -32,7 +32,8 @@ var rootCmd = &cobra.Command{
 	Short: "chunkify is a command line interface for Chunkify API",
 	Long:  `chunkify is a command line interface for Chunkify API.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return chunkifyCmd.Execute(cfg)
+		chunkifyCmd.Execute(cfg)
+		return nil
 	},
 }
 
