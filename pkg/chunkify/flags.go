@@ -34,7 +34,7 @@ var (
 
 // BindFlags attaches root-level flags used by the root command
 func BindFlags(rcmd *cobra.Command) {
-	chunkifyCmd = ChunkifyCommand{Progress: NewProgress()}
+	chunkifyCmd = ChunkifyCommand{}
 
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Video file or URL to process")
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file or directory")
