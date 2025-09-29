@@ -1,9 +1,8 @@
 package chunkify
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -90,20 +89,30 @@ func BindFlags(rcmd *cobra.Command, cfg *config.Config) {
 }
 
 type Progress struct {
-	JobProgress    chan chunkify.Job
-	JobTranscoders chan []chunkify.TranscoderStatus
-	JobCompleted   chan bool
-	UploadProgress chan chunkify.UploadProgressChannel
-	Error          chan error
+	JobProgress      chan chunkify.Job
+	JobTranscoders   chan []chunkify.TranscoderStatus
+	JobCompleted     chan bool
+	UploadProgress   chan chunkify.UploadProgressChannel
+	DownloadProgress chan DownloadProgress
+	Error            chan error
+}
+
+type DownloadProgress struct {
+	Progress     float64
+	TotalBytes   int64
+	BytesWritten int64
+	Eta          time.Duration
+	Speed        float64
 }
 
 func NewProgress() *Progress {
 	return &Progress{
-		JobProgress:    make(chan chunkify.Job, 100),
-		JobTranscoders: make(chan []chunkify.TranscoderStatus, 100),
-		JobCompleted:   make(chan bool),
-		UploadProgress: make(chan chunkify.UploadProgressChannel),
-		Error:          make(chan error),
+		JobProgress:      make(chan chunkify.Job, 100),
+		JobTranscoders:   make(chan []chunkify.TranscoderStatus, 100),
+		JobCompleted:     make(chan bool),
+		UploadProgress:   make(chan chunkify.UploadProgressChannel),
+		DownloadProgress: make(chan DownloadProgress, 100),
+		Error:            make(chan error),
 	}
 }
 
@@ -119,11 +128,18 @@ func (p *Progress) Render() {
 			}
 		case transcoders, ok := <-p.JobTranscoders:
 			if ok {
-				fmt.Printf("Job transcoders: %#+v\n", transcoders)
+				for _, transcoder := range transcoders {
+					fmt.Printf("[%d] %f%%\n", transcoder.ChunkNumber, transcoder.Progress)
+				}
+
 			}
 		case uploadProgress, ok := <-p.UploadProgress:
 			if ok {
-				fmt.Printf("Upload progress: %#+v\n", uploadProgress)
+				fmt.Printf("Upload progress: %f%%\n", uploadProgress.Progress)
+			}
+		case downloadProgress, ok := <-p.DownloadProgress:
+			if ok {
+				fmt.Printf("Download progress: %f%%\n", downloadProgress.Progress)
 			}
 		case err := <-p.Error:
 			fmt.Printf("Error: %s\n", err)
@@ -134,12 +150,16 @@ func (p *Progress) Render() {
 }
 
 func Execute() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go chunkifyCmd.Progress.Render()
 
 	chunkifyCmd.Id = uuid.New().String()
 
 	source, err := chunkifyCmd.CreateSource()
 	if err != nil {
+		chunkifyCmd.Progress.Error <- err
 		return fmt.Errorf("error creating source: %s", err)
 	}
 	fmt.Println("Source created:", source)
@@ -149,6 +169,7 @@ func Execute() error {
 
 	job, err := chunkifyCmd.CreateJob()
 	if err != nil {
+		chunkifyCmd.Progress.Error <- err
 		return fmt.Errorf("error creating job: %s", err)
 	}
 	chunkifyCmd.Job = job
@@ -168,7 +189,7 @@ func Execute() error {
 	if chunkifyCmd.Output != "" {
 		for _, file := range files {
 			fmt.Printf("Downloading file: %s\n", file.Url)
-			DownloadFile(file, chunkifyCmd.Output)
+			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Progress.DownloadProgress)
 		}
 	}
 
@@ -323,6 +344,9 @@ func (c *ChunkifyCommand) CreateJob() (chunkify.Job, error) {
 		SourceId:   c.Source.Id,
 		Format:     c.JobFormatParams,
 		Transcoder: t,
+		Metadata: chunkify.JobCreateParamsMetadata{
+			"cli_execution_id": c.Id,
+		},
 	})
 
 	if err != nil {
@@ -348,7 +372,6 @@ func (c *ChunkifyCommand) GetJobTranscoders() ([]chunkify.TranscoderStatus, erro
 }
 
 func (c *ChunkifyCommand) StartJobProgress() {
-
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -382,24 +405,24 @@ func (c *ChunkifyCommand) GetFiles() ([]chunkify.File, error) {
 	return files, nil
 }
 
-func DownloadFile(file chunkify.File, output string) error {
-	resp, err := http.Get(file.Url)
-	if err != nil {
-		return fmt.Errorf("error downloading file: %s", err)
-	}
-	defer resp.Body.Close()
+// func DownloadFile(file chunkify.File, output string) error {
+// 	resp, err := http.Get(file.Url)
+// 	if err != nil {
+// 		return fmt.Errorf("error downloading file: %s", err)
+// 	}
+// 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("error reading file: %s", err)
-	}
+// 	body, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		return fmt.Errorf("error reading file: %s", err)
+// 	}
 
-	err = os.WriteFile(output, body, 0644)
-	if err != nil {
-		return fmt.Errorf("error writing file: %s", err)
-	}
+// 	err = os.WriteFile(output, body, 0644)
+// 	if err != nil {
+// 		return fmt.Errorf("error writing file: %s", err)
+// 	}
 
-	fmt.Printf("File downloaded to: %s\n", output)
+// 	fmt.Printf("File downloaded to: %s\n", output)
 
-	return nil
-}
+// 	return nil
+// }
