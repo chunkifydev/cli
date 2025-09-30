@@ -3,13 +3,14 @@ package chunkify
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/formatter"
 
 	_ "embed"
 )
@@ -30,10 +31,14 @@ const (
 var chunkifyBanner string
 
 var (
-	checkMark = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
+	checkMark     = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
+	currentStep   = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Render
+	completedStep = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render
+	info          = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#666666", Dark: "#555555"}).Render
 )
 
 type TUI struct {
+	Command          *ChunkifyCommand
 	Status           int
 	Progress         *Progress
 	Job              *chunkify.Job
@@ -46,7 +51,8 @@ type TUI struct {
 	Ctx              context.Context
 	CancelFunc       context.CancelFunc
 
-	Spinner spinner.Model
+	Spinner         spinner.Model
+	OverallProgress progress.Model
 }
 
 func (t TUI) Init() tea.Cmd {
@@ -90,10 +96,11 @@ func NewTUI() TUI {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	return TUI{
-		Status:   Starting,
-		Progress: NewProgress(),
-		Done:     false,
-		Spinner:  s,
+		Status:          Starting,
+		Progress:        NewProgress(),
+		Done:            false,
+		Spinner:         s,
+		OverallProgress: progress.New(progress.WithSolidFill("#16a249")),
 	}
 }
 
@@ -126,9 +133,13 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t = t.checkChannels()
 		return t, tickCmd()
 	default:
-		var cmd tea.Cmd
-		t.Spinner, cmd = t.Spinner.Update(msg)
-		return t, cmd
+		var scmd tea.Cmd
+		t.Spinner, scmd = t.Spinner.Update(msg)
+		// if t.Job != nil {
+		// 	//pcmd := t.OverallProgress.SetPercent(t.Job.Progress)
+		// 	return t, tea.Batch(scmd, pcmd)
+		// }
+		return t, tea.Batch(scmd)
 	}
 
 	return t, nil
@@ -213,6 +224,8 @@ func (t TUI) checkChannels() TUI {
 
 func (t TUI) View() string {
 	var view string
+	indent := "  " // 2 spaces for consistent indentation
+	overallProgress := 0.0
 
 	view += fmt.Sprintf("\n%s\n\n", chunkifyBanner)
 
@@ -222,60 +235,74 @@ func (t TUI) View() string {
 	}
 
 	if t.Status == UploadingFromFile {
+		overallProgress = t.UploadProgress.Progress
+
 		// Display upload progress
-		view += fmt.Sprintf("Uploading file %.1f%% (%.1f MB/s, ETA: %s)\n",
+		view += currentStep(fmt.Sprintf("%s%sUploading %s %.1f%% (%.1f MB/s, ETA: %s)\n",
+			indent,
+			t.Spinner.View(),
+			t.Command.Input,
+			t.UploadProgress.Progress,
 			t.UploadProgress.Speed/(1024*1024),
-			t.UploadProgress.Progress, t.UploadProgress.Eta.Round(time.Second))
+			t.UploadProgress.Eta.Round(time.Second)))
 	}
 	if t.Status == UploadingFromUrl {
 		// Display upload progress
-		view += "Uploaded from URL\n"
+		view += fmt.Sprintf("%s%s Uploaded from %s\n", indent, checkMark.String(), t.Command.Input)
 	}
 
 	if t.Source != nil {
-		view += fmt.Sprintf("%s Uploaded to Chunkify\n", checkMark)
-		view += fmt.Sprintf("Source: %s %dx%d\n", t.Source.VideoCodec, t.Source.Width, t.Source.Height)
+		overallProgress = 100.0
+		view += fmt.Sprintf("%s%s Uploaded to Chunkify\n", indent, checkMark.String())
+		//view += fmt.Sprintf("Source: %s %dx%d\n", t.Source.VideoCodec, t.Source.Width, t.Source.Height)
 	}
 
 	// Display job progress
 	if t.Status >= Transcoding && t.Job != nil {
+		overallProgress = t.Job.Progress
+
 		if t.Job.Status == chunkify.JobStatusCompleted {
-			view += fmt.Sprintf("%s Video transcoded\n", checkMark)
+			view += fmt.Sprintf("%s%s Video transcoded\n", indent, checkMark.String())
 		} else {
 			if t.Job.Status == chunkify.JobStatusQueued {
-				view += fmt.Sprintf("Job: %s\n", t.Job.Status)
+				view += currentStep(fmt.Sprintf("%s%sTranscoding to %s - %s\n", indent, t.Spinner.View(), t.Command.Format, t.Job.Status))
 			} else {
 				totalFps := 0.0
 				totalSpeed := 0.0
-				view += fmt.Sprintf("Job: %s (%.1f%%)\n", t.Job.Status, t.Job.Progress)
+				view += currentStep(fmt.Sprintf("%s%sTranscoding to %s - %s (%.1f%%)\n", indent, t.Spinner.View(), t.Command.Format, t.Job.Status, t.Job.Progress))
 				for _, transcoder := range t.Transcoders {
-					view += fmt.Sprintf("  [%d] %.1f%%\n", transcoder.ChunkNumber, transcoder.Progress)
+					view += fmt.Sprintf("%s  [%d] %.1f%%\n", indent, transcoder.ChunkNumber, transcoder.Progress)
 					totalFps += transcoder.Fps
 					totalSpeed += transcoder.Speed
 				}
-				view += fmt.Sprintf("Total FPS: %.0f, Total Speed: %.1fx\n", totalFps, totalSpeed)
+				view += info(fmt.Sprintf("\n%sTotal FPS: %.0f, Total Speed: %.1fx\n", indent, totalFps, totalSpeed))
 			}
 		}
 	}
 
 	// Display download progress
 	if t.Status >= Downloading {
+		overallProgress = t.DownloadProgress.Progress
+
 		if t.DownloadProgress.Progress == 100 {
-			view += fmt.Sprintf("%s Video downloaded\n", checkMark)
+			view += fmt.Sprintf("%s%s %s written (%s)\n", indent, checkMark.String(), t.Command.Output, formatter.Size(t.DownloadProgress.WrittenBytes))
 		} else {
-			view += fmt.Sprintf("Downloading video %.1f%% (%.1f MB/s, ETA: %s)\n",
+			view += currentStep(fmt.Sprintf("%s%sDownloading video %.1f%% (%.1f MB/s, ETA: %s)\n",
+				indent,
+				t.Spinner.View(),
 				t.DownloadProgress.Progress,
 				t.DownloadProgress.Speed/(1024*1024),
-				t.DownloadProgress.Eta.Round(time.Second))
+				t.DownloadProgress.Eta.Round(time.Second)))
 		}
+	}
+
+	if !t.Done {
+		view += fmt.Sprintf("\n\n%s %s\n", indent, t.OverallProgress.ViewAs(overallProgress/100.0))
 	}
 
 	// Display completion message
 	if t.Done {
-		//view += fmt.Sprintf("\n%s Process completed!\n", checkMark)
-	} else {
-		// Display current status
-		view += fmt.Sprintf("\n%s %s\n", t.Spinner.View(), strings.ToUpper(t.getStatusString()))
+		//view += fmt.Sprintf("\n%s Process completed!\n", checkMark.String())
 	}
 
 	return view
