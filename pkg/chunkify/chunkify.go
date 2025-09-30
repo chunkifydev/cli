@@ -120,7 +120,6 @@ func Execute(cfg *config.Config) error {
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error getting files: %s", err)
 	}
-	// fmt.Printf("Files: %#+v\n", files)
 
 	if chunkifyCmd.Output != "" {
 		chunkifyCmd.Tui.Progress.Status <- Downloading
@@ -131,7 +130,6 @@ func Execute(cfg *config.Config) error {
 				return fmt.Errorf("download cancelled")
 			default:
 			}
-			// fmt.Printf("Downloading file: %s\n", file.Url)
 			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
 		}
 	}
