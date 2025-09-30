@@ -55,18 +55,33 @@ func Execute(cfg *config.Config) error {
 	}()
 
 	chunkifyCmd.Id = uuid.New().String()
+	chunkifyCmd.InitJobFormatParams()
 
-	source, err := chunkifyCmd.CreateSource()
-	if err != nil {
+	// Create source in a goroutine so we can check for cancellation
+	sourceChan := make(chan *chunkify.Source, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		source, err := chunkifyCmd.CreateSource()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		sourceChan <- source
+	}()
+
+	// Wait for either source creation or context cancellation
+	var source *chunkify.Source
+	select {
+	case source = <-sourceChan:
+		chunkifyCmd.Tui.Progress.Source <- source
+	case err := <-errChan:
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return fmt.Errorf("error creating source: %s", err)
+	case <-ctx.Done():
+		return fmt.Errorf("operation cancelled")
 	}
-	chunkifyCmd.Tui.Progress.Source <- source
-	// fmt.Println("Source created:", source)
-
-	chunkifyCmd.InitJobFormatParams()
-	// fmt.Printf("format: %#+v\n", chunkifyCmd.JobFormatParams)
 
 	job, err := chunkifyCmd.CreateJob(source)
 	if err != nil {
@@ -75,18 +90,14 @@ func Execute(cfg *config.Config) error {
 		return fmt.Errorf("error creating job: %s", err)
 	}
 	chunkifyCmd.Tui.Job = job
-	// fmt.Println("Job created:", job)
 
 	go chunkifyCmd.StartJobProgress(ctx, job.Id)
 
-	<-chunkifyCmd.Tui.Progress.JobCompleted
-	// fmt.Println("Job completed with status:", chunkifyCmd.Tui.Job.Status)
-
-	// Check if context was cancelled
+	// Wait for either job completion or context cancellation
 	select {
+	case <-chunkifyCmd.Tui.Progress.JobCompleted:
 	case <-ctx.Done():
 		return fmt.Errorf("operation cancelled")
-	default:
 	}
 
 	if chunkifyCmd.Tui.Job != nil && (chunkifyCmd.Tui.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Tui.Job.Status == chunkify.JobStatusCancelled) {
@@ -94,6 +105,13 @@ func Execute(cfg *config.Config) error {
 		chunkifyCmd.Tui.Progress.Status <- Failed
 		chunkifyCmd.Tui.Progress.Error <- err
 		return err
+	}
+
+	// Check if context was cancelled before getting files
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("operation cancelled")
+	default:
 	}
 
 	files, err := chunkifyCmd.GetFiles(job.Id)
@@ -256,6 +274,7 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 				return &source, nil
 			}
 		}
+		fmt.Println("Source not found, retrying...")
 		time.Sleep(1 * time.Second)
 		retry++
 	}
