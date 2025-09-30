@@ -3,10 +3,12 @@ package chunkify
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	chunkify "github.com/chunkifydev/chunkify-go"
 
 	_ "embed"
@@ -26,6 +28,10 @@ const (
 
 //go:embed chunkify.txt
 var chunkifyBanner string
+
+var (
+	checkMark = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("✓")
+)
 
 type TUI struct {
 	Status           int
@@ -209,48 +215,68 @@ func (t TUI) View() string {
 	var view string
 
 	view += fmt.Sprintf("\n%s\n\n", chunkifyBanner)
-	// Display current status
-	view += fmt.Sprintf("%s %s\n", t.Spinner.View(), t.getStatusString())
 
 	// Display error if any
 	if t.Error != nil {
 		view += fmt.Sprintf("Error: %s\n", t.Error)
 	}
 
-	// Display upload progress
-	view += fmt.Sprintf("Upload: %.1f%% (ETA: %.0fs)\n",
-		t.UploadProgress.Progress, t.UploadProgress.Eta.Seconds())
-	// if t.Status == UploadingFromUrl || t.Status == UploadingFromFile {
-
-	// }
+	if t.Status == UploadingFromFile {
+		// Display upload progress
+		view += fmt.Sprintf("Uploading file %.1f%% (%.1f MB/s, ETA: %s)\n",
+			t.UploadProgress.Speed/(1024*1024),
+			t.UploadProgress.Progress, t.UploadProgress.Eta.Round(time.Second))
+	}
+	if t.Status == UploadingFromUrl {
+		// Display upload progress
+		view += "Uploaded from URL\n"
+	}
 
 	if t.Source != nil {
+		view += fmt.Sprintf("%s Uploaded to Chunkify\n", checkMark)
 		view += fmt.Sprintf("Source: %s %dx%d\n", t.Source.VideoCodec, t.Source.Width, t.Source.Height)
 	}
 
 	// Display job progress
 	if t.Status >= Transcoding && t.Job != nil {
-		view += fmt.Sprintf("Job: %s (%.1f%%)\n", t.Job.Status, t.Job.Progress)
-		view += "Transcoders:\n"
-		for _, transcoder := range t.Transcoders {
-			view += fmt.Sprintf("  [%d] %.1f%%\n", transcoder.ChunkNumber, transcoder.Progress)
+		if t.Job.Status == chunkify.JobStatusCompleted {
+			view += fmt.Sprintf("%s Video transcoded\n", checkMark)
+		} else {
+			if t.Job.Status == chunkify.JobStatusQueued {
+				view += fmt.Sprintf("Job: %s\n", t.Job.Status)
+			} else {
+				totalFps := 0.0
+				totalSpeed := 0.0
+				view += fmt.Sprintf("Job: %s (%.1f%%)\n", t.Job.Status, t.Job.Progress)
+				for _, transcoder := range t.Transcoders {
+					view += fmt.Sprintf("  [%d] %.1f%%\n", transcoder.ChunkNumber, transcoder.Progress)
+					totalFps += transcoder.Fps
+					totalSpeed += transcoder.Speed
+				}
+				view += fmt.Sprintf("Total FPS: %.0f, Total Speed: %.1fx\n", totalFps, totalSpeed)
+			}
 		}
 	}
 
 	// Display download progress
 	if t.Status >= Downloading {
-		view += fmt.Sprintf("Download: %.1f%% (%.1f MB/s, ETA: %s)\n",
-			t.DownloadProgress.Progress,
-			t.DownloadProgress.Speed/(1024*1024),
-			t.DownloadProgress.Eta.Round(time.Second))
+		if t.DownloadProgress.Progress == 100 {
+			view += fmt.Sprintf("%s Video downloaded\n", checkMark)
+		} else {
+			view += fmt.Sprintf("Downloading video %.1f%% (%.1f MB/s, ETA: %s)\n",
+				t.DownloadProgress.Progress,
+				t.DownloadProgress.Speed/(1024*1024),
+				t.DownloadProgress.Eta.Round(time.Second))
+		}
 	}
 
 	// Display completion message
 	if t.Done {
-		view += "\n✅ Process completed!\n"
+		//view += fmt.Sprintf("\n%s Process completed!\n", checkMark)
+	} else {
+		// Display current status
+		view += fmt.Sprintf("\n%s %s\n", t.Spinner.View(), strings.ToUpper(t.getStatusString()))
 	}
-
-	view += "\nPress 'q' or Ctrl+C to quit\n"
 
 	return view
 }
