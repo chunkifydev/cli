@@ -38,6 +38,7 @@ func Execute(cfg *config.Config) error {
 	defer cancel()
 
 	tui := NewTUI()
+	tui.Command = &chunkifyCmd
 	tui.Ctx = ctx
 	tui.CancelFunc = cancel
 	chunkifyCmd.Tui = &tui
@@ -272,7 +273,6 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 				return &source, nil
 			}
 		}
-		fmt.Println("Source not found, retrying...")
 		time.Sleep(1 * time.Second)
 		retry++
 	}
