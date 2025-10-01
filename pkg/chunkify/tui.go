@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/chunkifydev/cli/pkg/version"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -61,6 +63,10 @@ type TUI struct {
 	CancelFunc       context.CancelFunc
 
 	Spinner spinner.Model
+}
+
+func init() {
+	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
 }
 
 func (t TUI) Init() tea.Cmd {
