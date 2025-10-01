@@ -33,13 +33,14 @@ const (
 var chunkifyBanner string
 
 var (
-	completedIconStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("▮")
-	currentStepStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true).Render
-	errorStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
-	statusStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
-	statusFormatStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
-	completedStepStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render
-	infoStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
+	completedIconStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("▮")
+	currentStepStyle            = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true).Render
+	errorStyle                  = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
+	statusStyle                 = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
+	statusFormatStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
+	completedStepStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render
+	infoStyle                   = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
+	pendingTranscoderChunkStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#59636e")).Render
 
 	indent = "  "
 )
@@ -322,24 +323,44 @@ func (t TUI) transcodingView() (string, string) {
 	if t.Job.Status == chunkify.JobStatusCompleted {
 		view += fmt.Sprintf("%s%s Video transcoded\n", indent, completedIconStyle.String())
 	} else {
-		view += currentStepStyle(fmt.Sprintf("%s%s %d/%d Transcoding (%s)", indent, t.Spinner.View(), completedTranscoders, totalTranscoders, t.Job.Transcoder.Type))
+		view += currentStepStyle(fmt.Sprintf("%s%s Transcoding video (%d x %s)", indent, t.Spinner.View(), totalTranscoders, t.Job.Transcoder.Type))
 		view += "\n"
 	}
+
+	// start of progress bar
+	view += indent + indent
+	counter := 0
+
+	maxCharsPerLine := 60
+	progressBarWidth := 10
+	transcodersPerLine := maxCharsPerLine / progressBarWidth
+
+	if totalTranscoders > 0 && totalTranscoders/transcodersPerLine < 1 {
+		progressBarWidth = maxCharsPerLine / totalTranscoders
+		transcodersPerLine = maxCharsPerLine / progressBarWidth
+	}
+
 	for _, transcoder := range t.Transcoders {
-		if transcoder.Status == chunkify.TranscoderStatusPending {
-			continue
-		}
-		bar := progressBar(transcoder.Progress, 10)
-		chunkNumStr := fmt.Sprintf("%d", transcoder.ChunkNumber)
-		if transcoder.ChunkNumber < 10 {
-			chunkNumStr = " " + chunkNumStr
-		}
-		view += fmt.Sprintf("%s%s%s %s %.0f%%\n", indent, indent, chunkNumStr, bar, transcoder.Progress)
+		bar := progressBar(transcoder.Status, transcoder.Progress, progressBarWidth)
+
+		//view += fmt.Sprintf("%s%s%s %s %.0f%%\n", indent, indent, chunkNumStr, bar, transcoder.Progress)
+		view += bar
 
 		totalFps += transcoder.Fps
 		totalSpeed += transcoder.Speed
 		totalOutTime += transcoder.OutTime
+
+		// 6 transcoders per line
+		if len(t.Transcoders) > transcodersPerLine {
+			if counter == transcodersPerLine-1 {
+				view += "\n" + indent + indent
+				counter = 0
+			} else {
+				counter++
+			}
+		}
 	}
+	view += "\n"
 
 	statusInfo := fmt.Sprintf("%s %.f%%, FPS: %.0f, Speed: %.1fx, OutTime: %s", statusFormatStyle(t.Command.Format), t.Job.Progress, totalFps, totalSpeed, formatter.Duration(totalOutTime))
 	return view, statusInfo
@@ -362,7 +383,7 @@ func (t TUI) downloadView() (string, string) {
 	return view, statusInfo
 }
 
-func progressBar(progress float64, width int) string {
+func progressBar(status string, progress float64, width int) string {
 	if progress < 0 {
 		progress = 0
 	}
@@ -378,7 +399,11 @@ func progressBar(progress float64, width int) string {
 		if i < filled {
 			bar += "▮"
 		} else {
-			bar += "▯"
+			if status == chunkify.TranscoderStatusPending {
+				bar += pendingTranscoderChunkStyle("▯")
+			} else {
+				bar += "▯"
+			}
 		}
 	}
 	bar += ""
