@@ -120,6 +120,7 @@ func Execute(cfg *config.Config) error {
 
 	if chunkifyCmd.Output != "" {
 		chunkifyCmd.Tui.Progress.Status <- Downloading
+		chunkifyCmd.Tui.Files = files
 		for _, file := range files {
 			// Check if context was cancelled before each download
 			select {
@@ -127,7 +128,7 @@ func Execute(cfg *config.Config) error {
 				return fmt.Errorf("download cancelled")
 			default:
 			}
-			DownloadFile(ctx, file.Url, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
+			DownloadFile(ctx, file, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
 		}
 	}
 	chunkifyCmd.Tui.Progress.Status <- Completed

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 type progressWriter struct {
@@ -17,6 +19,7 @@ type progressWriter struct {
 	lastUpdate   time.Time
 	updateEvery  time.Duration
 	progressChan chan DownloadProgress
+	file         chunkify.File
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -40,6 +43,7 @@ func (pw *progressWriter) print(now time.Time) {
 	speed := float64(pw.written) / elapsed // bytes/sec
 
 	pr := DownloadProgress{
+		File:         pw.file,
 		TotalBytes:   pw.total,
 		WrittenBytes: pw.written,
 		Speed:        speed,
@@ -76,7 +80,7 @@ func humanBytes(b int64) string {
 }
 
 // DownloadFile streams a URL to `output` with console progress.
-func DownloadFile(ctx context.Context, url, output string, progressChan chan DownloadProgress) error {
+func DownloadFile(ctx context.Context, file chunkify.File, output string, progressChan chan DownloadProgress) error {
 	// HTTP client with sane timeouts
 	client := &http.Client{
 		Timeout: 0, // no overall timeout; we rely on ctx + transport timeouts below
@@ -89,7 +93,7 @@ func DownloadFile(ctx context.Context, url, output string, progressChan chan Dow
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, file.Url, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
@@ -126,6 +130,7 @@ func DownloadFile(ctx context.Context, url, output string, progressChan chan Dow
 		start:        time.Now(),
 		updateEvery:  200 * time.Millisecond,
 		progressChan: progressChan,
+		file:         file,
 	}
 
 	// Stream copy with progress
