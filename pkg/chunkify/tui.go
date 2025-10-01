@@ -229,7 +229,11 @@ func (t TUI) View() string {
 	view = fmt.Sprintf("\n%s\n\n", chunkifyBanner)
 
 	if t.Error != nil {
-		view += fmt.Sprintf("%s%s", indent, errorStyle(t.Error.Error()))
+		if apiErr, ok := t.Error.(chunkify.ApiError); ok {
+			view += fmt.Sprintf("%s%s", indent, errorStyle(apiErr.Message))
+		} else {
+			view += fmt.Sprintf("%s%s", indent, errorStyle(t.Error.Error()))
+		}
 		view += "\n"
 		return view
 	}

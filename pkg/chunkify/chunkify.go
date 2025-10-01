@@ -77,18 +77,16 @@ func Execute(cfg *config.Config) error {
 	case source = <-sourceChan:
 		chunkifyCmd.Tui.Progress.Source <- source
 	case err := <-errChan:
-		chunkifyCmd.Tui.Progress.Status <- Failed
-		chunkifyCmd.Tui.Progress.Error <- err
-		return fmt.Errorf("error creating source: %s", err)
+		setError(&chunkifyCmd, err)
+		return err
 	case <-ctx.Done():
 		return fmt.Errorf("operation cancelled")
 	}
 
 	job, err := chunkifyCmd.CreateJob(source)
 	if err != nil {
-		chunkifyCmd.Tui.Progress.Status <- Failed
-		chunkifyCmd.Tui.Progress.Error <- err
-		return fmt.Errorf("error creating job: %s", err)
+		setError(&chunkifyCmd, err)
+		return err
 	}
 	chunkifyCmd.Tui.Job = job
 
@@ -103,8 +101,7 @@ func Execute(cfg *config.Config) error {
 
 	if chunkifyCmd.Tui.Job != nil && (chunkifyCmd.Tui.Job.Status == chunkify.JobStatusFailed || chunkifyCmd.Tui.Job.Status == chunkify.JobStatusCancelled) {
 		err := fmt.Errorf("job failed with status: %s: %s", chunkifyCmd.Tui.Job.Status, chunkifyCmd.Tui.Job.Error.Message)
-		chunkifyCmd.Tui.Progress.Status <- Failed
-		chunkifyCmd.Tui.Progress.Error <- err
+		setError(&chunkifyCmd, err)
 		return err
 	}
 
@@ -117,8 +114,7 @@ func Execute(cfg *config.Config) error {
 
 	files, err := chunkifyCmd.GetFiles(job.Id)
 	if err != nil {
-		chunkifyCmd.Tui.Progress.Status <- Failed
-		chunkifyCmd.Tui.Progress.Error <- err
+		setError(&chunkifyCmd, err)
 		return fmt.Errorf("error getting files: %s", err)
 	}
 
@@ -140,6 +136,13 @@ func Execute(cfg *config.Config) error {
 	time.Sleep(1 * time.Second)
 
 	return nil
+}
+
+func setError(c *ChunkifyCommand, err error) {
+	c.Tui.Progress.Status <- Failed
+	c.Tui.Progress.Error <- err
+	// give time to display the error message before tea quit
+	time.Sleep(1 * time.Second)
 }
 
 func (c *ChunkifyCommand) InitJobFormatParams() {
@@ -199,7 +202,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 		// create source directly from URL
 		source, err := c.CreateSourceFromUrl()
 		if err != nil {
-			return nil, fmt.Errorf("error creating source: %s", err)
+			return nil, err
 		}
 
 		return source, nil
@@ -213,7 +216,7 @@ func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
 	// fmt.Println("Creating source directly from file")
 	source, err := c.CreateSourceFromFile()
 	if err != nil {
-		return nil, fmt.Errorf("error creating source: %s", err)
+		return nil, err
 	}
 
 	return source, nil
@@ -228,7 +231,7 @@ func (c *ChunkifyCommand) CreateSourceFromUrl() (*chunkify.Source, error) {
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error creating source: %s", err)
+		return nil, err
 	}
 	return &source, nil
 }
@@ -299,7 +302,7 @@ func (c *ChunkifyCommand) CreateJob(source *chunkify.Source) (*chunkify.Job, err
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("error creating job: %s", err)
+		return nil, err
 	}
 	return &job, nil
 }
