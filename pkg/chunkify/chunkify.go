@@ -58,7 +58,6 @@ func Execute(cfg *config.Config) error {
 	chunkifyCmd.Config = cfg
 
 	go func() {
-		//fmt.Println("Starting TUI", tui)
 		p := tea.NewProgram(tui)
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Alas, there's been an error: %v", err)
