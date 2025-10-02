@@ -3,6 +3,7 @@ package chunkify
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -40,7 +41,6 @@ var (
 	errorStyle                  = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
 	statusStyle                 = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
 	statusFormatStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
-	completedStepStyle          = lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render
 	infoStyle                   = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
 	pendingTranscoderChunkStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#59636e")).Render
 
@@ -253,7 +253,7 @@ func (t TUI) View() string {
 	}
 
 	// Display download progress
-	if t.Job != nil && t.Job.Status == chunkify.JobStatusCompleted && t.Status >= Downloading {
+	if t.Command.Output != "" && t.Job != nil && t.Job.Status == chunkify.JobStatusCompleted && t.Status >= Downloading {
 		v, statusInfo = t.downloadView()
 		view += v
 	}
@@ -266,6 +266,8 @@ func (t TUI) View() string {
 
 	if !t.Done {
 		view += fmt.Sprintf("\n\n%s%s %s\n", indent, statusStyle(t.getStatusString()), infoStyle(statusInfo))
+	} else {
+		view += t.summaryView()
 	}
 
 	return view
@@ -305,10 +307,23 @@ func (t TUI) uploadView() (string, string) {
 }
 
 func (t TUI) sourceView() (string, string) {
-	view := fmt.Sprintf("%s%s %s uploaded\n", indent, completedIconStyle.String(), path.Base(t.Command.Input))
+	view := fmt.Sprintf("%s%s Source: %s\n", indent, completedIconStyle.String(), sourceName(t.Command.Input))
 	view += infoStyle(fmt.Sprintf("%sDuration: %s Size: %s Video: %s, %dx%d, %s, %.2ffps", indent+indent, formatter.Duration(t.Source.Duration), formatter.Size(t.Source.Size), t.Source.VideoCodec, t.Source.Width, t.Source.Height, formatter.Bitrate(t.Source.VideoBitrate), t.Source.VideoFramerate))
 	view += "\n\n"
 	return view, t.Command.Format
+}
+
+func sourceName(input string) string {
+	name := ""
+	if u, err := url.Parse(input); err == nil {
+		name += u.Path
+		if u.Host != "" {
+			name += fmt.Sprintf(" (%s)", u.Host)
+		}
+
+		return name
+	}
+	return path.Base(input)
 }
 
 func (t TUI) transcodingView() (string, string) {
@@ -327,9 +342,10 @@ func (t TUI) transcodingView() (string, string) {
 	}
 
 	if t.Job.Status == chunkify.JobStatusCompleted {
-		view += fmt.Sprintf("%s%s Video transcoded\n", indent, completedIconStyle.String())
+		view += fmt.Sprintf("%s%s Transcoding completed\n", indent, completedIconStyle.String())
 	} else {
-		view += currentStepStyle(fmt.Sprintf("%s%s Transcoding video (%d x %s)", indent, t.Spinner.View(), totalTranscoders, t.Job.Transcoder.Type))
+		view += currentStepStyle(fmt.Sprintf("%s%s Transcoding (%d x %s)", indent, t.Spinner.View(), totalTranscoders, t.Job.Transcoder.Type))
+		view += " " + formatter.TimeDiff(t.Job.StartedAt, time.Now())
 		view += "\n"
 	}
 
@@ -368,7 +384,10 @@ func (t TUI) transcodingView() (string, string) {
 	}
 	view += "\n"
 
-	statusInfo := fmt.Sprintf("%s %.f%%, FPS: %.0f, Speed: %.1fx, OutTime: %s", statusFormatStyle(t.Command.Format), t.Job.Progress, totalFps, totalSpeed, formatter.Duration(totalOutTime))
+	statusInfo := statusFormatStyle(t.Command.Format)
+	if totalOutTime > 0 {
+		statusInfo += fmt.Sprintf(" %.f%%, FPS: %.0f, Speed: %.1fx, OutTime: %s", t.Job.Progress, totalFps, totalSpeed, formatter.Duration(totalOutTime))
+	}
 	return view, statusInfo
 }
 
@@ -381,9 +400,10 @@ func (t TUI) downloadView() (string, string) {
 		view += fmt.Sprintf("%s%s %s written (%s)\n\n", indent, completedIconStyle.String(), t.Command.Output, formatter.Size(t.DownloadProgress.WrittenBytes))
 	} else {
 		statusInfo = fmt.Sprintf("%.1f%% (%.1f MB/s, ETA: %s)", t.DownloadProgress.Progress, t.DownloadProgress.Speed/(1024*1024), t.DownloadProgress.Eta.Round(time.Second))
-		view += currentStepStyle(fmt.Sprintf("%s%s Saving video",
+		view += currentStepStyle(fmt.Sprintf("%s%s Saving into %s",
 			indent,
-			t.Spinner.View()))
+			t.Spinner.View(),
+			t.Command.Output))
 		view += "\n"
 	}
 	return view, statusInfo
@@ -405,7 +425,7 @@ func progressBar(status string, progress float64, width int) string {
 		if i < filled {
 			bar += "▮"
 		} else {
-			if status == chunkify.TranscoderStatusPending {
+			if status == chunkify.TranscoderStatusPending || status == chunkify.TranscoderStatusStarting {
 				bar += pendingTranscoderChunkStyle("▯")
 			} else {
 				bar += "▯"
@@ -414,6 +434,29 @@ func progressBar(status string, progress float64, width int) string {
 	}
 	bar += ""
 	return bar
+}
+
+func (t TUI) summaryView() string {
+	speed := 0.0
+
+	for _, transcoder := range t.Transcoders {
+		speed += transcoder.Speed
+	}
+
+	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
+	view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
+	for key, value := range t.Job.Format.Config {
+		view += fmt.Sprintf("%s=%v ", key, value)
+	}
+	view += "\n"
+
+	view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)
+	view += fmt.Sprintf("%sSpeed: %.1fx\n", indent, speed)
+	view += fmt.Sprintf("%sTranscoding time: %s\n", indent, formatter.TimeDiff(t.Job.StartedAt, t.Job.UpdatedAt))
+	view += fmt.Sprintf("%sBillable time: %ds\n", indent, t.Job.BillableTime)
+
+	view += "\n"
+	return view
 }
 
 // getStatusString returns a human-readable status string
