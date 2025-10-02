@@ -3,7 +3,9 @@ package chunkify
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -32,6 +34,15 @@ type ChunkifyCommand struct {
 }
 
 var chunkifyCmd = ChunkifyCommand{}
+
+func init() {
+	logFile, err := os.Create("chunkify.log")
+	if err != nil {
+		fmt.Println("error creating log file", err)
+		return
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, nil)))
+}
 
 func Execute(cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -117,18 +128,42 @@ func Execute(cfg *config.Config) error {
 		setError(&chunkifyCmd, err)
 		return fmt.Errorf("error getting files: %s", err)
 	}
+	slog.Info("Files", "files", files)
+	chunkifyCmd.Tui.Progress.Files <- files
 
 	if chunkifyCmd.Output != "" {
 		chunkifyCmd.Tui.Progress.Status <- Downloading
-		chunkifyCmd.Tui.Files = files
+
+		slog.Info("Downloading files", "files", files)
+		downloadedFiles := []string{}
+		jobId := ""
+
 		for _, file := range files {
+			if jobId == "" {
+				jobId = file.JobId
+			}
+
 			// Check if context was cancelled before each download
 			select {
 			case <-ctx.Done():
 				return fmt.Errorf("download cancelled")
 			default:
 			}
-			DownloadFile(ctx, file, chunkifyCmd.Output, chunkifyCmd.Tui.Progress.DownloadProgress)
+			filepath := filename(file, chunkifyCmd.Output)
+
+			if err := DownloadFile(ctx, file, filepath, chunkifyCmd.Tui.Progress.DownloadProgress); err == nil {
+				chunkifyCmd.Tui.Progress.DownloadedFiles <- file
+				downloadedFiles = append(downloadedFiles, filepath)
+			}
+
+		}
+
+		// If format is jpg
+		// rename all vtt cues to match the filename set in --output flag
+		if chunkifyCmd.Format == string(chunkify.FormatJpg) {
+			if err := postProcessVtt(downloadedFiles, jobId); err != nil {
+				return fmt.Errorf("post process vtt: %w", err)
+			}
 		}
 	}
 	chunkifyCmd.Tui.Progress.Status <- Completed
@@ -194,6 +229,16 @@ func (c *ChunkifyCommand) InitJobFormatParams() {
 			Level:    level,
 		}
 		c.JobFormatParams.Mp4Av1 = av1Params
+	case string(chunkify.FormatJpg):
+		jpgParams := &chunkify.Jpg{
+			Image: &chunkify.Image{
+				Width:    width,
+				Height:   height,
+				Interval: *interval,
+				Sprite:   sprite,
+			},
+		}
+		c.JobFormatParams.Jpg = jpgParams
 	}
 }
 
@@ -362,4 +407,39 @@ func (c *ChunkifyCommand) GetFiles(jobId string) ([]chunkify.File, error) {
 		return nil, fmt.Errorf("error getting files: %s", err)
 	}
 	return files, nil
+}
+
+func filename(file chunkify.File, output string) string {
+	fileBase := strings.Replace(path.Base(output), path.Ext(output), "", 1)
+	newFilename := strings.Replace(path.Base(file.Path), file.JobId, fileBase, 1)
+	return path.Join(path.Dir(output), newFilename)
+}
+
+func postProcessVtt(downloadedFiles []string, jobId string) error {
+	var vttContent []byte
+	var imageBasename string
+	var vttPath string
+	var err error
+
+	for _, filepath := range downloadedFiles {
+		switch path.Ext(filepath) {
+		case ".vtt":
+			vttPath = filepath
+			vttContent, err = os.ReadFile(filepath)
+			if err != nil {
+				return fmt.Errorf("read file: %w", err)
+			}
+		case ".jpg":
+			parts := strings.Split(path.Base(filepath), "-")
+			if len(parts) >= 2 {
+				imageBasename = strings.Join(parts[0:len(parts)-1], "-")
+			}
+		}
+	}
+
+	vttContent = []byte(strings.ReplaceAll(string(vttContent), jobId, imageBasename))
+	if err := os.WriteFile(vttPath, vttContent, 0644); err != nil {
+		return fmt.Errorf("write vtt file: %w", err)
+	}
+	return nil
 }

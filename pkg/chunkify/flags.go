@@ -32,6 +32,12 @@ var (
 	x265KeyInt *int64
 )
 
+// jpg
+var (
+	interval *int64
+	sprite   *bool
+)
+
 // BindFlags attaches root-level flags used by the root command
 func BindFlags(rcmd *cobra.Command) {
 	chunkifyCmd = ChunkifyCommand{}
@@ -62,4 +68,7 @@ func BindFlags(rcmd *cobra.Command) {
 	flags.Int64VarPtr(rcmd.Flags(), &level, "level", 0, "ffmpeg config: Level")
 	flags.Int64VarPtr(rcmd.Flags(), &x264KeyInt, "x264keyint", 0, "ffmpeg config: X264KeyInt")
 	flags.Int64VarPtr(rcmd.Flags(), &x265KeyInt, "x265keyint", 0, "ffmpeg config: X265KeyInt")
+
+	flags.Int64VarPtr(rcmd.Flags(), &interval, "interval", 0, "ffmpeg config: Interval in seconds (jpg)")
+	flags.BoolVarPtr(rcmd.Flags(), &sprite, "sprite", false, "ffmpeg config: Sprite (jpg)")
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -81,6 +82,9 @@ func humanBytes(b int64) string {
 
 // DownloadFile streams a URL to `output` with console progress.
 func DownloadFile(ctx context.Context, file chunkify.File, output string, progressChan chan DownloadProgress) error {
+	slog.Info("Downloading file", "file", file.Path, "output", output)
+
+	slog.Info("Output changed to", "output", output)
 	// HTTP client with sane timeouts
 	client := &http.Client{
 		Timeout: 0, // no overall timeout; we rely on ctx + transport timeouts below
@@ -154,6 +158,5 @@ func DownloadFile(ctx context.Context, file chunkify.File, output string, progre
 		return fmt.Errorf("rename %q -> %q: %w", tmp, output, err)
 	}
 
-	//fmt.Printf("Saved to %s\n", output)
 	return nil
 }
