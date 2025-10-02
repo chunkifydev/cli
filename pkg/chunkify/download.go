@@ -56,28 +56,9 @@ func (pw *progressWriter) print(now time.Time) {
 		percent := float64(pw.written) * 100 / float64(pw.total)
 		pr.Progress = percent
 		pr.Eta = eta.Truncate(time.Second)
-		//fmt.Printf("\r%.1f%%  %s / %s  —  %s/s  ETA %s",
-		//percent, humanBytes(pw.written), humanBytes(pw.total), humanBytes(int64(speed)), eta.Truncate(time.Second))
-	} else {
-		// unknown length
-		//fmt.Printf("\r%s downloaded  —  %s/s",
-		//humanBytes(pw.written), humanBytes(int64(speed)))
 	}
 
 	pw.progressChan <- pr
-}
-
-func humanBytes(b int64) string {
-	const unit = 1024
-	if b < unit {
-		return fmt.Sprintf("%d B", b)
-	}
-	div, exp := int64(unit), 0
-	for n := b / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %ciB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 // DownloadFile streams a URL to `output` with console progress.
@@ -139,14 +120,11 @@ func DownloadFile(ctx context.Context, file chunkify.File, output string, progre
 
 	// Stream copy with progress
 	if _, err = io.Copy(pw, resp.Body); err != nil {
-		//fmt.Println() // end progress line
 		return fmt.Errorf("download copy: %w", err)
 	}
 
 	// Final progress line
 	pw.print(time.Now())
-
-	//fmt.Println()
 
 	// Close file before rename to ensure flush
 	if err := out.Close(); err != nil {

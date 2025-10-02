@@ -22,15 +22,15 @@ const (
 )
 
 type ChunkifyCommand struct {
-	Id              string
-	Config          *config.Config
-	Input           string
-	Output          string
-	Format          string
-	JobFormatParams chunkify.JobCreateFormatParams
-	Transcoders     *int64
-	TranscoderVcpu  *int64
-	Tui             *TUI
+	Id                  string
+	Config              *config.Config
+	Input               string
+	Output              string
+	Format              string
+	JobFormatParams     chunkify.JobCreateFormatParams
+	JobTranscoderParams *chunkify.JobCreateTranscoderParams
+
+	Tui *TUI
 }
 
 var chunkifyCmd = ChunkifyCommand{}
@@ -67,7 +67,6 @@ func Execute(cfg *config.Config) error {
 	}()
 
 	chunkifyCmd.Id = uuid.New().String()
-	chunkifyCmd.InitJobFormatParams()
 
 	// Create source in a goroutine so we can check for cancellation
 	sourceChan := make(chan *chunkify.Source, 1)
@@ -149,8 +148,8 @@ func Execute(cfg *config.Config) error {
 				return fmt.Errorf("download cancelled")
 			default:
 			}
-			filepath := filename(file, chunkifyCmd.Output)
 
+			filepath := filename(file, chunkifyCmd.Output)
 			if err := DownloadFile(ctx, file, filepath, chunkifyCmd.Tui.Progress.DownloadProgress); err == nil {
 				chunkifyCmd.Tui.Progress.DownloadedFiles <- file
 				downloadedFiles = append(downloadedFiles, filepath)
@@ -163,6 +162,10 @@ func Execute(cfg *config.Config) error {
 		if chunkifyCmd.Format == string(chunkify.FormatJpg) {
 			if err := postProcessVtt(downloadedFiles, jobId); err != nil {
 				return fmt.Errorf("post process vtt: %w", err)
+			}
+		} else if strings.HasPrefix(chunkifyCmd.Format, "hls") {
+			if err := postProcessM3u8(downloadedFiles, jobId); err != nil {
+				return fmt.Errorf("post process m3u8: %w", err)
 			}
 		}
 	}
@@ -179,67 +182,6 @@ func setError(c *ChunkifyCommand, err error) {
 	c.Tui.Progress.Error <- err
 	// give time to display the error message before tea quit
 	time.Sleep(1 * time.Second)
-}
-
-func (c *ChunkifyCommand) InitJobFormatParams() {
-	c.JobFormatParams = chunkify.JobCreateFormatParams{}
-
-	videoCommon := &chunkify.Video{
-		Width:        width,
-		Height:       height,
-		Framerate:    framerate,
-		Gop:          gop,
-		Channels:     channels,
-		Maxrate:      maxrate,
-		Bufsize:      bufsize,
-		DisableAudio: disableAudio,
-		DisableVideo: disableVideo,
-		Duration:     duration,
-		Seek:         seek,
-		PixFmt:       pixfmt,
-	}
-
-	switch c.Format {
-	case string(chunkify.FormatMp4H264):
-		h264Params := &chunkify.H264{
-			Video:      videoCommon,
-			Crf:        crf,
-			Preset:     preset,
-			Profilev:   profilev,
-			Level:      level,
-			X264KeyInt: x264KeyInt,
-		}
-		c.JobFormatParams.Mp4H264 = h264Params
-	case string(chunkify.FormatMp4H265):
-		h265Params := &chunkify.H265{
-			Video:      videoCommon,
-			Crf:        crf,
-			Preset:     preset,
-			Profilev:   profilev,
-			Level:      level,
-			X265KeyInt: x265KeyInt,
-		}
-		c.JobFormatParams.Mp4H265 = h265Params
-	case string(chunkify.FormatMp4Av1):
-		av1Params := &chunkify.Av1{
-			Video:    videoCommon,
-			Crf:      crf,
-			Preset:   preset,
-			Profilev: profilev,
-			Level:    level,
-		}
-		c.JobFormatParams.Mp4Av1 = av1Params
-	case string(chunkify.FormatJpg):
-		jpgParams := &chunkify.Jpg{
-			Image: &chunkify.Image{
-				Width:    width,
-				Height:   height,
-				Interval: *interval,
-				Sprite:   sprite,
-			},
-		}
-		c.JobFormatParams.Jpg = jpgParams
-	}
 }
 
 func (c *ChunkifyCommand) CreateSource() (*chunkify.Source, error) {
@@ -331,17 +273,12 @@ func (c *ChunkifyCommand) CreateSourceFromFile() (*chunkify.Source, error) {
 
 func (c *ChunkifyCommand) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 	c.Tui.Progress.Status <- Transcoding
-	t := &chunkify.JobCreateTranscoderParams{}
-
-	if c.Transcoders != nil && *c.Transcoders > 0 {
-		t.Quantity = *c.Transcoders
-		t.Type = fmt.Sprintf("%dvCPU", *c.TranscoderVcpu)
-	}
 
 	job, err := c.Config.Client.JobCreate(chunkify.JobCreateParams{
-		SourceId:   source.Id,
-		Format:     c.JobFormatParams,
-		Transcoder: t,
+		SourceId:      source.Id,
+		Format:        c.JobFormatParams,
+		Transcoder:    c.JobTranscoderParams,
+		HlsManifestId: hlsManifestId,
 		Metadata: chunkify.JobCreateParamsMetadata{
 			"chunkify_execution_id": c.Id,
 		},
@@ -440,6 +377,46 @@ func postProcessVtt(downloadedFiles []string, jobId string) error {
 	vttContent = []byte(strings.ReplaceAll(string(vttContent), jobId, imageBasename))
 	if err := os.WriteFile(vttPath, vttContent, 0644); err != nil {
 		return fmt.Errorf("write vtt file: %w", err)
+	}
+	return nil
+}
+
+func postProcessM3u8(downloadedFiles []string, jobId string) error {
+	var (
+		m3u8Content, manifestContent []byte
+		videoBasename                string
+		m3u8Path, manifestPath       string
+		err                          error
+	)
+
+	for _, filepath := range downloadedFiles {
+		switch path.Ext(filepath) {
+		case ".m3u8":
+			if strings.HasSuffix(filepath, "manifest.m3u8") {
+				manifestPath = filepath
+				manifestContent, err = os.ReadFile(filepath)
+				if err != nil {
+					return fmt.Errorf("read file: %w", err)
+				}
+			} else {
+				m3u8Path = filepath
+				m3u8Content, err = os.ReadFile(filepath)
+				if err != nil {
+					return fmt.Errorf("read file: %w", err)
+				}
+			}
+		case ".mp4":
+			videoBasename = strings.Replace(path.Base(filepath), ".mp4", "", 1)
+		}
+	}
+
+	m3u8Content = []byte(strings.ReplaceAll(string(m3u8Content), jobId, videoBasename))
+	if err := os.WriteFile(m3u8Path, m3u8Content, 0644); err != nil {
+		return fmt.Errorf("write m3u8 file: %w", err)
+	}
+	manifestContent = []byte(strings.ReplaceAll(string(manifestContent), jobId, videoBasename))
+	if err := os.WriteFile(manifestPath, manifestContent, 0644); err != nil {
+		return fmt.Errorf("write manifest file: %w", err)
 	}
 	return nil
 }

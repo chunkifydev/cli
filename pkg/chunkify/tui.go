@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -333,7 +334,7 @@ func (t TUI) uploadView() (string, string) {
 
 func (t TUI) sourceView() (string, string) {
 	view := fmt.Sprintf("%s%s Source: %s\n", indent, completedIcon.String(), sourceName(t.Command.Input))
-	view += infoText(fmt.Sprintf("%sDuration: %s Size: %s Video: %s, %dx%d, %s, %.2ffps", indent+indent, formatter.Duration(t.Source.Duration), formatter.Size(t.Source.Size), t.Source.VideoCodec, t.Source.Width, t.Source.Height, formatter.Bitrate(t.Source.VideoBitrate), t.Source.VideoFramerate))
+	view += fmt.Sprintf("%sDuration: %s Size: %s Video: %s, %dx%d, %s, %.2ffps", indent+indent, formatter.Duration(t.Source.Duration), formatter.Size(t.Source.Size), t.Source.VideoCodec, t.Source.Width, t.Source.Height, formatter.Bitrate(t.Source.VideoBitrate), t.Source.VideoFramerate)
 	view += "\n\n"
 	return view, t.Command.Format
 }
@@ -464,7 +465,7 @@ func progressBar(status string, progress float64, width int) string {
 		filled = width
 	}
 	bar := ""
-	for i := 0; i < width; i++ {
+	for i := range width {
 		if i < filled {
 			bar += "▮"
 		} else {
@@ -488,8 +489,10 @@ func (t TUI) summaryView() string {
 
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
 	view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
-	for key, value := range t.Job.Format.Config {
-		view += fmt.Sprintf("%s=%v ", key, value)
+	view += formatConfig(t.Job.Format.Config)
+
+	if t.Job.HlsManifestId != nil {
+		view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, *t.Job.HlsManifestId)
 	}
 	view += "\n"
 
@@ -529,4 +532,20 @@ func (t TUI) getStatusString() string {
 	default:
 		return "Unknown"
 	}
+}
+
+func formatConfig(config map[string]any) string {
+	view := ""
+	if len(config) > 0 {
+		keys := []string{}
+		for k := range config {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			view += fmt.Sprintf("%s=%v ", k, config[k])
+		}
+	}
+
+	return view
 }
