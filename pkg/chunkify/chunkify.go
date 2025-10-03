@@ -275,7 +275,6 @@ func (a *App) StartJobProgress(ctx context.Context, jobId string) {
 	defer ticker.Stop()
 
 	for {
-
 		select {
 		case <-ctx.Done():
 			a.Progress.JobCompleted <- true

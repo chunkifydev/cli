@@ -459,19 +459,22 @@ func (t App) summaryView() string {
 	}
 
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
-	view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
-	view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
-	view += formatConfig(t.Job.Format.Config)
+	if t.Job != nil {
+		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
 
-	if t.Job.HlsManifestId != nil {
-		view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, *t.Job.HlsManifestId)
+		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
+		view += formatConfig(t.Job.Format.Config)
+
+		if t.Job.HlsManifestId != nil {
+			view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, *t.Job.HlsManifestId)
+		}
+		view += "\n"
+
+		view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)
+		view += fmt.Sprintf("%sSpeed: %.1fx\n", indent, speed)
+		view += fmt.Sprintf("%sTranscoding time: %s\n", indent, formatter.TimeDiff(t.Job.StartedAt, t.Job.UpdatedAt))
+		view += fmt.Sprintf("%sBillable time: %ds\n", indent, t.Job.BillableTime)
 	}
-	view += "\n"
-
-	view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)
-	view += fmt.Sprintf("%sSpeed: %.1fx\n", indent, speed)
-	view += fmt.Sprintf("%sTranscoding time: %s\n", indent, formatter.TimeDiff(t.Job.StartedAt, t.Job.UpdatedAt))
-	view += fmt.Sprintf("%sBillable time: %ds\n", indent, t.Job.BillableTime)
 
 	view += "\n"
 	return view

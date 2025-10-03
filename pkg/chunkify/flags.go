@@ -2,6 +2,7 @@ package chunkify
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
@@ -10,6 +11,17 @@ import (
 )
 
 var chunkifyCmd ChunkifyCommand
+
+var validFormats = []chunkify.FormatName{
+	chunkify.FormatMp4H264,
+	chunkify.FormatMp4H265,
+	chunkify.FormatMp4Av1,
+	chunkify.FormatWebmVp9,
+	chunkify.FormatHlsH264,
+	chunkify.FormatHlsH265,
+	chunkify.FormatHlsAv1,
+	chunkify.FormatJpg,
+}
 
 // Transcoder flags
 var (
@@ -74,7 +86,7 @@ func BindFlags(rcmd *cobra.Command) {
 
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Video file or URL to process")
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "chunkify formats: mp4h264, mp4h265, mp4av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg")
+	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "chunkify formats: mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg")
 	flags.Int64VarPtr(rcmd.Flags(), &transcoders, "transcoders", 0, "chunkify transcoder quantity: Transcoders")
 	flags.Int64VarPtr(rcmd.Flags(), &transcoderVcpu, "vcpu", 8, "chunkify transcoder vCPU: 4, 8 or 16")
 
@@ -127,6 +139,10 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		// build job format params according to all format flags
 		setJobFormatParams()
+
+		if !slices.Contains(validFormats, chunkify.FormatName(chunkifyCmd.Format)) {
+			return fmt.Errorf("invalid format: %s", chunkifyCmd.Format)
+		}
 
 		if transcoders != nil && *transcoders > 0 {
 			chunkifyCmd.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
