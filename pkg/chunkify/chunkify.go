@@ -2,7 +2,10 @@ package chunkify
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -207,19 +210,38 @@ func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 
 func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error) {
 	a.Progress.Status <- UploadingFromFile
-	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
-		Metadata: chunkify.UploadCreateParamsMetadata{
-			"chunkify_execution_id": a.Command.Id,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error creating upload: %s", err)
-	}
+
 	file, err := os.Open(a.Command.Input)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %s", err)
 	}
 	defer file.Close()
+
+	md5, err := fileMD5(file)
+	if err != nil {
+		return nil, fmt.Errorf("error calculating file md5: %s", err)
+	}
+
+	// Try to find the source by MD5, so we don't upload the same file again
+	if source, err := a.GetSourceByMd5(md5); err == nil {
+		slog.Info("Source found by md5", "source", source.Id)
+		return source, nil
+	}
+
+	slog.Info("Upload again")
+
+	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
+		Metadata: chunkify.UploadCreateParamsMetadata{
+			"chunkify_execution_id": a.Command.Id,
+			"md5":                   md5,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error creating upload: %s", err)
+	}
+
+	// Reset file pointer to the beginning
+	file.Seek(0, io.SeekStart)
 
 	if err := a.Client.UploadBlobWithProgress(ctx, file, upload, a.Progress.UploadProgress); err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
@@ -248,6 +270,26 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		retry++
 	}
 
+	return nil, fmt.Errorf("source not found")
+}
+
+func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
+	sources, err := a.Client.SourceList(chunkify.SourceListParams{
+		Metadata: map[string]string{
+			"md5": md5,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error listing sources: %s", err)
+	}
+	for _, source := range sources.Items {
+		if v, ok := source.Metadata.(map[string]any); ok && v["md5"] == md5 {
+			if source.CreatedAt.Before(time.Now().Add(-24 * time.Hour)) {
+				return nil, fmt.Errorf("source is too old, upload again")
+			}
+			return &source, nil
+		}
+	}
 	return nil, fmt.Errorf("source not found")
 }
 
@@ -374,4 +416,15 @@ func postProcessM3u8(downloadedFiles []string, jobId string) error {
 		return fmt.Errorf("write manifest file: %w", err)
 	}
 	return nil
+}
+
+func fileMD5(file *os.File) (string, error) {
+	w := md5.New()
+	_, err := io.Copy(w, file)
+	if err != nil {
+		return "", fmt.Errorf("copy file: %w", err)
+	}
+
+	rawHash := w.Sum(nil)
+	return hex.EncodeToString(rawHash), nil
 }
