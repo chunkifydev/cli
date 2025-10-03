@@ -45,80 +45,73 @@ func Execute(cfg *config.Config) error {
 	defer cancel()
 
 	app := NewApp(ctx, cancel, cfg)
-	go app.Run()
 
-	// Create source in a goroutine so we can check for cancellation
-	sourceChan := make(chan *chunkify.Source, 1)
-	errChan := make(chan error, 1)
+	// Start all background work in a goroutine
+	go app.executeWorkflow(ctx)
 
-	go func() {
-		source, err := app.CreateSource(ctx)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		sourceChan <- source
-	}()
+	// Run TUI synchronously - this will block until the TUI exits
+	app.Run()
 
-	// Wait for either source creation or context cancellation
-	var source *chunkify.Source
-	select {
-	case source = <-sourceChan:
-		app.Progress.Source <- source
-	case err := <-errChan:
+	return nil
+}
+
+// executeWorkflow runs all the background work and communicates with the TUI via channels
+func (app *App) executeWorkflow(ctx context.Context) {
+	// Create source
+	source, err := app.CreateSource(ctx)
+	if err != nil {
 		app.setError(err)
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("operation cancelled")
+		return
 	}
+	app.Progress.Source <- source
 
-	var err error
+	// Create job
 	app.Job, err = app.CreateJob(source)
 	if err != nil {
 		app.setError(err)
-		return err
+		return
 	}
 
+	// Start job progress monitoring
 	go app.StartJobProgress(ctx, app.Job.Id)
 
-	// Wait for either job completion or context cancellation
+	// Wait for job completion
 	select {
 	case <-app.Progress.JobCompleted:
 	case <-ctx.Done():
-		return fmt.Errorf("operation cancelled")
+		return
 	}
 
+	// Check if job failed
 	if app.Job != nil && jobHasFailed(app.Job.Status) {
 		err := fmt.Errorf("job failed with status: %s: %s", app.Job.Status, app.Job.Error.Message)
 		app.setError(err)
-		return err
+		return
 	}
 
 	// Check if context was cancelled before getting files
 	select {
 	case <-ctx.Done():
-		return fmt.Errorf("operation cancelled")
+		return
 	default:
 	}
 
+	// Download files if output is specified
 	if app.Command.Output != "" {
 		files, err := app.Client.JobListFiles(app.Job.Id)
 		if err != nil {
 			app.setError(err)
-			return fmt.Errorf("error getting files: %s", err)
+			return
 		}
 		app.Progress.Files <- files
-		if err := downloadFiles(ctx, &app, files); err != nil {
+		if err := downloadFiles(ctx, app, files); err != nil {
 			app.setError(err)
-			return fmt.Errorf("error downloading files: %s", err)
+			return
 		}
 	}
 
+	// Mark as completed
 	app.Progress.Status <- Completed
-	// Give the TUI time to display the completion message
-	time.Sleep(1 * time.Second)
-
-	return nil
 }
 
 func downloadFiles(ctx context.Context, app *App, files []chunkify.File) error {

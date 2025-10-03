@@ -167,7 +167,10 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tickMsg:
 		// Check for updates from channels (non-blocking)
-		t = t.checkChannels()
+		t, shouldQuit := t.checkChannels()
+		if shouldQuit {
+			return t, tea.Quit
+		}
 		return t, tickCmd()
 	default:
 		var cmd tea.Cmd
@@ -179,7 +182,8 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // checkChannels performs non-blocking reads from all channels
-func (t App) checkChannels() App {
+// Returns the updated app and whether the TUI should quit
+func (t App) checkChannels() (App, bool) {
 	// Check job progress
 	select {
 	case job, ok := <-t.Progress.JobProgress:
@@ -221,12 +225,16 @@ func (t App) checkChannels() App {
 		t.Error = err
 		t.Progress.JobCompleted <- true
 	case <-t.Ctx.Done():
-		t.Status = Cancelled
 		t.Done = true
 	default:
 	}
 
-	return t
+	if t.Done {
+		time.Sleep(1 * time.Second)
+		return t, true
+	}
+
+	return t, t.Done
 }
 
 func (t App) View() string {
