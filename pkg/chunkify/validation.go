@@ -66,7 +66,7 @@ func validateCommonVideoFlags() error {
 }
 
 func validateH264Flags() error {
-	if crf != nil && (*crf < 16 || *crf > 35) {
+	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 35) {
 		return fmt.Errorf("--crf must be between 16 and 35")
 	}
 	if preset != nil && *preset != "" {
@@ -94,7 +94,7 @@ func validateH264Flags() error {
 }
 
 func validateH265Flags() error {
-	if crf != nil && (*crf < 16 || *crf > 35) {
+	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 35) {
 		return fmt.Errorf("--crf must be between 16 and 35")
 	}
 	if preset != nil && *preset != "" {
@@ -122,7 +122,7 @@ func validateH265Flags() error {
 }
 
 func validateAv1Flags() error {
-	if crf != nil && (*crf < 16 || *crf > 63) {
+	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 63) {
 		return fmt.Errorf("--crf must be between 16 and 63")
 	}
 	if preset != nil && *preset != "" {
