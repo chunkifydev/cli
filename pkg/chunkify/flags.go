@@ -86,7 +86,7 @@ var (
 func BindFlags(rcmd *cobra.Command) {
 	chunkifyCmd = ChunkifyCommand{}
 
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Input video file or URL")
+	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Input video to transcode. It can be a file, URL or source ID (src_*)")
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file path")
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
 	flags.Int64VarPtr(rcmd.Flags(), &transcoders, "transcoders", 0, "Number of transcoders to use")
