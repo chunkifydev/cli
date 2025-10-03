@@ -15,6 +15,7 @@ import (
 	_ "embed"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/chunkify/hooks"
 	"github.com/chunkifydev/cli/pkg/config"
 )
 
@@ -119,6 +120,7 @@ func downloadFiles(ctx context.Context, app *App, files []chunkify.File) error {
 
 	slog.Info("Downloading files", "files", files)
 	downloadedFiles := []string{}
+	var oldManifestContent []byte
 
 	for _, file := range files {
 		// Check if context was cancelled before each download
@@ -129,21 +131,34 @@ func downloadFiles(ctx context.Context, app *App, files []chunkify.File) error {
 		}
 
 		filepath := filename(file, app.Command.Output)
+
+		// check if we have a manifest.m3u8 already
+		// if so we will merge it with the new manifest.m3u8
+		if strings.HasSuffix(filepath, "manifest.m3u8") {
+			if _, err := os.Stat(filepath); err == nil {
+				manifestContent, err := os.ReadFile(filepath)
+				if err != nil {
+					return fmt.Errorf("read manifest file: %w", err)
+				}
+				oldManifestContent = manifestContent
+			}
+		}
+
 		if err := DownloadFile(ctx, file, filepath, app.Progress.DownloadProgress); err == nil {
 			app.Progress.DownloadedFiles <- file
 			downloadedFiles = append(downloadedFiles, filepath)
 		}
-
 	}
 
 	// If format is jpg
 	// rename all vtt cues to match the filename set in --output flag
 	if app.Command.Format == string(chunkify.FormatJpg) {
-		if err := postProcessVtt(downloadedFiles, app.Job.Id); err != nil {
+		if err := hooks.ProcessVtt(downloadedFiles, app.Job.Id); err != nil {
 			return fmt.Errorf("post process vtt: %w", err)
 		}
 	} else if strings.HasPrefix(app.Command.Format, "hls") {
-		if err := postProcessM3u8(downloadedFiles, app.Job.Id); err != nil {
+
+		if err := hooks.ProcessM3u8(downloadedFiles, app.Job.Id, oldManifestContent); err != nil {
 			return fmt.Errorf("post process m3u8: %w", err)
 		}
 	}
@@ -216,9 +231,9 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	}
 
 	// Try to find the source by MD5, so we don't upload the same file again
-	if source, err := a.GetSourceByMd5(md5); err == nil {
-		return source, nil
-	}
+	// if source, err := a.GetSourceByMd5(md5); err == nil {
+	// 	return source, nil
+	// }
 
 	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
@@ -337,75 +352,6 @@ func filename(file chunkify.File, output string) string {
 	fileBase := strings.Replace(path.Base(output), path.Ext(output), "", 1)
 	newFilename := strings.Replace(path.Base(file.Path), file.JobId, fileBase, 1)
 	return path.Join(path.Dir(output), newFilename)
-}
-
-func postProcessVtt(downloadedFiles []string, jobId string) error {
-	var vttContent []byte
-	var imageBasename string
-	var vttPath string
-	var err error
-
-	for _, filepath := range downloadedFiles {
-		switch path.Ext(filepath) {
-		case ".vtt":
-			vttPath = filepath
-			vttContent, err = os.ReadFile(filepath)
-			if err != nil {
-				return fmt.Errorf("read file: %w", err)
-			}
-		case ".jpg":
-			parts := strings.Split(path.Base(filepath), "-")
-			if len(parts) >= 2 {
-				imageBasename = strings.Join(parts[0:len(parts)-1], "-")
-			}
-		}
-	}
-
-	vttContent = []byte(strings.ReplaceAll(string(vttContent), jobId, imageBasename))
-	if err := os.WriteFile(vttPath, vttContent, 0644); err != nil {
-		return fmt.Errorf("write vtt file: %w", err)
-	}
-	return nil
-}
-
-func postProcessM3u8(downloadedFiles []string, jobId string) error {
-	var (
-		m3u8Content, manifestContent []byte
-		videoBasename                string
-		m3u8Path, manifestPath       string
-		err                          error
-	)
-
-	for _, filepath := range downloadedFiles {
-		switch path.Ext(filepath) {
-		case ".m3u8":
-			if strings.HasSuffix(filepath, "manifest.m3u8") {
-				manifestPath = filepath
-				manifestContent, err = os.ReadFile(filepath)
-				if err != nil {
-					return fmt.Errorf("read file: %w", err)
-				}
-			} else {
-				m3u8Path = filepath
-				m3u8Content, err = os.ReadFile(filepath)
-				if err != nil {
-					return fmt.Errorf("read file: %w", err)
-				}
-			}
-		case ".mp4":
-			videoBasename = strings.Replace(path.Base(filepath), ".mp4", "", 1)
-		}
-	}
-
-	m3u8Content = []byte(strings.ReplaceAll(string(m3u8Content), jobId, videoBasename))
-	if err := os.WriteFile(m3u8Path, m3u8Content, 0644); err != nil {
-		return fmt.Errorf("write m3u8 file: %w", err)
-	}
-	manifestContent = []byte(strings.ReplaceAll(string(manifestContent), jobId, videoBasename))
-	if err := os.WriteFile(manifestPath, manifestContent, 0644); err != nil {
-		return fmt.Errorf("write manifest file: %w", err)
-	}
-	return nil
 }
 
 func fileMD5(file *os.File) (string, error) {
