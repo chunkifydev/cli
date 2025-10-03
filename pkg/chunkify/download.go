@@ -12,6 +12,15 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
+type DownloadProgress struct {
+	File         chunkify.File
+	Progress     float64
+	TotalBytes   int64
+	WrittenBytes int64
+	Eta          time.Duration
+	Speed        float64 // bytes/sec
+}
+
 type progressWriter struct {
 	w            io.Writer
 	total        int64 // content-length (may be 0 when unknown)

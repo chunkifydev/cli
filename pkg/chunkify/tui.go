@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -13,8 +14,10 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/chunkifydev/cli/pkg/version"
+	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -37,19 +40,22 @@ const (
 var chunkifyBanner string
 
 var (
-	completedIcon   = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("▮")
-	currentStepText = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true).Render
-	errorText       = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
-	statusText      = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
-	OrangeText      = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
-	infoText        = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
-	grayText        = lipgloss.NewStyle().Foreground(lipgloss.Color("#59636e")).Render
+	completedIcon    = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("▮")
+	currentStepText  = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true).Render
+	errorText        = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
+	statusText       = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
+	statusOrangeText = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
+	infoText         = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
+	grayText         = lipgloss.NewStyle().Foreground(lipgloss.Color("#59636e")).Render
 
 	indent    = "  "
 	dblIndent = indent + indent
+
+	spin = spinner.New()
 )
 
-type TUI struct {
+type App struct {
+	Client           *chunkify.Client
 	Command          *ChunkifyCommand
 	Status           int
 	Progress         *Progress
@@ -57,23 +63,13 @@ type TUI struct {
 	Source           *chunkify.Source
 	Files            []chunkify.File
 	Transcoders      []chunkify.TranscoderStatus
-	UploadProgress   chunkify.UploadProgressChannel
+	UploadProgress   chunkify.UploadProgress
 	DownloadProgress DownloadProgress
 	DownloadedFiles  map[string]chunkify.File
 	Error            error
 	Done             bool
 	Ctx              context.Context
 	CancelFunc       context.CancelFunc
-
-	Spinner spinner.Model
-}
-
-func init() {
-	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
-}
-
-func (t TUI) Init() tea.Cmd {
-	return tea.Batch(tickCmd(), t.Spinner.Tick)
 }
 
 type Progress struct {
@@ -81,7 +77,7 @@ type Progress struct {
 	JobProgress      chan chunkify.Job
 	JobTranscoders   chan []chunkify.TranscoderStatus
 	JobCompleted     chan bool
-	UploadProgress   chan chunkify.UploadProgressChannel
+	UploadProgress   chan chunkify.UploadProgress
 	DownloadProgress chan DownloadProgress
 	Files            chan []chunkify.File
 	DownloadedFiles  chan chunkify.File
@@ -89,13 +85,8 @@ type Progress struct {
 	Error            chan error
 }
 
-type DownloadProgress struct {
-	File         chunkify.File
-	Progress     float64
-	TotalBytes   int64
-	WrittenBytes int64
-	Eta          time.Duration
-	Speed        float64 // bytes/sec
+func init() {
+	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
 }
 
 func NewProgress() *Progress {
@@ -104,7 +95,7 @@ func NewProgress() *Progress {
 		JobProgress:      make(chan chunkify.Job, 100),
 		JobTranscoders:   make(chan []chunkify.TranscoderStatus, 100),
 		JobCompleted:     make(chan bool, 1),
-		UploadProgress:   make(chan chunkify.UploadProgressChannel, 100),
+		UploadProgress:   make(chan chunkify.UploadProgress, 100),
 		DownloadProgress: make(chan DownloadProgress, 100),
 		DownloadedFiles:  make(chan chunkify.File, 100),
 		Source:           make(chan *chunkify.Source, 1),
@@ -113,16 +104,40 @@ func NewProgress() *Progress {
 	}
 }
 
-// NewTUI creates a new TUI instance with the given progress tracker
-func NewTUI() TUI {
-	s := spinner.New()
-	s.Spinner = spinner.MiniDot
-	return TUI{
+// NewApp creates a new TUI instance with the given progress tracker
+func NewApp(ctx context.Context, cancelFunc context.CancelFunc, cfg *config.Config) App {
+	spin.Spinner = spinner.MiniDot
+
+	app := App{
+		Client:          cfg.Client,
 		Status:          Starting,
 		Progress:        NewProgress(),
+		Ctx:             ctx,
+		CancelFunc:      cancelFunc,
 		Done:            false,
-		Spinner:         s,
 		DownloadedFiles: map[string]chunkify.File{},
+		Command: &ChunkifyCommand{
+			Id:                  uuid.New().String(),
+			Input:               chunkifyCmd.Input,
+			Output:              chunkifyCmd.Output,
+			Format:              chunkifyCmd.Format,
+			JobFormatParams:     chunkifyCmd.JobFormatParams,
+			JobTranscoderParams: chunkifyCmd.JobTranscoderParams,
+		},
+	}
+
+	return app
+}
+
+func (t App) Init() tea.Cmd {
+	return tea.Batch(tickCmd(), spin.Tick)
+}
+
+func (t App) Run() {
+	p := tea.NewProgram(t)
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
 	}
 }
 
@@ -136,12 +151,12 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":
-			fmt.Println("Quitting...")
+			fmt.Println("\nQuitting...")
 			t.CancelFunc()
 			// Send JobCompleted to unblock the main goroutine
 			select {
@@ -155,72 +170,42 @@ func (t TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		t = t.checkChannels()
 		return t, tickCmd()
 	default:
-		var scmd tea.Cmd
-		t.Spinner, scmd = t.Spinner.Update(msg)
-		return t, tea.Batch(scmd)
+		var cmd tea.Cmd
+		spin, cmd = spin.Update(msg)
+		return t, tea.Batch(cmd)
 	}
 
 	return t, nil
 }
 
 // checkChannels performs non-blocking reads from all channels
-func (t TUI) checkChannels() TUI {
+func (t App) checkChannels() App {
 	// Check job progress
 	select {
 	case job, ok := <-t.Progress.JobProgress:
 		if ok {
 			t.Job = &job
 		}
-	default:
-	}
-
-	// Check transcoder status
-	select {
 	case transcoders, ok := <-t.Progress.JobTranscoders:
 		if ok {
 			t.Transcoders = transcoders
 		}
-	default:
-	}
-
-	// Check upload progress
-	select {
 	case uploadProgress, ok := <-t.Progress.UploadProgress:
 		if ok {
 			t.UploadProgress = uploadProgress
 		}
-	default:
-	}
-
-	// Check download progress
-	select {
 	case downloadProgress, ok := <-t.Progress.DownloadProgress:
 		if ok {
 			t.DownloadProgress = downloadProgress
 		}
-	default:
-	}
-
-	// Check downloaded files
-	select {
 	case downloadedFile, ok := <-t.Progress.DownloadedFiles:
 		if ok {
 			t.DownloadedFiles[downloadedFile.Id] = downloadedFile
 		}
-	default:
-	}
-
-	// Check files
-	select {
 	case files, ok := <-t.Progress.Files:
 		if ok {
 			t.Files = files
 		}
-	default:
-	}
-
-	// Check status
-	select {
 	case status, ok := <-t.Progress.Status:
 		if ok {
 			t.Status = status
@@ -228,27 +213,13 @@ func (t TUI) checkChannels() TUI {
 				t.Done = true
 			}
 		}
-	default:
-	}
-
-	// Check for source updates
-	select {
 	case source, ok := <-t.Progress.Source:
 		if ok {
 			t.Source = source
 		}
-	default:
-	}
-
-	// Check for errors
-	select {
 	case err := <-t.Progress.Error:
 		t.Error = err
 		t.Progress.JobCompleted <- true
-	default:
-	}
-
-	select {
 	case <-t.Ctx.Done():
 		t.Status = Cancelled
 		t.Done = true
@@ -258,7 +229,7 @@ func (t TUI) checkChannels() TUI {
 	return t
 }
 
-func (t TUI) View() string {
+func (t App) View() string {
 	var view string
 	statusInfo := ""
 	view = fmt.Sprintf("\n%s\n\n", chunkifyBanner)
@@ -299,7 +270,7 @@ func (t TUI) View() string {
 	return view
 }
 
-func (t TUI) errorView() string {
+func (t App) errorView() string {
 	var view string
 	if apiErr, ok := t.Error.(chunkify.ApiError); ok {
 		view = fmt.Sprintf("%s%s", indent, errorText(apiErr.Message))
@@ -310,7 +281,7 @@ func (t TUI) errorView() string {
 	return view
 }
 
-func (t TUI) uploadView() (string, string) {
+func (t App) uploadView() (string, string) {
 	view := ""
 	statusInfo := ""
 
@@ -320,7 +291,7 @@ func (t TUI) uploadView() (string, string) {
 		// Display upload progress
 		view = currentStepText(fmt.Sprintf("%s%s Uploading %s",
 			indent,
-			t.Spinner.View(),
+			spin.View(),
 			t.Command.Input))
 		view += "\n"
 	}
@@ -332,7 +303,7 @@ func (t TUI) uploadView() (string, string) {
 	return view, statusInfo
 }
 
-func (t TUI) sourceView() (string, string) {
+func (t App) sourceView() (string, string) {
 	view := fmt.Sprintf("%s%s Source: %s\n", indent, completedIcon.String(), sourceName(t.Command.Input))
 	view += fmt.Sprintf("%sDuration: %s Size: %s Video: %s, %dx%d, %s, %.2ffps", indent+indent, formatter.Duration(t.Source.Duration), formatter.Size(t.Source.Size), t.Source.VideoCodec, t.Source.Width, t.Source.Height, formatter.Bitrate(t.Source.VideoBitrate), t.Source.VideoFramerate)
 	view += "\n\n"
@@ -352,7 +323,7 @@ func sourceName(input string) string {
 	return path.Base(input)
 }
 
-func (t TUI) transcodingView() (string, string) {
+func (t App) transcodingView() (string, string) {
 	view := ""
 
 	completedTranscoders := 0
@@ -370,7 +341,7 @@ func (t TUI) transcodingView() (string, string) {
 	if t.Job.Status == chunkify.JobStatusCompleted {
 		view += fmt.Sprintf("%s%s Transcoding completed\n", indent, completedIcon.String())
 	} else {
-		view += currentStepText(fmt.Sprintf("%s%s Transcoding (%d x %s)", indent, t.Spinner.View(), totalTranscoders, t.Job.Transcoder.Type))
+		view += currentStepText(fmt.Sprintf("%s%s Transcoding (%d x %s)", indent, spin.View(), totalTranscoders, t.Job.Transcoder.Type))
 		view += " " + formatter.TimeDiff(t.Job.StartedAt, time.Now())
 		view += "\n"
 	}
@@ -410,14 +381,14 @@ func (t TUI) transcodingView() (string, string) {
 	}
 	view += "\n"
 
-	statusInfo := OrangeText(t.Command.Format)
+	statusInfo := statusOrangeText(t.Command.Format)
 	if totalOutTime > 0 {
 		statusInfo += fmt.Sprintf(" %.f%%, FPS: %.0f, Speed: %.1fx, OutTime: %s", t.Job.Progress, totalFps, totalSpeed, formatter.Duration(totalOutTime))
 	}
 	return view, statusInfo
 }
 
-func (t TUI) downloadView() (string, string) {
+func (t App) downloadView() (string, string) {
 	view := ""
 	statusInfo := ""
 
@@ -429,7 +400,7 @@ func (t TUI) downloadView() (string, string) {
 		statusInfo = fmt.Sprintf("%.1f%% (%.1f MB/s, ETA: %s)", t.DownloadProgress.Progress, t.DownloadProgress.Speed/(1024*1024), t.DownloadProgress.Eta.Round(time.Second))
 		view += currentStepText(fmt.Sprintf("%s%s Saving files",
 			indent,
-			t.Spinner.View(),
+			spin.View(),
 		))
 		view += "\n"
 	}
@@ -480,7 +451,7 @@ func progressBar(status string, progress float64, width int) string {
 	return bar
 }
 
-func (t TUI) summaryView() string {
+func (t App) summaryView() string {
 	speed := 0.0
 
 	for _, transcoder := range t.Transcoders {
@@ -488,6 +459,7 @@ func (t TUI) summaryView() string {
 	}
 
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
+	view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
 	view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
 	view += formatConfig(t.Job.Format.Config)
 
@@ -506,7 +478,7 @@ func (t TUI) summaryView() string {
 }
 
 // getStatusString returns a human-readable status string
-func (t TUI) getStatusString() string {
+func (t App) getStatusString() string {
 	switch t.Status {
 	case Status:
 		return "Initializing"

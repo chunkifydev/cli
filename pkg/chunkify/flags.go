@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var chunkifyCmd ChunkifyCommand
+
 // Transcoder flags
 var (
 	transcoders    *int64
@@ -71,8 +73,8 @@ func BindFlags(rcmd *cobra.Command) {
 	chunkifyCmd = ChunkifyCommand{}
 
 	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Video file or URL to process")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file or directory")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "chunkify format: mp4_h264, mp4_h265 or mp4_av1")
+	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file")
+	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "chunkify formats: mp4h264, mp4h265, mp4av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg")
 	flags.Int64VarPtr(rcmd.Flags(), &transcoders, "transcoders", 0, "chunkify transcoder quantity: Transcoders")
 	flags.Int64VarPtr(rcmd.Flags(), &transcoderVcpu, "vcpu", 8, "chunkify transcoder vCPU: 4, 8 or 16")
 
@@ -119,7 +121,6 @@ func BindFlags(rcmd *cobra.Command) {
 
 	rcmd.MarkFlagRequired("input")
 	rcmd.MarkFlagRequired("output")
-	rcmd.MarkFlagRequired("format")
 
 	rcmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
@@ -136,15 +137,15 @@ func BindFlags(rcmd *cobra.Command) {
 
 		if chunkifyCmd.Format == string(chunkify.FormatJpg) {
 			if interval == nil || *interval == 0 {
-				return fmt.Errorf("interval flag is required when format is jpg")
+				return fmt.Errorf("--interval flag is required when format is jpg")
 			}
 		}
 		if strings.HasPrefix(chunkifyCmd.Format, "hls") {
 			if videoBitrate == nil || *videoBitrate == 0 {
-				return fmt.Errorf("videoBitrate flag is required when format is hls")
+				return fmt.Errorf("--vb (video bitrate) flag is required when format is hls")
 			}
 			if audioBitrate == nil || *audioBitrate == 0 {
-				return fmt.Errorf("audioBitrate flag is required when format is hls")
+				return fmt.Errorf("--ab (audio bitrate) flag is required when format is hls")
 			}
 		}
 
