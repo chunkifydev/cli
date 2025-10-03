@@ -224,11 +224,8 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 
 	// Try to find the source by MD5, so we don't upload the same file again
 	if source, err := a.GetSourceByMd5(md5); err == nil {
-		slog.Info("Source found by md5", "source", source.Id)
 		return source, nil
 	}
-
-	slog.Info("Upload again")
 
 	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
@@ -284,7 +281,7 @@ func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
 	}
 	for _, source := range sources.Items {
 		if v, ok := source.Metadata.(map[string]any); ok && v["md5"] == md5 {
-			if source.CreatedAt.Before(time.Now().Add(-24 * time.Hour)) {
+			if source.CreatedAt.Before(time.Now().Add(-12 * time.Hour)) {
 				return nil, fmt.Errorf("source is too old, upload again")
 			}
 			return &source, nil
@@ -422,7 +419,7 @@ func fileMD5(file *os.File) (string, error) {
 	w := md5.New()
 	_, err := io.Copy(w, file)
 	if err != nil {
-		return "", fmt.Errorf("copy file: %w", err)
+		return "", fmt.Errorf("md5 copy: %w", err)
 	}
 
 	rawHash := w.Sum(nil)
