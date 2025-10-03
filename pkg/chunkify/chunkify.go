@@ -189,6 +189,15 @@ func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
 		return source, nil
 	}
 
+	// the input is a source id (already uploaded)
+	if strings.HasPrefix(a.Command.Input, "src_") {
+		source, err := a.Client.Source(a.Command.Input)
+		if err != nil {
+			return nil, err
+		}
+		return &source, nil
+	}
+
 	// it's a path file, check if it's a valid file
 	if _, err := os.Stat(a.Command.Input); err != nil {
 		return nil, fmt.Errorf("file not found: %s", a.Command.Input)
