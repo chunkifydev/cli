@@ -1,5 +1,5 @@
 // Package notifications provides functionality for managing and interacting with notifications
-package notifications
+package webhooks
 
 import (
 	"bytes"
@@ -46,9 +46,10 @@ func NewCommand(config *config.Config) *Command {
 	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use:   "notifications",
-			Short: "Manage your notifications",
-			Long:  "Manage your notifications",
+			Use:     "webhooks",
+			Short:   "Proxy webhooks to a local URL for local development",
+			Long:    "Proxy webhooks to a local URL for local development",
+			Example: "chunkify webhooks proxy http://localhost:3000/webhook",
 		}}
 
 	// Add all subcommands

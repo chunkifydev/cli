@@ -6,7 +6,7 @@ import (
 
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/notifications"
+	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 
 	"github.com/chunkifydev/chunkify-go"
@@ -28,9 +28,10 @@ type Commander interface {
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "chunkify",
-	Short: "chunkify is a command line interface for Chunkify API",
-	Long:  `chunkify is a command line interface for Chunkify API.`,
+	Use:     "chunkify",
+	Short:   "Transcode videos with Chunkify",
+	Long:    "Transcode videos with Chunkify",
+	Example: "chunkify --input video.mp4 --output transcoded.mp4 --format mp4/h264 --width 1920 --height 1080 --crf 23",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		chunkifyCmd.Execute(cfg)
 		return nil
@@ -118,7 +119,7 @@ func init() {
 	// Bind root flags coming from the chunkify package
 	chunkifyCmd.BindFlags(rootCmd)
 
-	rootCmd.AddCommand(notifications.NewCommand(cfg).Command)
+	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
 
