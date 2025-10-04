@@ -4,13 +4,9 @@
 
 # Chunkify CLI
 
-The Chunkify CLI provides easy access to all Chunkify services and features directly from your terminal.
+The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
 
-#### With this CLI, you can:
-
--   **Create and manage** sources, projects, jobs, storages, webhooks, notifications and tokens
--   **Forward** webhooks notifications to your local environment
--   **View** jobs logs
+For local development, the Chunkify CLI provides a convenient command to forward webhook notifications to your local application URL.
 
 ## Installation
 
@@ -32,130 +28,176 @@ chunkify auth login
 
 3. After authentication, the CLI will prompt you to select your project.
 
-4. Once done, you're now ready to use all CLI features! Try some basic commands to verify your setup:
+Another way to authenticate is to setup environment variables:
 
 ```bash
-# List all the projects of your team
-$ chunkify projects list
-╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Project Id                        Name              Storage                              │
-├───────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 11 Jul 24 13:00 UTC  proj_A1cce6120E56e7Tu9ioP09Nhjk1  Chunkify project  stor_aws_2vuLlCyiW1mvAsKGq5zECh1MvRm │
-╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-```
-
-### Authentication Commands
-
--   If you encounter "Unauthorized" errors, try logging in again with `chunkify auth login`
--   To logout: `chunkify auth logout`
-
-### Environment-based Authentication
-
-For CI/CD environments or automated scripts where interactive login isn't possible (like GitHub Actions), you can authenticate using environment variables. First, generate your tokens from the chunkify app, you'll need both an account token and a project token for full CLI functionality :
-
--   Team token: Required for projects and tokens commands
--   Project token: Required for all other commands (jobs, sources, webhooks, etc.)
-
-```bash
-# Option 1: Use tokens inline for a single command
-$ CHUNKIFY_TEAM_TOKEN=sk_team_token chunkify projects list
-$ CHUNKIFY_PROJECT_TOKEN=sk_project_token chunkify jobs list
-
-# Option 2: Export tokens for multiple commands in the same session
-$ export CHUNKIFY_TEAM_TOKEN=sk_team_token
 $ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
-$ chunkify projects list  # Uses team token
-$ chunkify jobs list      # Uses project token
-$ chunkify sources list   # Uses project token
 ```
-
-> Note: Store your tokens securely and never commit them to version control. For GitHub Actions, use repository secrets.
 
 ## Usage
 
-Here are the most common commands and their usage examples:
+You can use the chunkify CLI to transcode a local video, an URL or a sourceID if it was already uploaded to Chunkify.
 
-### Source Creation
+### Basic
 
 ```bash
-$ chunkify sources create --url https://videosource.com/video.mp4
-╭────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Id      Duration  Size  WxH      Video  Bitrate  Audio  Bitrate  Jobs     │
-├────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ 20 Mar 25 13:55 UTC  src_...  00:15    2MB   1280x720 h264   1MB/s    aac    187KB/s   0       │
-╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
-### Job Creation
+It will upload the video to Chunkify, transcode it into the given format and download it to your local disk.
 
-There are two ways to create a job, you can use the source id if you already have created a source or pass the source url directly.
-
-#### Create a job using a source ID:
+By default the number of transcoders and their type will be selected automatically according to the input and output specs.
+To define them yourself use `--transcoders` and `--vcpu` like this:
 
 ```bash
-$ chunkify jobs create mp4/x264 --source-id src_... --height 1080 --crf 23
-╭──────────────────────────────────────────────────────────────────────────────────────────╮
-│ Date                 Id      Status  Progress  Format     Transcoders  Speed  Time       │
-├──────────────────────────────────────────────────────────────────────────────────────────┤
-│ 20 Mar 25 13:58 UTC  job_...  queued  0%       mp4/x264   1 x 4vCPU    0.00x  00:00      │
-╰──────────────────────────────────────────────────────────────────────────────────────────╯
+chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
 ```
 
-#### Create a job directly with a source URL:
+Depending on your plan, here are the available formats:
+
+- `mp4/h264`
+- `mp4/h265`
+- `mp4/av1`
+- `webm/vp9`
+- `hls/h264`
+- `hls/h265`
+- `hls/av1`
+- `jpg`
+
+### Thumbnails
+
+To generate thumbnails every 10 seconds:
 
 ```bash
-$ chunkify jobs create mp4/av1--url https://videosource.com/video.mp4 --width 3840 --crf 28
+chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 ```
 
-### Webhook Creation
+> Note: if you set either `width` or `height` to 0, it will be automatically calculated according to the orignal aspect ratio.
 
-The webhook will be created for your current selected project.
+### HLS
+
+To generate HLS videos, in order to perfectly align frames between multiple renditions, you must set the `gop` and `x264keyint` if H264 or `x265keyint` if H265. Here is an example:
 
 ```bash
-$ chunkify webhooks create --url http://www.example.com/webhooks
-╭────────────────────────────────────────────────────────────╮
-│ Id      Url                     Events  Active             │
-├────────────────────────────────────────────────────────────┤
-│ wh_...  http://www.webhooks.com  *      yes                │
-╰────────────────────────────────────────────────────────────╯
+chunkify -i video.mp4 -o video_540p.m3u8 -f hls/h264 -s 540x0 -g 120 --x264keyint 120 --vb 800000 --ab 128000
 ```
 
-### Testing Webhook Notifications Locally
-
-When developing webhook integrations locally, you can use the notifications proxy to forward webhooks to your local server:
+Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next HLS rendition:
 
 ```bash
-$ chunkify notifications proxy http://localhost:8000
+chunkify -i video.mp4 -o video_720p.m3u8 -f hls/h264 -s 720x0 -g 120 --x264keyint 120 --vb 1200000 --ab 128000 --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
+```
+
+You will have the following files:
+
+```bash
+manifest.m3u8
+video_540p.mp4
+video_540p.m3u8
+video_720p.mp4
+video_720p.m3u8
+```
+
+> Note: you must set the video bitrate and / or the audio bitate for HLS output
+
+### Receiving Webhook Notifications Locally
+
+When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the command `listen` to forward webhooks to your local server URL which is normally not available publicly.
+
+```bash
+$ chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
 Setting up localdev webhook...
-Secret key: sk_123...abc
 
-Start proxying notifications matching '*' to http://localhost:8000
+Start proxying notifications matching '*' to http://localhost:3000/webhooks/chunkify
+```
+> Note: you will find the webhook secret key in your project settings under Webhooks section.
+
+By default, it will forward all events, but you can specify the ones you are interesting to:
+
+```bash
+$ chunkify listen \
+  --forward-to http://localhost:3000/webhooks/chunkify \
+  --webhook-secret <secret-key> \
+  --events job.completed \
+  --events job.failed \
+  --events job.cancelled
 ```
 
 The proxy will:
 
 -   Create a temporary webhook in your project
 -   Forward all notifications to your local server
--   Sign requests with the displayed secret key
+-   Sign requests with the webhook secret key
 -   Clean up the webhook when you exit
 
-### Getting Help
+### All commands and flags
 
 ```bash
 # Get general help
 $ chunkify --help
 
-# Get help for a specific command
-$ chunkify [command] --help
+    ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
+  ██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
+    ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
+
+  Chunkify CLI version: dev
+  https://chunkify.dev
+
+  ────────────────────────────────────────────────
+
+Transcode videos with Chunkify
+
+Usage:
+  chunkify [flags]
+  chunkify [command]
+
+Available Commands:
+  auth        Connect to your Chunkify account
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  listen      Forward webhook notifications to local HTTP URL
+  version     Print the version number of Chunkify
+
+Flags:
+      --ab int                    Set audio bitrate in bits per second (32000-512000)
+      --an                        Disable audio
+      --bufsize int               Set buffer size in bits (100000-50000000)
+      --channels int              Set number of audio channels (1, 2, 5, 7)
+      --cpu-used string           Set VP9 CPU usage (0-8)
+      --crf int                   Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)
+  -t, --duration int              Set duration in seconds
+  -f, --format string             Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg) (default "mp4/h264")
+  -r, --framerate float           Set frame rate (15-120)
+  -g, --gop int                   Set group of pictures size (1-300)
+  -h, --help                      help for chunkify
+      --hls-enc                   Enable HLS encryption
+      --hls-enc-iv string         Set HLS encryption IV
+      --hls-enc-key string        Set HLS encryption key
+      --hls-enc-key-url string    Set HLS encryption key URL
+      --hls-manifest-id string    Set HLS manifest ID
+      --hls-segment-type string   Set HLS segment type (mpegts, fmp4)
+      --hls-time int              Set HLS segment duration in seconds (1-10)
+  -i, --input string              Input video to transcode. It can be a file, HTTP URL or source ID (src_*)
+      --interval int              Set frame extraction interval in seconds (1-60)
+      --level int                 Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)
+      --maxrate int               Set maximum bitrate in bits per second (100000-50000000)
+  -o, --output string             Output file path
+      --pixfmt string             Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)
+      --preset string             Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)
+      --profilev string           Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)
+      --quality string            Set VP9 quality (good, best, realtime)
+  -s, --resolution string         Set resolution wxh (0-8192x0-8192)
+      --seek int                  Seek to position in seconds
+      --sprite                    Generate sprite sheet
+      --transcoders int           Number of transcoders to use
+      --vb int                    Set video bitrate in bits per second (100000-50000000)
+      --vcpu int                  vCPU per transcoder (4, 8, or 16) (default 8)
+      --vn                        Disable video
+      --x264keyint int            H264 - Set x264 keyframe interval
+      --x265keyint int            H265 - Set x265 keyframe interval
+
+Use "chunkify [command] --help" for more information about a command.
 ```
-
-## Configuration
-
-The CLI can be configured using command-line flags or environment variables:
-
-### Global Flags
-
--   `--json`: Output results in JSON format
 
 ## Development
 
