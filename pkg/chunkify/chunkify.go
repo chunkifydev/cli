@@ -17,6 +17,7 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/chunkify/hooks"
 	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -30,6 +31,28 @@ type ChunkifyCommand struct {
 	Format              string
 	JobFormatParams     chunkify.JobCreateFormatParams
 	JobTranscoderParams *chunkify.JobCreateTranscoderParams
+}
+
+// Command represents the root notifications command and configuration
+type Command struct {
+	Command *cobra.Command // The root cobra command for notifications
+	Config  *config.Config // Configuration for the notifications command
+}
+
+func NewCommand(cfg *config.Config) *Command {
+	cmd := &Command{
+		Config: cfg,
+		Command: &cobra.Command{
+			Use:   "chunkify",
+			Short: "Transcode videos with Chunkify",
+			Long:  "Transcode videos with Chunkify",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				return Execute(cfg)
+			},
+		},
+	}
+	BindFlags(cmd.Command)
+	return cmd
 }
 
 func init() {

@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -16,7 +15,6 @@ import (
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/formatter"
-	"github.com/chunkifydev/cli/pkg/version"
 	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -35,9 +33,6 @@ const (
 	Failed
 	Cancelled
 )
-
-//go:embed chunkify.txt
-var chunkifyBanner string
 
 var (
 	completedIcon    = lipgloss.NewStyle().Foreground(lipgloss.Color("42")).SetString("▮")
@@ -83,10 +78,6 @@ type Progress struct {
 	DownloadedFiles  chan chunkify.File
 	Source           chan *chunkify.Source
 	Error            chan error
-}
-
-func init() {
-	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
 }
 
 func NewProgress() *Progress {
@@ -235,7 +226,6 @@ func (t App) checkChannels() (App, bool) {
 func (t App) View() string {
 	var view string
 	statusInfo := ""
-	view = fmt.Sprintf("\n%s\n\n", chunkifyBanner)
 
 	var v string
 	v, statusInfo = t.uploadView()

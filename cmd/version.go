@@ -9,9 +9,9 @@ import (
 
 var VersionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of chunkify",
-	Long:  `Print the version number of chunkify`,
+	Short: "Print the version number of Chunkify",
+	Long:  `Print the version number of Chunkify`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("chunkify version %s\n", version.Version)
+		fmt.Printf("Chunkify version %s\n", version.Version)
 	},
 }

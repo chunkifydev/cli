@@ -3,19 +3,25 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
-	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/webhooks"
-	"github.com/spf13/cobra"
+	_ "embed"
 
 	"github.com/chunkifydev/chunkify-go"
+	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
+	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/version"
+	"github.com/chunkifydev/cli/pkg/webhooks"
+	"github.com/spf13/cobra"
 )
 
 // ChunkifyApiEndpoint is the default API endpoint URL for Chunkify
 const (
 	ChunkifyApiEndpoint = "https://api.chunkify.dev/v1"
 )
+
+//go:embed chunkify.txt
+var chunkifyBanner string
 
 // cfg holds the global configuration for the CLI defined in config pkg
 var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
@@ -27,16 +33,7 @@ type Commander interface {
 }
 
 // rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:     "chunkify",
-	Short:   "Transcode videos with Chunkify",
-	Long:    "Transcode videos with Chunkify",
-	Example: "chunkify -i video.mp4 -o transcoded.mp4 -f mp4/h264 -s 1920x1080 --crf 23",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		chunkifyCmd.Execute(cfg)
-		return nil
-	},
-}
+var rootCmd = &cobra.Command{}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -110,15 +107,13 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 
 // init initializes the CLI by setting up configuration and registering all available commands
 func init() {
+	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
+	fmt.Println("\n" + chunkifyBanner + "\n")
 	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
 		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
 	}
 
-	rootCmd.PersistentFlags().BoolVar(&cfg.JSON, "json", false, "Output in JSON format")
-
-	// Bind root flags coming from the chunkify package
-	chunkifyCmd.BindFlags(rootCmd)
-
+	rootCmd = chunkifyCmd.NewCommand(cfg).Command
 	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
