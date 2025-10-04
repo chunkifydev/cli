@@ -13,7 +13,7 @@ For local development, the Chunkify CLI provides a convenient command to forward
 Installing the latest version:
 
 ```bash
-curl -L https://chunkify.dev/install.sh | sh
+$ curl -L https://chunkify.dev/install.sh | sh
 ```
 
 ## Getting Started
@@ -21,7 +21,7 @@ curl -L https://chunkify.dev/install.sh | sh
 1. After the installation, the first step is to authenticate with your Chunkify account:
 
 ```bash
-chunkify auth login
+$ chunkify auth login
 ```
 
 2. The CLI will open your browser and ask you to select one of your team for the authentication.
@@ -41,16 +41,31 @@ You can use the chunkify CLI to transcode a local video, an URL or a sourceID if
 ### Basic
 
 ```bash
-chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+$ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
-It will upload the video to Chunkify, transcode it into the given format and download it to your local disk.
+It will upload the video to Chunkify, transcode it into MP4 H264 and download it to your local disk.
 
 By default the number of transcoders and their type will be selected automatically according to the input and output specs.
 To define them yourself use `--transcoders` and `--vcpu` like this:
 
 ```bash
-chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
+$ chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
+```
+
+> [!TIP]
+> When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't upload the video more than once.
+
+You can also transcode a video from an HTTP URL:
+
+```bash
+$ chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+```
+
+If a video already uploaded to Chunkify, you can simply use the source ID as input:
+
+```bash
+$ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 -o video_av1_1080p.mp4 -f mp4/av1 -s 1920x1080 --crf 34 --preset 7
 ```
 
 Depending on your plan, here are the available formats:
@@ -64,28 +79,18 @@ Depending on your plan, here are the available formats:
 - `hls/av1`
 - `jpg`
 
-### Thumbnails
-
-To generate thumbnails every 10 seconds:
-
-```bash
-chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
-```
-
-> Note: if you set either `width` or `height` to 0, it will be automatically calculated according to the orignal aspect ratio.
-
 ### HLS
 
-To generate HLS videos, in order to perfectly align frames between multiple renditions, you must set the `gop` and `x264keyint` if H264 or `x265keyint` if H265. Here is an example:
+To generate HLS videos, in order to perfectly align frames between multiple renditions, you must set the `gop` and `x264keyint` if H264 or `x265keyint` if H265 for *all* renditions. Here is an example:
 
 ```bash
-chunkify -i video.mp4 -o video_540p.m3u8 -f hls/h264 -s 540x0 -g 120 --x264keyint 120 --vb 800000 --ab 128000
+$ chunkify -i video.mp4 -o video_540p.m3u8 -f hls/h264 -s 540x0 -g 120 --x264keyint 120 --vb 800000 --ab 128000
 ```
 
-Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next HLS rendition:
+Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
 
 ```bash
-chunkify -i video.mp4 -o video_720p.m3u8 -f hls/h264 -s 720x0 -g 120 --x264keyint 120 --vb 1200000 --ab 128000 --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
+$ chunkify -i video.mp4 -o video_720p.m3u8 -f hls/h264 -s 720x0 -g 120 --x264keyint 120 --vb 1200000 --ab 128000 --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
 ```
 
 You will have the following files:
@@ -98,7 +103,20 @@ video_720p.mp4
 video_720p.m3u8
 ```
 
-> Note: you must set the video bitrate and / or the audio bitate for HLS output
+> [!TIP]
+> The video bitrate and / or the audio bitate are mandatory for HLS output
+
+### Thumbnails
+
+To generate thumbnails every 10 seconds:
+
+```bash
+$ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
+```
+
+> [!TIP]
+> If you set either `width` or `height` to 0, it will be automatically calculated according to the orignal aspect ratio.
+
 
 ### Receiving Webhook Notifications Locally
 
@@ -110,7 +128,8 @@ Setting up localdev webhook...
 
 Start proxying notifications matching '*' to http://localhost:3000/webhooks/chunkify
 ```
-> Note: you will find the webhook secret key in your project settings under Webhooks section.
+
+> You will find the webhook secret key in your project settings under Webhooks section.
 
 By default, it will forward all events, but you can specify the ones you are interesting to:
 
@@ -133,7 +152,6 @@ The proxy will:
 ### All commands and flags
 
 ```bash
-# Get general help
 $ chunkify --help
 
     ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
