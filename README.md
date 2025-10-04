@@ -1,6 +1,9 @@
 <p align="center">
-  <img src="https://chunkify.s3.us-east-1.amazonaws.com/logos/chunkify.png" alt="Chunkify Logo" width="300"/>
+  <a href="https://chunkify.dev">
+    <img width="300" alt="chunkify-black" src="https://github.com/user-attachments/assets/2cece349-77b6-4a13-badf-512ae11ca5e2" />
+  </a>
 </p>
+<p align="center">The next generation Cloud transcoding service.</p>
 
 # Chunkify CLI
 
@@ -53,7 +56,7 @@ To define them yourself use `--transcoders` and `--vcpu` like this:
 $ chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
 ```
 
-> [!TIP]
+> [!TIPS]
 > When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't upload the video more than once.
 
 You can also transcode a video from an HTTP URL:
@@ -117,6 +120,75 @@ $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 > [!TIP]
 > If you set either `width` or `height` to 0, it will be automatically calculated according to the orignal aspect ratio.
 
+## CLI parameters
+
+| Flag | Type | Description | Default |
+|------|------|-------------|---------|
+| `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) | - |
+| `-o, --output` | string | Output file path | - |
+| `-f, --format` | string | Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg) | mp4/h264 |
+| `--transcoders` | int | Number of transcoders to use | - |
+| `--vcpu` | int | vCPU per transcoder (4, 8, or 16) | 8 |
+
+### Video Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `-s, --resolution` | string | Set resolution wxh | 0-8192x0-8192 |
+| `-r, --framerate` | float | Set frame rate | 15-120 |
+| `-g, --gop` | int | Set group of pictures size | 1-300 |
+| `--vb` | int | Set video bitrate in bits per second | 100000-50000000 |
+| `--maxrate` | int | Set maximum bitrate in bits per second | 100000-50000000 |
+| `--bufsize` | int | Set buffer size in bits | 100000-50000000 |
+| `--pixfmt` | string | Set pixel format | yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv444p12be |
+| `--vn` | bool | Disable video | - |
+
+### Audio Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `--ab` | int | Set audio bitrate in bits per second | 32000-512000 |
+| `--channels` | int | Set number of audio channels | 1, 2, 5, 7 |
+| `--an` | bool | Disable audio | - |
+
+### H.264/H.265/AV1 Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `--crf` | int | Set constant rate factor | H264/H265: 16-35, AV1: 16-63, VP9: 15-35 |
+| `--preset` | string | Set encoding preset | H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13 |
+| `--profilev` | string | Set video profile | H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture |
+| `--level` | int | Set encoding level | H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41 |
+| `--x264keyint` | int | H264 - Set x264 keyframe interval | - |
+| `--x265keyint` | int | H265 - Set x265 keyframe interval | - |
+
+### VP9 Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `--quality` | string | Set VP9 quality | good, best, realtime |
+| `--cpu-used` | string | Set VP9 CPU usage | 0-8 |
+
+### HLS Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `--hls-manifest-id` | string | Set HLS manifest ID | - |
+| `--hls-time` | int | Set HLS segment duration in seconds | 1-10 |
+| `--hls-segment-type` | string | Set HLS segment type | mpegts, fmp4 |
+| `--hls-enc` | bool | Enable HLS encryption | - |
+| `--hls-enc-key` | string | Set HLS encryption key | - |
+| `--hls-enc-key-url` | string | Set HLS encryption key URL | - |
+| `--hls-enc-iv` | string | Set HLS encryption IV | - |
+
+### JPG Settings
+
+| Flag | Type | Description | Range |
+|------|------|-------------|-------|
+| `--interval` | int | Set frame extraction interval in seconds | 1-60 |
+| `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
+
+## Chunkify API Integration
 
 ### Receiving Webhook Notifications Locally
 
