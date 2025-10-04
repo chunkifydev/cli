@@ -12,8 +12,6 @@
 <img src="https://github.com/user-attachments/assets/28441a45-cf41-4476-8920-5b641812d56a" alt="demo" width="640" />
 </p>
 
-# Chunkify CLI
-
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
 
 For local development, the Chunkify CLI provides a convenient command to forward webhook notifications to your local application URL.
@@ -63,7 +61,7 @@ To define them yourself use `--transcoders` and `--vcpu` like this:
 $ chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
 ```
 
-> [!TIPS]
+> [!TIP]
 > When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't upload the video more than once.
 
 You can also transcode a video from an HTTP URL:
