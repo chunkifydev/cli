@@ -10,8 +10,8 @@ import (
 	"github.com/chunkifydev/chunkify-go"
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
+	"github.com/chunkifydev/cli/pkg/dev"
 	"github.com/chunkifydev/cli/pkg/version"
-	"github.com/chunkifydev/cli/pkg/webhooks"
 	"github.com/spf13/cobra"
 )
 
@@ -114,8 +114,7 @@ func init() {
 	}
 
 	rootCmd = chunkifyCmd.NewCommand(cfg).Command
-	rootCmd.AddCommand(webhooks.NewCommand(cfg).Command)
+	rootCmd.AddCommand(dev.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
-
 }

@@ -1,5 +1,5 @@
 // Package notifications provides functionality for managing and interacting with notifications
-package webhooks
+package dev
 
 import (
 	"bytes"
@@ -42,17 +42,62 @@ var cmd *Command
 
 // NewCommand creates and configures a new notifications root command
 func NewCommand(config *config.Config) *Command {
-	cmd = &Command{
+	var hostname string
+	req := ProxyCmd{}
+
+	cmd := &Command{
 		Config: config,
 		Command: &cobra.Command{
-			Use:     "webhooks",
-			Short:   "Proxy webhooks to a local URL for local development",
-			Long:    "Proxy webhooks to a local URL for local development",
-			Example: "chunkify webhooks proxy http://localhost:3000/webhook",
-		}}
+			Use:     "listen",
+			Short:   "Forward webhook notifications to local HTTP URL",
+			Long:    "Forward webhook notifications to local HTTP URL for local development",
+			Example: "chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <ws_secret>",
+			Run: func(_ *cobra.Command, args []string) {
+				log("chunkify listen\n")
+				//req.localUrl = args[0]
 
-	// Add all subcommands
-	cmd.Command.AddCommand(newProxyCmd()) // Proxy notifications to a local URL
+				if hostname == "" {
+					hostname, _ = os.Hostname()
+					if hostname == "" {
+						hostname = uuid.New().String()
+					}
+				}
+
+				webhook, err := createLocaldevWebhook(fmt.Sprintf("http://%s.chunkify.local", hostname))
+				if err != nil {
+					return
+				}
+
+				defer deleteLocalDevWebhook(webhook.Id)
+
+				req.WebhookId = webhook.Id
+				log(fmt.Sprintf("Secret key: %s\n", req.webhookSecret))
+
+				log(fmt.Sprintf("Start proxying notifications to %s\n\nEvents:\n%s", styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n")))
+
+				ch := make(chan []chunkify.Notification)
+				m := model{
+					cmd: &req,
+					ch:  ch,
+				}
+
+				p := tea.NewProgram(m)
+				if _, err := p.Run(); err != nil {
+					fmt.Printf("Alas, there's been an error: %v", err)
+					os.Exit(1)
+				}
+
+			},
+		},
+	}
+
+	cmd.Command.Flags().StringVar(&req.localUrl, "forward-to", "", "The URL to forward webhook notifications to")
+	cmd.Command.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	cmd.Command.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
+	cmd.Command.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
+
+	cmd.Command.MarkFlagRequired("webhook-secret")
+
 	return cmd
 }
 
@@ -291,61 +336,4 @@ func deleteLocalDevWebhook(webhookId string) error {
 // log adds a message to the log list
 func log(l string) {
 	logs = append(logs, l)
-}
-
-// newProxyCmd creates and configures a new cobra command for proxying notifications
-func newProxyCmd() *cobra.Command {
-	var hostname string
-	req := ProxyCmd{}
-
-	cmd := &cobra.Command{
-		Use:   "proxy",
-		Short: "Proxy notifications to local HTTP URL",
-		Long:  `Proxy notifications to local HTTP URL`,
-		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			log("chunkify proxy\n")
-			req.localUrl = args[0]
-
-			if hostname == "" {
-				hostname, _ = os.Hostname()
-				if hostname == "" {
-					hostname = uuid.New().String()
-				}
-			}
-
-			webhook, err := createLocaldevWebhook(fmt.Sprintf("http://%s.chunkify.local", hostname))
-			if err != nil {
-				return
-			}
-
-			defer deleteLocalDevWebhook(webhook.Id)
-
-			req.WebhookId = webhook.Id
-			log(fmt.Sprintf("Secret key: %s\n", req.webhookSecret))
-
-			log(fmt.Sprintf("Start proxying notifications to %s\n\nEvents:\n%s", styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n")))
-
-			ch := make(chan []chunkify.Notification)
-			m := model{
-				cmd: &req,
-				ch:  ch,
-			}
-
-			p := tea.NewProgram(m)
-			if _, err := p.Run(); err != nil {
-				fmt.Printf("Alas, there's been an error: %v", err)
-				os.Exit(1)
-			}
-
-		},
-	}
-
-	cmd.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
-	cmd.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
-	cmd.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
-
-	cmd.MarkFlagRequired("webhook-secret")
-
-	return cmd
 }
