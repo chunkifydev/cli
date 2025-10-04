@@ -111,7 +111,7 @@ video_720p.mp4
 video_720p.m3u8
 ```
 
-> [!TIP]
+> [!WARNING]
 > The video bitrate and / or the audio bitate are mandatory for HLS output
 
 ### Thumbnails
@@ -206,6 +206,7 @@ Setting up localdev webhook...
 Start proxying notifications matching '*' to http://localhost:3000/webhooks/chunkify
 ```
 
+> [!NOTE]
 > You will find the webhook secret key in your project settings under Webhooks section.
 
 By default, it will forward all events, but you can specify the ones you are interesting to:
