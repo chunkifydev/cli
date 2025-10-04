@@ -89,17 +89,40 @@ Depending on your plan, here are the available formats:
 
 ### HLS
 
-To generate HLS videos, in order to perfectly align frames between multiple renditions, you must set the `gop` and `x264keyint` if H264 or `x265keyint` if H265 for *all* renditions. Here is an example:
+Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
+
+> [!WARNING]
+> When transcoding to HLS format, you must align frames between multiple renditions with the same `--gop`, `--x264keyint` (H264), `--x265keyint` (H265).
 
 ```bash
-$ chunkify -i video.mp4 -o video_540p.m3u8 -f hls/h264 -s 540x0 -g 120 --x264keyint 120 --vb 800000 --ab 128000
+$ chunkify \
+  -i video.mp4 \
+  -o video_540p.m3u8 \
+  -f hls/h264 \
+  -s 540x0 \
+  -g 120 \
+  --x264keyint 120 \
+  --vb 800000 \
+  --ab 128000
 ```
 
 Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
 
 ```bash
-$ chunkify -i video.mp4 -o video_720p.m3u8 -f hls/h264 -s 720x0 -g 120 --x264keyint 120 --vb 1200000 --ab 128000 --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
+$ chunkify \
+  -i video.mp4 \
+  -o video_720p.m3u8 \
+  -f hls/h264 \
+  -s 720x0 \
+  -g 120 \
+  --x264keyint 120 \
+  --vb 1200000 \
+  --ab 128000 \
+  --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
 ```
+
+> [!NOTE]
+> The video bitrate and / or the audio bitate are mandatory for HLS output
 
 You will have the following files:
 
@@ -110,9 +133,6 @@ video_540p.m3u8
 video_720p.mp4
 video_720p.m3u8
 ```
-
-> [!WARNING]
-> The video bitrate and / or the audio bitate are mandatory for HLS output
 
 ### Thumbnails
 
