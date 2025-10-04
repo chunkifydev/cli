@@ -44,9 +44,7 @@ $ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 
 ## Usage
 
-You can use the chunkify CLI to transcode a local video, an URL or a sourceID if it was already uploaded to Chunkify.
-
-### Basic
+You can use the chunkify CLI to transcode a local video, an URL or a source ID if it was already uploaded to Chunkify.
 
 ```bash
 $ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
@@ -58,7 +56,14 @@ By default the number of transcoders and their type will be selected automatical
 To define them yourself use `--transcoders` and `--vcpu` like this:
 
 ```bash
-$ chunkify -i video.mp4 -o video_720p.mp4 -f mp4/h264 -s 1280x720 --crf 24 --transcoders 10 --vcpu 8
+$ chunkify \
+  -i video.mp4 \
+  -o video_720p.mp4 \
+  -f mp4/h264 \
+  -s 1280x720 \
+  --crf 24 \
+  --transcoders 10 \
+  --vcpu 8
 ```
 
 > [!TIP]
@@ -73,10 +78,18 @@ $ chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 
 If a video already uploaded to Chunkify, you can simply use the source ID as input:
 
 ```bash
-$ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 -o video_av1_1080p.mp4 -f mp4/av1 -s 1920x1080 --crf 34 --preset 7
+$ chunkify \
+  -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
+  -o video_av1_1080p.mp4 \
+  -f mp4/av1 \
+  -s 1920x1080 \
+  --crf 34 \
+  --preset 7
 ```
 
-Depending on your plan, here are the available formats:
+### Formats
+
+Depending on your plan, here are the supported formats:
 
 - `mp4/h264`
 - `mp4/h265`
@@ -87,12 +100,12 @@ Depending on your plan, here are the available formats:
 - `hls/av1`
 - `jpg`
 
-### HLS
+### HLS packaging
 
 Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
 
 > [!WARNING]
-> When transcoding to HLS format, you must align frames between multiple renditions with the same `--gop`, `--x264keyint` (H264), `--x265keyint` (H265).
+> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `gop` is necessary.
 
 ```bash
 $ chunkify \
@@ -124,7 +137,7 @@ $ chunkify \
 > [!NOTE]
 > The video bitrate and / or the audio bitate are mandatory for HLS output
 
-You will have the following files:
+Now we have 2 renditions that belongs to the same Manifest:
 
 ```bash
 manifest.m3u8
@@ -134,7 +147,7 @@ video_720p.mp4
 video_720p.m3u8
 ```
 
-### Thumbnails
+### Generate thumbnails
 
 To generate thumbnails every 10 seconds:
 
@@ -142,22 +155,29 @@ To generate thumbnails every 10 seconds:
 $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 ```
 
-> [!TIP]
-> If you set either `width` or `height` to 0, it will be automatically calculated according to the orignal aspect ratio.
+If lots of thumbnails are required, it's recommended to generate a sprite image instead of many single images. A sprite image is a single image containing many thumbnails arranged in a grid, which is more efficient when there are hundreds of them to download to display a preview.
+
+```bash
+$ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
+```
+
+> [!NOTE]
+> For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering over the progress bar
+
 
 ## CLI parameters
 
-| Flag | Type | Description | Default |
-|------|------|-------------|---------|
-| `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) | - |
+| Flag | Type | Description |
+|------|------|-------------|
+| `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) |
 | `-o, --output` | string | Output file path | - |
-| `-f, --format` | string | Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg) | mp4/h264 |
-| `--transcoders` | int | Number of transcoders to use | - |
-| `--vcpu` | int | vCPU per transcoder (4, 8, or 16) | 8 |
+| `-f, --format` | string | `mp4/h264`, `mp4/h265`, `mp4/av1`, `webm/vp9`, `hls/h264`, `hls/h265`, `hls/av1`, `jpg` |
+| `--transcoders` | int | Number of transcoders to use | 
+| `--vcpu` | int | vCPU per transcoder (4, 8, or 16) |
 
 ### Video Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `-s, --resolution` | string | Set resolution wxh | 0-8192x0-8192 |
 | `-r, --framerate` | float | Set frame rate | 15-120 |
@@ -170,7 +190,7 @@ $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 
 ### Audio Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--ab` | int | Set audio bitrate in bits per second | 32000-512000 |
 | `--channels` | int | Set number of audio channels | 1, 2, 5, 7 |
@@ -178,7 +198,7 @@ $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 
 ### H.264/H.265/AV1 Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--crf` | int | Set constant rate factor | H264/H265: 16-35, AV1: 16-63, VP9: 15-35 |
 | `--preset` | string | Set encoding preset | H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13 |
@@ -189,14 +209,14 @@ $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 
 ### VP9 Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--quality` | string | Set VP9 quality | good, best, realtime |
 | `--cpu-used` | string | Set VP9 CPU usage | 0-8 |
 
 ### HLS Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--hls-manifest-id` | string | Set HLS manifest ID | - |
 | `--hls-time` | int | Set HLS segment duration in seconds | 1-10 |
@@ -208,7 +228,7 @@ $ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 
 ### JPG Settings
 
-| Flag | Type | Description | Range |
+| Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--interval` | int | Set frame extraction interval in seconds | 1-60 |
 | `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
