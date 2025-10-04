@@ -31,7 +31,7 @@ var rootCmd = &cobra.Command{
 	Use:     "chunkify",
 	Short:   "Transcode videos with Chunkify",
 	Long:    "Transcode videos with Chunkify",
-	Example: "chunkify --input video.mp4 --output transcoded.mp4 --format mp4/h264 --width 1920 --height 1080 --crf 23",
+	Example: "chunkify -i video.mp4 -o transcoded.mp4 -f mp4/h264 -s 1920x1080 --crf 23",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		chunkifyCmd.Execute(cfg)
 		return nil

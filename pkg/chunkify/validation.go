@@ -6,17 +6,15 @@ import (
 	"strings"
 )
 
-var validPixFmts = []string{"yuv410p", "yuv411p", "yuv420p", "yuv422p", "yuv440p", "yuv444p", "yuvJ411p", "yuvJ420p", "yuvJ422p", "yuvJ440p", "yuvJ444p", "yuv420p10le", "yuv422p10le", "yuv440p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le", "yuv440p12le", "yuv444p12le", "yuv420p10be", "yuv422p10be", "yuv440p10be", "yuv444p10be", "yuv420p12be", "yuv422p12be", "yuv440p12be", "yuv444p12be"}
-
 func validateCommonVideoFlags() error {
 	if width != nil && *width != 0 {
 		if *width < 0 || *width > 8192 {
-			return fmt.Errorf("--width must be between 0 and 8192")
+			return fmt.Errorf("--resolution width must be between 0 and 8192")
 		}
 	}
 	if height != nil && *height != 0 {
 		if *height < 0 || *height > 8192 {
-			return fmt.Errorf("--height must be between 0 and 8192")
+			return fmt.Errorf("--resolution height must be between 0 and 8192")
 		}
 	}
 
@@ -57,6 +55,8 @@ func validateCommonVideoFlags() error {
 		}
 	}
 	if pixfmt != nil && *pixfmt != "" {
+		validPixFmts := []string{"yuv410p", "yuv411p", "yuv420p", "yuv422p", "yuv440p", "yuv444p", "yuvJ411p", "yuvJ420p", "yuvJ422p", "yuvJ440p", "yuvJ444p", "yuv420p10le", "yuv422p10le", "yuv440p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le", "yuv440p12le", "yuv444p12le", "yuv420p10be", "yuv422p10be", "yuv440p10be", "yuv444p10be", "yuv420p12be", "yuv422p12be", "yuv440p12be", "yuv444p12be"}
+
 		if !slices.Contains(validPixFmts, *pixfmt) {
 			return fmt.Errorf("--pixfmt must be one of %s", strings.Join(validPixFmts, ", "))
 		}
@@ -171,11 +171,8 @@ func validateJpgFlags() error {
 }
 
 func validateHlsFlags() error {
-	if videoBitrate == nil || *videoBitrate == 0 {
-		return fmt.Errorf("--vb (video bitrate) flag is required when format is hls")
-	}
-	if audioBitrate == nil || *audioBitrate == 0 {
-		return fmt.Errorf("--ab (audio bitrate) flag is required when format is hls")
+	if (videoBitrate == nil || *videoBitrate == 0) && (audioBitrate == nil || *audioBitrate == 0) {
+		return fmt.Errorf("--vb (video bitrate) or --ab (audio bitrate) are required when format is hls")
 	}
 
 	if hlsTime != nil && *hlsTime != 0 {

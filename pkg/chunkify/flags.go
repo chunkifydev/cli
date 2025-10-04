@@ -7,132 +7,119 @@ import (
 	"strings"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
-	"github.com/chunkifydev/cli/pkg/flags"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 )
 
 var chunkifyCmd ChunkifyCommand
 
-var validFormats = []chunkify.FormatName{
-	chunkify.FormatMp4H264,
-	chunkify.FormatMp4H265,
-	chunkify.FormatMp4Av1,
-	chunkify.FormatWebmVp9,
-	chunkify.FormatHlsH264,
-	chunkify.FormatHlsH265,
-	chunkify.FormatHlsAv1,
-	chunkify.FormatJpg,
-}
-
 // Transcoder flags
 var (
-	transcoders    *int64
-	transcoderVcpu *int64
+	transcoders    = new(int64)
+	transcoderVcpu = new(int64)
 )
 
 // Common video flags
 var (
-	resolution   *string
-	width        *int64
-	height       *int64
-	framerate    *float64
-	gop          *int64
-	channels     *int64
-	maxrate      *int64
-	bufsize      *int64
-	pixfmt       *string
-	disableAudio *bool
-	disableVideo *bool
-	duration     *int64
-	seek         *int64
-	videoBitrate *int64
-	audioBitrate *int64
+	resolution   = new(string)
+	width        = new(int64)
+	height       = new(int64)
+	framerate    = new(float64)
+	gop          = new(int64)
+	channels     = new(int64)
+	maxrate      = new(int64)
+	bufsize      = new(int64)
+	pixfmt       = new(string)
+	disableAudio = new(bool)
+	disableVideo = new(bool)
+	duration     = new(int64)
+	seek         = new(int64)
+	videoBitrate = new(int64)
+	audioBitrate = new(int64)
 )
 
 // H264, H265 and AV1 flags
 var (
-	crf        *int64
-	preset     *string
-	profilev   *string
-	level      *int64
-	x264KeyInt *int64
-	x265KeyInt *int64
+	crf        = new(int64)
+	preset     = new(string)
+	profilev   = new(string)
+	level      = new(int64)
+	x264KeyInt = new(int64)
+	x265KeyInt = new(int64)
 )
 
 // VP9 flags
 var (
-	quality *string
-	cpuUsed *string
+	quality = new(string)
+	cpuUsed = new(string)
 )
 
 // HLS flags
 var (
-	hlsManifestId  *string
-	hlsTime        *int64
-	hlsSegmentType *string
-	hlsEnc         *bool
-	hlsEncKey      *string
-	hlsEncKeyUrl   *string
-	hlsEncIv       *string
+	hlsManifestId  = new(string)
+	hlsTime        = new(int64)
+	hlsSegmentType = new(string)
+	hlsEnc         = new(bool)
+	hlsEncKey      = new(string)
+	hlsEncKeyUrl   = new(string)
+	hlsEncIv       = new(string)
 )
 
 // JPG
 var (
-	interval *int64
-	sprite   *bool
+	interval = new(int64)
+	sprite   = new(bool)
 )
 
 // BindFlags attaches root-level flags used by the root command
 func BindFlags(rcmd *cobra.Command) {
 	chunkifyCmd = ChunkifyCommand{}
 
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Input, "input", "", "Input video to transcode. It can be a file, URL or source ID (src_*)")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Output, "output", "", "Output file path")
-	flags.StringVar(rcmd.Flags(), &chunkifyCmd.Format, "format", string(chunkify.FormatMp4H264), "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
-	flags.Int64VarPtr(rcmd.Flags(), &transcoders, "transcoders", 0, "Number of transcoders to use")
-	flags.Int64VarPtr(rcmd.Flags(), &transcoderVcpu, "vcpu", 8, "vCPU per transcoder (4, 8, or 16)")
+	flag.StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
+	flag.StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
+	flag.StringVarP(&chunkifyCmd.Format, "format", "f", string(chunkify.FormatMp4H264), "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+	flag.Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
+	flag.Int64Var(transcoderVcpu, "vcpu", 8, "vCPU per transcoder (4, 8, or 16)")
 
 	// Common video settings
-	flags.Int64VarPtr(rcmd.Flags(), &width, "width", 0, "Set video width (0-8192)")
-	flags.Int64VarPtr(rcmd.Flags(), &height, "height", 0, "Set video height (0-8192)")
-	flags.StringVarPtr(rcmd.Flags(), &resolution, "resolution", "", "Set resolution wxh")
-	flags.Float64VarPtr(rcmd.Flags(), &framerate, "framerate", 0, "Set frame rate (15-120)")
-	flags.Int64VarPtr(rcmd.Flags(), &gop, "gop", 0, "Set group of pictures size (1-300)")
-	flags.Int64VarPtr(rcmd.Flags(), &channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
-	flags.Int64VarPtr(rcmd.Flags(), &maxrate, "maxrate", 0, "Set maximum bitrate in bits per second (100000-50000000)")
-	flags.Int64VarPtr(rcmd.Flags(), &bufsize, "bufsize", 0, "Set buffer size in bits (100000-50000000)")
-	flags.StringVarPtr(rcmd.Flags(), &pixfmt, "pixfmt", "", "Set pixel format ("+strings.Join(validPixFmts, ", ")+")")
-	flags.BoolVarPtr(rcmd.Flags(), &disableAudio, "an", false, "Disable audio")
-	flags.BoolVarPtr(rcmd.Flags(), &disableVideo, "vn", false, "Disable video")
-	flags.Int64VarPtr(rcmd.Flags(), &duration, "duration", 0, "Set duration in seconds")
-	flags.Int64VarPtr(rcmd.Flags(), &seek, "seek", 0, "Seek to position in seconds")
-	flags.Int64VarPtr(rcmd.Flags(), &videoBitrate, "vb", 0, "Set video bitrate in bits per second (100000-50000000)")
-	flags.Int64VarPtr(rcmd.Flags(), &audioBitrate, "ab", 0, "Set audio bitrate in bits per second (32000-512000)")
+	flag.StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
+	flag.Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (15-120)")
+	flag.Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-300)")
+	flag.Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
+	flag.Int64Var(maxrate, "maxrate", 0, "Set maximum bitrate in bits per second (100000-50000000)")
+	flag.Int64Var(bufsize, "bufsize", 0, "Set buffer size in bits (100000-50000000)")
+	flag.StringVar(pixfmt, "pixfmt", "", "Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)")
+	flag.BoolVar(disableAudio, "an", false, "Disable audio")
+	flag.BoolVar(disableVideo, "vn", false, "Disable video")
+	flag.Int64VarP(duration, "duration", "t", 0, "Set duration in seconds")
+	flag.Int64Var(seek, "seek", 0, "Seek to position in seconds")
+	flag.Int64Var(videoBitrate, "vb", 0, "Set video bitrate in bits per second (100000-50000000)")
+	flag.Int64Var(audioBitrate, "ab", 0, "Set audio bitrate in bits per second (32000-512000)")
 
 	// H264, H265 and AV1 flags
-	flags.Int64VarPtr(rcmd.Flags(), &crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63)")
-	flags.StringVarPtr(rcmd.Flags(), &preset, "preset", "", "Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)")
-	flags.StringVarPtr(rcmd.Flags(), &profilev, "profilev", "", "Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)")
-	flags.Int64VarPtr(rcmd.Flags(), &level, "level", 0, "Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)")
-	flags.Int64VarPtr(rcmd.Flags(), &x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval")
-	flags.Int64VarPtr(rcmd.Flags(), &x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval")
+	flag.Int64Var(crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)")
+	flag.StringVar(preset, "preset", "", "Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)")
+	flag.StringVar(profilev, "profilev", "", "Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)")
+	flag.Int64Var(level, "level", 0, "Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)")
+	flag.Int64Var(x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval")
+	flag.Int64Var(x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval")
 
 	// VP9 flags
-	flags.StringVarPtr(rcmd.Flags(), &quality, "quality", "", "Set VP9 quality (good, best, realtime)")
-	flags.StringVarPtr(rcmd.Flags(), &cpuUsed, "cpu-used", "", "Set VP9 CPU usage (0-8)")
+	flag.StringVar(quality, "quality", "", "Set VP9 quality (good, best, realtime)")
+	flag.StringVar(cpuUsed, "cpu-used", "", "Set VP9 CPU usage (0-8)")
 
 	// HLS flags
-	flags.StringVarPtr(rcmd.Flags(), &hlsManifestId, "hls-manifest-id", "", "Set HLS manifest ID")
-	flags.Int64VarPtr(rcmd.Flags(), &hlsTime, "hls-time", 0, "Set HLS segment duration in seconds (1-10)")
-	flags.StringVarPtr(rcmd.Flags(), &hlsSegmentType, "hls-segment-type", "", "Set HLS segment type (mpegts, fmp4)")
-	flags.BoolVarPtr(rcmd.Flags(), &hlsEnc, "hls-enc", false, "Enable HLS encryption")
-	flags.StringVarPtr(rcmd.Flags(), &hlsEncKey, "hls-enc-key", "", "Set HLS encryption key")
-	flags.StringVarPtr(rcmd.Flags(), &hlsEncKeyUrl, "hls-enc-key-url", "", "Set HLS encryption key URL")
-	flags.StringVarPtr(rcmd.Flags(), &hlsEncIv, "hls-enc-iv", "", "Set HLS encryption IV")
+	flag.StringVar(hlsManifestId, "hls-manifest-id", "", "Set HLS manifest ID")
+	flag.Int64Var(hlsTime, "hls-time", 0, "Set HLS segment duration in seconds (1-10)")
+	flag.StringVar(hlsSegmentType, "hls-segment-type", "", "Set HLS segment type (mpegts, fmp4)")
+	flag.BoolVar(hlsEnc, "hls-enc", false, "Enable HLS encryption")
+	flag.StringVar(hlsEncKey, "hls-enc-key", "", "Set HLS encryption key")
+	flag.StringVar(hlsEncKeyUrl, "hls-enc-key-url", "", "Set HLS encryption key URL")
+	flag.StringVar(hlsEncIv, "hls-enc-iv", "", "Set HLS encryption IV")
 
 	// JPG flags
-	flags.Int64VarPtr(rcmd.Flags(), &interval, "interval", 0, "Set frame extraction interval in seconds (1-60)")
-	flags.BoolVarPtr(rcmd.Flags(), &sprite, "sprite", false, "Generate sprite sheet")
+	flag.Int64Var(interval, "interval", 0, "Set frame extraction interval in seconds (1-60)")
+	flag.BoolVar(sprite, "sprite", false, "Generate sprite sheet")
 
 	rcmd.MarkFlagRequired("input")
 	rcmd.MarkFlagRequired("output")
@@ -140,7 +127,16 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	rcmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if !slices.Contains(validFormats, chunkify.FormatName(chunkifyCmd.Format)) {
+		if !slices.Contains([]chunkify.FormatName{
+			chunkify.FormatMp4H264,
+			chunkify.FormatMp4H265,
+			chunkify.FormatMp4Av1,
+			chunkify.FormatWebmVp9,
+			chunkify.FormatHlsH264,
+			chunkify.FormatHlsH265,
+			chunkify.FormatHlsAv1,
+			chunkify.FormatJpg,
+		}, chunkify.FormatName(chunkifyCmd.Format)) {
 			return fmt.Errorf("invalid format: %s", chunkifyCmd.Format)
 		}
 
@@ -223,7 +219,6 @@ func BindFlags(rcmd *cobra.Command) {
 
 		return nil
 	}
-
 }
 
 func setJobFormatParams() {
