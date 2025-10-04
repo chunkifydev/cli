@@ -4,6 +4,9 @@
   </a>
 </p>
 <p align="center">The next generation Cloud transcoding service.</p>
+<p align="center">
+<img src="https://github.com/user-attachments/assets/28441a45-cf41-4476-8920-5b641812d56a" alt="demo" width="640" />
+</p>
 
 # Chunkify CLI
 
