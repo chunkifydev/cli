@@ -413,20 +413,32 @@ func (t App) downloadView() (string, string) {
 		view += "\n"
 	}
 
+	currentFile := 0
 	downloaded := false
 
-	for _, file := range t.Files {
+	for i, file := range t.Files {
 		_, downloaded = t.DownloadedFiles[file.Id]
-
-		info := fmt.Sprintf("%s (%s)", filename(file, t.Command.Output), formatter.Size(file.Size))
-		if downloaded {
-			view += dblIndent + "- " + info
-		} else {
-			view += grayText(dblIndent + "> " + info)
+		if !downloaded {
+			currentFile = i - 1
 		}
 
-		view += "\n"
+		if currentFile < 0 {
+			currentFile = 0
+		}
+		if len(t.Files) <= 10 {
+			info := fmt.Sprintf("%s (%s)", filename(file, t.Command.Output), formatter.Size(file.Size))
+			if downloaded {
+				view += dblIndent + "- " + info
+			} else {
+				view += grayText(dblIndent + "> " + info)
+			}
+			view += "\n"
+		}
+	}
 
+	if len(t.Files) > 10 {
+		view += fmt.Sprintf("%s%d/%d %s", dblIndent, len(t.DownloadedFiles), len(t.Files), filename(t.Files[currentFile], t.Command.Output))
+		view += "\n"
 	}
 
 	return view, statusInfo
