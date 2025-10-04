@@ -229,11 +229,6 @@ func (t App) checkChannels() (App, bool) {
 	default:
 	}
 
-	if t.Done {
-		time.Sleep(1 * time.Second)
-		return t, true
-	}
-
 	return t, t.Done
 }
 

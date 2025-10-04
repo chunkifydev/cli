@@ -112,6 +112,8 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	}
 
 	// Mark as completed
+	// give enough time to display the completed message
+	time.Sleep(1 * time.Second)
 	app.Progress.Status <- Completed
 }
 
@@ -240,9 +242,9 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	}
 
 	// Try to find the source by MD5, so we don't upload the same file again
-	// if source, err := a.GetSourceByMd5(md5); err == nil {
-	// 	return source, nil
-	// }
+	if source, err := a.GetSourceByMd5(md5); err == nil {
+		return source, nil
+	}
 
 	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
