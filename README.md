@@ -32,7 +32,7 @@ $ curl -L https://chunkify.dev/install.sh | sh
 $ chunkify auth login
 ```
 
-2. The CLI will open your browser and ask you to select one of your team for the authentication.
+2. The CLI will open your browser and ask you to select one of your teams for authentication.
 
 3. After authentication, the CLI will prompt you to select your project.
 
@@ -44,7 +44,7 @@ $ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 
 ## Usage
 
-You can use the chunkify CLI to transcode a local video, an URL or a source ID if it was already uploaded to Chunkify.
+You can use the chunkify CLI to transcode a local video, a URL, or a source ID if it was already uploaded to Chunkify.
 
 ```bash
 $ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
@@ -52,7 +52,7 @@ $ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 
 It will upload the video to Chunkify, transcode it into MP4 H264 and download it to your local disk.
 
-By default the number of transcoders and their type will be selected automatically according to the input and output specs.
+By default, the number of transcoders and their type will be selected automatically according to the input and output specs.
 To define them yourself use `--transcoders` and `--vcpu` like this:
 
 ```bash
@@ -75,7 +75,7 @@ You can also transcode a video from an HTTP URL:
 $ chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
-If a video already uploaded to Chunkify, you can simply use the source ID as input:
+If a video has already been uploaded to Chunkify, you can simply use the source ID as input:
 
 ```bash
 $ chunkify \
@@ -135,9 +135,9 @@ $ chunkify \
 ```
 
 > [!NOTE]
-> The video bitrate and / or the audio bitate are mandatory for HLS output
+> The video bitrate and/or the audio bitrate are mandatory for HLS output
 
-Now we have 2 renditions that belongs to the same Manifest:
+Now we have 2 renditions that belong to the same manifest:
 
 ```bash
 manifest.m3u8
@@ -249,7 +249,7 @@ Start proxying notifications matching '*' to http://localhost:3000/webhooks/chun
 > [!NOTE]
 > You will find the webhook secret key in your project settings under Webhooks section.
 
-By default, it will forward all events, but you can specify the ones you are interesting to:
+By default, it will forward all events, but you can specify the ones you are interested in:
 
 ```bash
 $ chunkify listen \
