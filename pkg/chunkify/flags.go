@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/formatter"
 	"github.com/spf13/cobra"
 )
 
@@ -31,15 +32,21 @@ var (
 	framerate    = new(float64)
 	gop          = new(int64)
 	channels     = new(int64)
-	maxrate      = new(int64)
-	bufsize      = new(int64)
 	pixfmt       = new(string)
 	disableAudio = new(bool)
 	disableVideo = new(bool)
 	duration     = new(int64)
 	seek         = new(int64)
+
+	maxrate      = new(int64)
+	bufsize      = new(int64)
 	videoBitrate = new(int64)
 	audioBitrate = new(int64)
+
+	maxrateStr      = new(string)
+	bufsizeStr      = new(string)
+	videoBitrateStr = new(string)
+	audioBitrateStr = new(string)
 )
 
 // H264, H265 and AV1 flags
@@ -93,15 +100,15 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.Flags().Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (15-120)")
 	rcmd.Flags().Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-300)")
 	rcmd.Flags().Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
-	rcmd.Flags().Int64Var(maxrate, "maxrate", 0, "Set maximum bitrate in bits per second (100000-50000000)")
-	rcmd.Flags().Int64Var(bufsize, "bufsize", 0, "Set buffer size in bits (100000-50000000)")
+	rcmd.Flags().StringVar(maxrateStr, "maxrate", "", "Set maximum bitrate in bits per second (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
+	rcmd.Flags().StringVar(bufsizeStr, "bufsize", "", "Set buffer size in bits (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
 	rcmd.Flags().StringVar(pixfmt, "pixfmt", "", "Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)")
 	rcmd.Flags().BoolVar(disableAudio, "an", false, "Disable audio")
 	rcmd.Flags().BoolVar(disableVideo, "vn", false, "Disable video")
 	rcmd.Flags().Int64VarP(duration, "duration", "t", 0, "Set duration in seconds")
 	rcmd.Flags().Int64Var(seek, "seek", 0, "Seek to position in seconds")
-	rcmd.Flags().Int64Var(videoBitrate, "vb", 0, "Set video bitrate in bits per second (100000-50000000)")
-	rcmd.Flags().Int64Var(audioBitrate, "ab", 0, "Set audio bitrate in bits per second (32000-512000)")
+	rcmd.Flags().StringVar(videoBitrateStr, "vb", "", "Set video bitrate in bits per second (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
+	rcmd.Flags().StringVar(audioBitrateStr, "ab", "", "Set audio bitrate in bits per second (32000-512000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
 
 	// H264, H265 and AV1 flags
 	rcmd.Flags().Int64Var(crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)")
@@ -181,6 +188,40 @@ func BindFlags(rcmd *cobra.Command) {
 			width = &resWidth
 			height = &resHeight
 			resolution = nil
+		}
+
+		// Convert bitrate like "1200K", "2M" to bits (int64)
+		// for convenience
+		if videoBitrateStr != nil && *videoBitrateStr != "" {
+			videoBitrateInt, err := formatter.ParseFileSize(*videoBitrateStr)
+			if err != nil {
+				return fmt.Errorf("invalid video bitrate: %s", *videoBitrateStr)
+			}
+			videoBitrate = &videoBitrateInt
+		}
+
+		if audioBitrateStr != nil && *audioBitrateStr != "" {
+			audioBitrateInt, err := formatter.ParseFileSize(*audioBitrateStr)
+			if err != nil {
+				return fmt.Errorf("invalid audio bitrate: %s", *audioBitrateStr)
+			}
+			audioBitrate = &audioBitrateInt
+		}
+
+		if maxrateStr != nil && *maxrateStr != "" {
+			maxrateInt, err := formatter.ParseFileSize(*maxrateStr)
+			if err != nil {
+				return fmt.Errorf("invalid maximum bitrate: %s", *maxrateStr)
+			}
+			maxrate = &maxrateInt
+		}
+
+		if bufsizeStr != nil && *bufsizeStr != "" {
+			bufsizeInt, err := formatter.ParseFileSize(*bufsizeStr)
+			if err != nil {
+				return fmt.Errorf("invalid buffer size: %s", *bufsizeStr)
+			}
+			bufsize = &bufsizeInt
 		}
 
 		if err := validateCommonVideoFlags(); err != nil {

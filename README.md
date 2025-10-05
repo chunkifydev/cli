@@ -156,8 +156,8 @@ chunkify -i video.mp4 \
          -s 540x0 \
          -g 120 \
          --x264keyint 120 \
-         --vb 800000 \
-         --ab 128000
+         --vb 800k \
+         --ab 128k
 ```
 
 Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
@@ -169,8 +169,8 @@ chunkify -i video.mp4 \
          -s 720x0 \
          -g 120 \
          --x264keyint 120 \
-         --vb 1200000 \
-         --ab 128000 \
+         --vb 1200k \
+         --ab 128k \
          --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
 ```
 
@@ -237,9 +237,9 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `-s, --resolution` | string | Set resolution wxh | 0-8192x0-8192 |
 | `-r, --framerate` | float | Set frame rate | 15-120 |
 | `-g, --gop` | int | Set group of pictures size | 1-300 |
-| `--vb` | int | Set video bitrate in bits per second | 100000-50000000 |
-| `--maxrate` | int | Set maximum bitrate in bits per second | 100000-50000000 |
-| `--bufsize` | int | Set buffer size in bits | 100000-50000000 |
+| `--vb` | int | Set video bitrate in bits per second | 100000-50000000. You can also use units like 2000K or 2M |
+| `--maxrate` | string | Set maximum bitrate in bits per second | 100000-50000000. You can also use units like 2000K or 2M |
+| `--bufsize` | string | Set buffer size in bits | 100000-50000000. You can also use units like 2000K or 2M |
 | `--pixfmt` | string | Set pixel format | yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv444p12be |
 | `--vn` | bool | Disable video | - |
 
@@ -247,7 +247,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
-| `--ab` | int | Set audio bitrate in bits per second | 32000-512000 |
+| `--ab` | int | Set audio bitrate in bits per second | 32000-512000. You can also use units like 128K |
 | `--channels` | int | Set number of audio channels | 1, 2, 5, 7 |
 | `--an` | bool | Disable audio | - |
 
