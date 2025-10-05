@@ -394,3 +394,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT
+
+----------------------
+
+<p align="center">
+  <picture width="300">
+    <source srcset="https://github.com/user-attachments/assets/8978c909-de3f-4bca-85c2-4c5d1f595b91" media="(prefers-color-scheme: dark)">
+    <source srcset="https://github.com/user-attachments/assets/939c830c-3671-496f-9d2d-3b3eedb489ba" media="(prefers-color-scheme: light)">
+    <img width="300" alt="chunkify-ascii-black" src="https://github.com/user-attachments/assets/8978c909-de3f-4bca-85c2-4c5d1f595b91" />
+  </picture>
+</p>
