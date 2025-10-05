@@ -21,7 +21,7 @@ The Chunkify CLI brings super-fast video transcoding to your terminal. With a si
 
 For local development, the Chunkify CLI provides a convenient command to [forward webhook notifications](#chunkify-api-integration) to your local application URL.
 
-Useful links:
+**Useful links:**
 
 - [chunkify.dev](https://chunkify.dev)
 - [Documentation](https://chunkify.dev/docs)
@@ -31,6 +31,7 @@ Useful links:
 
 ## Table of Contents
 
+- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Authentication](#authentication)
 - [Quick Start with Chunkify](#quick-start-with-chunkify)
@@ -48,6 +49,10 @@ Useful links:
 - [Chunkify API Integration](#chunkify-api-integration)
   - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
     
+## Prerequisites
+
+You need to have a Chunkify account to use the CLI. If you don't have one, you can sign up for a free trial at [chunkify.dev](https://chunkify.dev).
+
 ## Installation
 
 Installing the latest version:
