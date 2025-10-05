@@ -2,15 +2,10 @@ package formatter
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
-
-	"github.com/chunkifydev/cli/pkg/styles"
-
-	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 // Duration formats a duration in seconds into a human readable string (HH:MM:SS)
@@ -53,102 +48,6 @@ func Bitrate(size int64) string {
 	}
 
 	return fmt.Sprintf("%.fMB/s", float64(size)/1024/1024)
-}
-
-// JobStatus formats a job status with appropriate styling
-func JobStatus(status string) string {
-	switch status {
-	case chunkify.JobStatusCompleted:
-		return styles.Important.Render(status)
-	case chunkify.JobStatusFailed:
-		return styles.Error.Render(status)
-	default:
-		return styles.Working.Render(status)
-	}
-}
-
-// TranscoderStatus formats a transcoder status with appropriate styling
-func TranscoderStatus(status string) string {
-	switch status {
-	case chunkify.TranscoderStatusCompleted:
-		return styles.Important.Render(status)
-	case chunkify.TranscoderStatusStarting:
-		return styles.Id.Render(status)
-	case chunkify.TranscoderStatusPending:
-		return styles.Pending.Render(status)
-	case chunkify.TranscoderStatusFailed:
-		return styles.Error.Render(status)
-	default:
-		return styles.Working.Render(status)
-	}
-}
-
-// UploadStatus formats an upload status with appropriate styling
-func UploadStatus(status string) string {
-	switch status {
-	case chunkify.UploadStatusCompleted:
-		return styles.Important.Render(status)
-	case chunkify.UploadStatusFailed, chunkify.UploadStatusExpired:
-		return styles.Error.Render(status)
-	default:
-		return styles.Working.Render(status)
-	}
-}
-
-// LogLevel formats a log level with appropriate styling
-func LogLevel(level string) string {
-	switch level {
-	case "WARN", "DEBUG":
-		return styles.Warning.Render(level)
-	case "ERROR":
-		return styles.Error.Render(level)
-	default:
-		return styles.Important.Render(level)
-	}
-}
-
-// LogService formats a service name, handling special case for transcoder services
-func LogService(service string) string {
-	if strings.HasPrefix(service, "transcoder") {
-		parts := strings.Split(service, "#")
-		if len(parts) != 2 {
-			service = styles.DefaultText.Render(service)
-		} else {
-			service = styles.DefaultText.Render(parts[0]) +
-				styles.Debug.Render("#"+parts[1])
-		}
-	}
-
-	return service
-}
-
-// HttpCode formats an HTTP status code with appropriate styling
-func HttpCode(status int) string {
-	statusStr := fmt.Sprintf("%d %s", status, http.StatusText(status))
-
-	if status < 400 {
-		return styles.Important.Render(statusStr)
-	}
-
-	return styles.Error.Render(statusStr)
-}
-
-// Bool formats a boolean value as "yes"/"no" with appropriate styling
-func Bool(b bool) string {
-	if b {
-		return styles.Important.Render("yes")
-	}
-
-	return styles.Error.Render("no")
-}
-
-// BoolDefaultColor formats a boolean value as "yes"/"no" with default styling
-func BoolDefaultColor(b bool) string {
-	if b {
-		return styles.DefaultText.Render("yes")
-	}
-
-	return styles.DefaultText.Render("no")
 }
 
 // TimeDiff calculates and formats the duration between two timestamps

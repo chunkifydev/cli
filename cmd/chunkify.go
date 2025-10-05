@@ -11,8 +11,8 @@ import (
 	"github.com/chunkifydev/chunkify-go"
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/dev"
 	"github.com/chunkifydev/cli/pkg/version"
+	"github.com/chunkifydev/cli/pkg/webhook"
 	"github.com/spf13/cobra"
 )
 
@@ -57,10 +57,6 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 	if parent != nil {
 		c = parent.Name()
 	}
-	// if cmd.Parent() == nil {
-	// 	fmt.Println("parent is nil")
-	// 	return
-	// }
 
 	// Determine command type and handle accordingly
 	switch c {
@@ -70,16 +66,6 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 			// Try to set team token, but don't fail if it doesn't exist
 			cfg.SetDefaultTeamToken() // Ignore error since it's optional for auth
 		}
-
-	// case "projects", "tokens":
-	// 	// Projects and tokens commands require team token
-	// 	if cfg.TeamToken == "" {
-	// 		if err := cfg.SetDefaultTeamToken(); err != nil {
-	// 			fmt.Println("error setting team token:", err)
-	// 			printError(err)
-	// 			os.Exit(1)
-	// 		}
-	// 	}
 
 	default:
 		// All other commands require project token
@@ -115,7 +101,7 @@ func init() {
 	}
 
 	rootCmd = chunkifyCmd.NewCommand(cfg).Command
-	rootCmd.AddCommand(dev.NewCommand(cfg).Command)
+	rootCmd.AddCommand(webhook.NewCommand(cfg).Command)
 	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
 }

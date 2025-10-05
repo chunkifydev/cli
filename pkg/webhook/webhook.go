@@ -1,5 +1,4 @@
-// Package notifications provides functionality for managing and interacting with notifications
-package dev
+package webhook
 
 import (
 	"bytes"
@@ -19,8 +18,6 @@ import (
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/formatter"
-	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +62,12 @@ func NewCommand(config *config.Config) *Command {
 
 				req.WebhookId = webhook.Id
 
-				fmt.Printf("  [%s] Start forwarding to %s\n\n  Events:\n  - %s\n\n  ────────────────────────────────────────────────\n\n", hostname, styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n  - "))
+				fmt.Printf("  [%s] Start forwarding to %s\n\n  Events:\n  - %s",
+					hostname,
+					req.localUrl,
+					strings.Join(req.Events, "\n  - "))
+
+				fmt.Printf("\n\n  ────────────────────────────────────────────────\n\n")
 
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
@@ -198,7 +200,12 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 		return
 	}
 
-	fmt.Printf("  [%s] %s %s (%s)\n", formatter.HttpCode(resp.StatusCode), notif.Id, notif.Event, notif.ObjectId)
+	fmt.Printf("  [%d %s] %s %s (%s)\n",
+		resp.StatusCode,
+		http.StatusText(resp.StatusCode),
+		notif.Id,
+		notif.Event,
+		notif.ObjectId)
 }
 
 // createLocaldevWebhook sets up a webhook for local development
@@ -206,7 +213,7 @@ func (r *WebhookProxy) createLocaldevWebhook(webhookUrl string) (chunkify.Webhoo
 	enabled := true
 	wh, err := r.Client.WebhookCreate(chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled})
 	if err != nil {
-		fmt.Println(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
+		fmt.Printf("Couldn't create localdev webhook for proxying: %s\n", err)
 		return chunkify.Webhook{}, err
 	}
 

@@ -15,7 +15,6 @@ import (
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/config"
-	"github.com/chunkifydev/cli/pkg/styles"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -272,7 +271,7 @@ func logout(cfg *config.Config) {
 
 // printError formats and prints error messages
 func printError(err error) {
-	fmt.Println(styles.Error.Render(err.Error()))
+	fmt.Println(err.Error())
 }
 
 // authHandler processes the authentication callback from the server

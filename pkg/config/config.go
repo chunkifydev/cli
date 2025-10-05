@@ -16,7 +16,6 @@ type Config struct {
 	ProjectToken string
 	TeamToken    string
 	Client       *chunkify.Client
-	JSON         bool
 }
 
 // KeyringServiceKey is the service name used for storing secrets in the system keyring
