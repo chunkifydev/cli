@@ -23,12 +23,12 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 ## Table of Contents
 
 - [Installation](#installation)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-  - [Formats](#formats)
+- [Authentication](#authentication)
+- [Quick Start with Chunkify](#quick-start-with-chunkify)
+  - [Transcode a video](#transcode-a-video)
   - [HLS packaging](#hls-packaging)
   - [Generate thumbnails](#generate-thumbnails)
-- [CLI transcoding parameters](#cli-transcoding-parameters)
+- [Transcoding parameters](#transcoding-parameters)
   - [Video Settings](#video-settings)
   - [Audio Settings](#audio-settings)
   - [H.264/H.265/AV1 Settings](#h264h265av1-settings)
@@ -46,7 +46,7 @@ Installing the latest version:
 curl -L https://chunkify.dev/install.sh | sh
 ```
 
-## Getting Started
+## Authentication
 
 1. After the installation, the first step is to authenticate with your Chunkify account:
 
@@ -58,15 +58,17 @@ chunkify auth login
 
 3. After authentication, the CLI will prompt you to select your project.
 
-Another way to authenticate is to setup environment variables:
+Another way to authenticate is to setup environment variables with your project token:
 
 ```bash
 export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 ```
 
-## Usage
+## Quick Start with Chunkify
 
 You can use the chunkify CLI to transcode a local video, a URL, or a source ID if it was already uploaded to Chunkify.
+
+### Transcode a video
 
 ```
 chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
@@ -128,19 +130,6 @@ chunkify -i chunkify-animation-logo.mp4
 
   Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
-
-### Formats
-
-Depending on your plan, here are the supported formats:
-
-- `mp4/h264`
-- `mp4/h265`
-- `mp4/av1`
-- `webm/vp9`
-- `hls/h264`
-- `hls/h265`
-- `hls/av1`
-- `jpg`
 
 ### HLS packaging
 
@@ -205,7 +194,7 @@ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 > For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering the player progress bar
 
 
-## CLI Transcoding parameters
+## Transcoding parameters
 
 | Flag | Type | Description |
 |------|------|-------------|
