@@ -16,12 +16,28 @@
 <img src="https://github.com/user-attachments/assets/28441a45-cf41-4476-8920-5b641812d56a" alt="demo" width="640" />
 </p>
 
-
-
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
 
 For local development, the Chunkify CLI provides a convenient command to [forward webhook notifications](#chunkify-api-integration) to your local application URL.
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Getting Started](#getting-started)
+- [Usage](#usage)
+  - [Formats](#formats)
+  - [HLS packaging](#hls-packaging)
+  - [Generate thumbnails](#generate-thumbnails)
+- [CLI transcoding parameters](#cli-transcoding-parameters)
+  - [Video Settings](#video-settings)
+  - [Audio Settings](#audio-settings)
+  - [H.264/H.265/AV1 Settings](#h264h265av1-settings)
+  - [VP9 Settings](#vp9-settings)
+  - [HLS Settings](#hls-settings)
+  - [JPG Settings](#jpg-settings)
+- [Chunkify API Integration](#chunkify-api-integration)
+  - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
+    
 ## Installation
 
 Installing the latest version:
@@ -296,74 +312,6 @@ What `chunkify listen` does under the hood:
 -   Forward all notifications to your local server
 -   Sign requests with the webhook secret key
 -   Clean up the webhook when you exit
-
-### All commands and flags
-
-```
-chunkify --help
-
-    ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
-  ██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
-    ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
-
-  Chunkify CLI version: dev
-  https://chunkify.dev
-
-  ────────────────────────────────────────────────
-
-Transcode videos with Chunkify
-
-Usage:
-  chunkify [flags]
-  chunkify [command]
-
-Available Commands:
-  auth        Connect to your Chunkify account
-  completion  Generate the autocompletion script for the specified shell
-  help        Help about any command
-  listen      Forward webhook notifications to local HTTP URL
-  version     Print the version number of Chunkify
-
-Flags:
-      --ab int                    Set audio bitrate in bits per second (32000-512000)
-      --an                        Disable audio
-      --bufsize int               Set buffer size in bits (100000-50000000)
-      --channels int              Set number of audio channels (1, 2, 5, 7)
-      --cpu-used string           Set VP9 CPU usage (0-8)
-      --crf int                   Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)
-  -t, --duration int              Set duration in seconds
-  -f, --format string             Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg) (default "mp4/h264")
-  -r, --framerate float           Set frame rate (15-120)
-  -g, --gop int                   Set group of pictures size (1-300)
-  -h, --help                      help for chunkify
-      --hls-enc                   Enable HLS encryption
-      --hls-enc-iv string         Set HLS encryption IV
-      --hls-enc-key string        Set HLS encryption key
-      --hls-enc-key-url string    Set HLS encryption key URL
-      --hls-manifest-id string    Set HLS manifest ID
-      --hls-segment-type string   Set HLS segment type (mpegts, fmp4)
-      --hls-time int              Set HLS segment duration in seconds (1-10)
-  -i, --input string              Input video to transcode. It can be a file, HTTP URL or source ID (src_*)
-      --interval int              Set frame extraction interval in seconds (1-60)
-      --level int                 Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)
-      --maxrate int               Set maximum bitrate in bits per second (100000-50000000)
-  -o, --output string             Output file path
-      --pixfmt string             Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)
-      --preset string             Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)
-      --profilev string           Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)
-      --quality string            Set VP9 quality (good, best, realtime)
-  -s, --resolution string         Set resolution wxh (0-8192x0-8192)
-      --seek int                  Seek to position in seconds
-      --sprite                    Generate sprite sheet
-      --transcoders int           Number of transcoders to use
-      --vb int                    Set video bitrate in bits per second (100000-50000000)
-      --vcpu int                  vCPU per transcoder (4, 8, or 16) (default 8)
-      --vn                        Disable video
-      --x264keyint int            H264 - Set x264 keyframe interval
-      --x265keyint int            H265 - Set x265 keyframe interval
-
-Use "chunkify [command] --help" for more information about a command.
-```
 
 ## Development
 
