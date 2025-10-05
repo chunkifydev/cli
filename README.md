@@ -9,8 +9,14 @@
 </p>
 <p align="center">The next generation Cloud transcoding service.</p>
 <p align="center">
+  <a href="https://github.com/chunkifydev/cli/releases"><img src="https://img.shields.io/github/release/chunkifydev/cli.svg" alt="Latest Release"></a>
+  <a href="https://github.com/chunkifydev/cli/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/release.yml?style=flat-square&branch=main" /></a>
+</p>
+<p align="center">
 <img src="https://github.com/user-attachments/assets/28441a45-cf41-4476-8920-5b641812d56a" alt="demo" width="640" />
 </p>
+
+
 
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
 
