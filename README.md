@@ -20,7 +20,7 @@
 
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
 
-For local development, the Chunkify CLI provides a convenient command to forward webhook notifications to your local application URL.
+For local development, the Chunkify CLI provides a convenient command to [forward webhook notifications](#chunkify-api-integration) to your local application URL.
 
 ## Installation
 
@@ -109,6 +109,7 @@ chunkify -i chunkify-animation-logo.mp4
     Duration: 00:03 Size: 61KB Video: h264, 400x400, 149KB/s, 24.00fps
 
   ────────────────────────────────────────────────
+
   Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
@@ -130,7 +131,7 @@ Depending on your plan, here are the supported formats:
 Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
 
 > [!WARNING]
-> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `gop` is necessary.
+> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `--gop` is necessary.
 
 ```
 chunkify -i video.mp4 \
@@ -185,10 +186,10 @@ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 ```
 
 > [!NOTE]
-> For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering over the progress bar
+> For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering the player progress bar
 
 
-## CLI parameters
+## CLI Transcoding parameters
 
 | Flag | Type | Description |
 |------|------|-------------|
@@ -262,15 +263,22 @@ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 
 When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the command `listen` to forward webhooks to your local server URL which is normally not available publicly.
 
+> [!NOTE]
+> First, you need to retrieve your webhook secret in your project settings page under Webhooks section.
+
+<p align="center">
+<picture width="600">
+  <source srcset="https://github.com/user-attachments/assets/e3617da9-ad3b-4c57-bbfc-a30f51220b12" media="(prefers-color-scheme: light)">
+  <source srcset="https://github.com/user-attachments/assets/a274b4a4-89ba-4874-8dfb-748d9984145c" media="(prefers-color-scheme: dark)">
+  <img width="600" alt="webhook secret" src="https://github.com/user-attachments/assets/e3617da9-ad3b-4c57-bbfc-a30f51220b12" />
+</picture>
+</p>
+
+Start forwarding webhooks to your local server
+
 ```
 chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
-Setting up localdev webhook...
-
-Start proxying notifications matching '*' to http://localhost:3000/webhooks/chunkify
 ```
-
-> [!NOTE]
-> You will find the webhook secret key in your project settings under Webhooks section.
 
 By default, it will forward all events, but you can specify the ones you are interested in:
 
@@ -283,8 +291,7 @@ chunkify listen \
   --events job.cancelled
 ```
 
-The proxy will:
-
+What `chunkify listen` does under the hood:
 -   Create a temporary webhook in your project
 -   Forward all notifications to your local server
 -   Sign requests with the webhook secret key
