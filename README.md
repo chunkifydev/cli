@@ -119,7 +119,12 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 ```
 
 > [!TIP]
-> If `--format` is ommitted, but the `--output` is set, we will match the file extension to the right format. `.mp4` -> `Mp4H264`, `.webm` -> `WebmVP9`, `.m3u8` -> `HlsH264` and `.jpg` -> `JPG`
+> If `--format` is omitted, but the `--output` is set, we will match the file extension to the appropriate format:
+> 
+> - `.mp4` → `mp4/h264`
+> - `.webm` → `webm/vp9`
+> - `.m3u8` → `hls/h264`
+> - `.jpg` → `jpg`
 
 Sometimes, it's better to know what the input specs are before transcoding. Use `--input` without setting `--format` and it will only upload / make available the source video:
 
