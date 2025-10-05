@@ -45,7 +45,7 @@ func NewCommand(config *config.Config) *Command {
 	var hostname string
 	req := ProxyCmd{}
 
-	cmd := &Command{
+	cmd = &Command{
 		Config: config,
 		Command: &cobra.Command{
 			Use:     "listen",
@@ -53,9 +53,6 @@ func NewCommand(config *config.Config) *Command {
 			Long:    "Forward webhook notifications to local HTTP URL for local development",
 			Example: "chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <ws_secret>",
 			Run: func(_ *cobra.Command, args []string) {
-				log("chunkify listen\n")
-				//req.localUrl = args[0]
-
 				if hostname == "" {
 					hostname, _ = os.Hostname()
 					if hostname == "" {
@@ -63,17 +60,21 @@ func NewCommand(config *config.Config) *Command {
 					}
 				}
 
-				webhook, err := createLocaldevWebhook(fmt.Sprintf("http://%s.chunkify.local", hostname))
+				webhookUrl := fmt.Sprintf("http://%s.chunkify.local", hostname)
+
+				req.Client = config.Client
+
+				webhook, err := req.createLocaldevWebhook(webhookUrl)
 				if err != nil {
+					fmt.Printf("Error creating localdev webhook: %s\n", err)
 					return
 				}
 
-				defer deleteLocalDevWebhook(webhook.Id)
+				defer req.deleteLocalDevWebhook(webhook.Id)
 
 				req.WebhookId = webhook.Id
-				log(fmt.Sprintf("Secret key: %s\n", req.webhookSecret))
 
-				log(fmt.Sprintf("Start proxying notifications to %s\n\nEvents:\n%s", styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n")))
+				log(fmt.Sprintf("  [%s] Start forwarding to %s\n\n  Events:\n  - %s\n\n  ────────────────────────────────────────────────\n\n", hostname, styles.Important.Render(req.localUrl), strings.Join(req.Events, "\n  - ")))
 
 				ch := make(chan []chunkify.Notification)
 				m := model{
@@ -108,6 +109,7 @@ func printError(err error) {
 
 // ProxyCmd represents the command for proxying notifications to a local URL
 type ProxyCmd struct {
+	Client        *chunkify.Client        // Client to use to create the webhook
 	localUrl      string                  // Target URL to proxy notifications to
 	webhookSecret string                  // Key used to sign proxied notifications
 	WebhookId     string                  // ID of the webhook receiving notifications
@@ -189,9 +191,15 @@ func tickCmd() tea.Cmd {
 
 // View renders the current state as a string
 func (m model) View() string {
-	s := strings.Join(logs, "\n")
+	var s string
+	log(fmt.Sprintf("logs: %+v\n", logs))
+	if len(lastProxiedNotifications) > 0 {
+		s = strings.Join(logs, "\n")
+	} else {
+		s = "  Listening...\n"
+	}
 	s += "\n\n"
-	s += styles.Debug.Render("[R] Replay the last notification\n[V] View last notification payload\n[Q] Exit\n")
+	s += styles.Debug.Render("  [r] Replay [v] View [q] Exit\n")
 
 	return s
 }
@@ -214,7 +222,7 @@ func (r *ProxyCmd) toParams() chunkify.NotificationListParams {
 
 // Execute fetches notifications from the API based on the command parameters
 func (r *ProxyCmd) Execute() error {
-	notifications, err := cmd.Config.Client.NotificationList(r.toParams())
+	notifications, err := r.Client.NotificationList(r.toParams())
 	if err != nil {
 		return err
 	}
@@ -310,11 +318,9 @@ func prettyRenderJSONPayload(payload string) string {
 }
 
 // createLocaldevWebhook sets up a webhook for local development
-func createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
-	log(fmt.Sprintf("Setting up localdev webhook for %s", webhookUrl))
-
+func (r *ProxyCmd) createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
 	enabled := true
-	wh, err := cmd.Config.Client.WebhookCreate(chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled})
+	wh, err := r.Client.WebhookCreate(chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled})
 	if err != nil {
 		log(styles.Error.Render(fmt.Sprintf("Couldn't create localdev webhook for proxying: %s", err)))
 		return chunkify.Webhook{}, err
@@ -324,8 +330,8 @@ func createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
 }
 
 // deleteLocalDevWebhook removes the local development webhook
-func deleteLocalDevWebhook(webhookId string) error {
-	if err := cmd.Config.Client.WebhookDelete(webhookId); err != nil {
+func (r *ProxyCmd) deleteLocalDevWebhook(webhookId string) error {
+	if err := r.Client.WebhookDelete(webhookId); err != nil {
 		fmt.Printf("Couldn't delete localdev webhook. You need to manually delete it. webhookId: %s, error: %s\n", webhookId, err)
 		return err
 	}

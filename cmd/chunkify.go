@@ -66,21 +66,19 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 	case "auth":
 		// For auth, try to set team token (i.e if it not the first login)
 		if cfg.TeamToken == "" {
-			if cfg.TeamToken == "" {
-				// Try to set team token, but don't fail if it doesn't exist
-				cfg.SetDefaultTeamToken() // Ignore error since it's optional for auth
-			}
+			// Try to set team token, but don't fail if it doesn't exist
+			cfg.SetDefaultTeamToken() // Ignore error since it's optional for auth
 		}
 
-	case "projects", "tokens":
-		// Projects and tokens commands require team token
-		if cfg.TeamToken == "" {
-			if err := cfg.SetDefaultTeamToken(); err != nil {
-				fmt.Println("error setting team token:", err)
-				printError(err)
-				os.Exit(1)
-			}
-		}
+	// case "projects", "tokens":
+	// 	// Projects and tokens commands require team token
+	// 	if cfg.TeamToken == "" {
+	// 		if err := cfg.SetDefaultTeamToken(); err != nil {
+	// 			fmt.Println("error setting team token:", err)
+	// 			printError(err)
+	// 			os.Exit(1)
+	// 		}
+	// 	}
 
 	default:
 		// All other commands require project token
@@ -102,7 +100,6 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 	})
 
 	cfg.Client = &client
-
 }
 
 // init initializes the CLI by setting up configuration and registering all available commands
