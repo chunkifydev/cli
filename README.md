@@ -399,8 +399,8 @@ MIT
 
 <p align="center">
   <picture width="300">
-    <source srcset="https://github.com/user-attachments/assets/8978c909-de3f-4bca-85c2-4c5d1f595b91" media="(prefers-color-scheme: dark)">
-    <source srcset="https://github.com/user-attachments/assets/939c830c-3671-496f-9d2d-3b3eedb489ba" media="(prefers-color-scheme: light)">
-    <img width="300" alt="chunkify-ascii-black" src="https://github.com/user-attachments/assets/8978c909-de3f-4bca-85c2-4c5d1f595b91" />
+    <source srcset="https://github.com/user-attachments/assets/b897dd77-7ce1-4e9b-b0b3-393ca9aa5473" media="(prefers-color-scheme: dark)">
+    <source srcset="https://github.com/user-attachments/assets/d0d31788-9b13-4a75-ab5a-97831791d910" media="(prefers-color-scheme: light)">
+    <img width="300" alt="chunkify-ascii-black" src="https://github.com/user-attachments/assets/b897dd77-7ce1-4e9b-b0b3-393ca9aa5473" />
   </picture>
 </p>
