@@ -84,63 +84,63 @@ var (
 )
 
 // BindFlags attaches root-level flags used by the root command
-func BindFlags(rcmd *cobra.Command) {
+func BindFlags(cmd *cobra.Command) {
 	chunkifyCmd = ChunkifyCommand{}
 
-	rcmd.Flags().StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
-	rcmd.Flags().StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
-	rcmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+	cmd.Flags().StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
+	cmd.Flags().StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
+	cmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
 
-	rcmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
-	rcmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
+	cmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
+	cmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
 
-	rcmd.Flags().StringVar(storagePath, "storage-path", "", "Storage absolute path")
+	cmd.Flags().StringVar(storagePath, "storage-path", "", "Storage absolute path")
 
 	// Common video settings
-	rcmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
-	rcmd.Flags().Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (15-120)")
-	rcmd.Flags().Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-300)")
-	rcmd.Flags().Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
-	rcmd.Flags().StringVar(maxrateStr, "maxrate", "", "Set maximum bitrate in bits per second (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
-	rcmd.Flags().StringVar(bufsizeStr, "bufsize", "", "Set buffer size in bits (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
-	rcmd.Flags().StringVar(pixfmt, "pixfmt", "", "Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)")
-	rcmd.Flags().BoolVar(disableAudio, "an", false, "Disable audio")
-	rcmd.Flags().BoolVar(disableVideo, "vn", false, "Disable video")
-	rcmd.Flags().Int64VarP(duration, "duration", "t", 0, "Set duration in seconds")
-	rcmd.Flags().Int64Var(seek, "seek", 0, "Seek to position in seconds")
-	rcmd.Flags().StringVar(videoBitrateStr, "vb", "", "Set video bitrate in bits per second (100000-50000000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
-	rcmd.Flags().StringVar(audioBitrateStr, "ab", "", "Set audio bitrate in bits per second (32000-512000). You can use units like K, M, G, T (e.g. 1200K, 2M)")
+	cmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
+	cmd.Flags().Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (15-120)")
+	cmd.Flags().Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-300)")
+	cmd.Flags().Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
+	cmd.Flags().StringVar(maxrateStr, "maxrate", "", "Set maximum bitrate in bits per second (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
+	cmd.Flags().StringVar(bufsizeStr, "bufsize", "", "Set buffer size in bits (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
+	cmd.Flags().StringVar(pixfmt, "pixfmt", "", "Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)")
+	cmd.Flags().BoolVar(disableAudio, "an", false, "Disable audio")
+	cmd.Flags().BoolVar(disableVideo, "vn", false, "Disable video")
+	cmd.Flags().Int64VarP(duration, "duration", "t", 0, "Set duration in seconds")
+	cmd.Flags().Int64Var(seek, "seek", 0, "Seek to position in seconds")
+	cmd.Flags().StringVar(videoBitrateStr, "vb", "", "Set video bitrate in bits per second (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
+	cmd.Flags().StringVar(audioBitrateStr, "ab", "", "Set audio bitrate in bits per second (32000-512000). You can use units like K, M (e.g. 1200K, 2M)")
 
 	// H264, H265 and AV1 flags
-	rcmd.Flags().Int64Var(crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)")
-	rcmd.Flags().StringVar(preset, "preset", "", "Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)")
-	rcmd.Flags().StringVar(profilev, "profilev", "", "Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)")
-	rcmd.Flags().Int64Var(level, "level", 0, "Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)")
-	rcmd.Flags().Int64Var(x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval")
-	rcmd.Flags().Int64Var(x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval")
+	cmd.Flags().Int64Var(crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)")
+	cmd.Flags().StringVar(preset, "preset", "", "Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)")
+	cmd.Flags().StringVar(profilev, "profilev", "", "Set video profile (H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture)")
+	cmd.Flags().Int64Var(level, "level", 0, "Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)")
+	cmd.Flags().Int64Var(x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval")
+	cmd.Flags().Int64Var(x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval")
 
 	// VP9 flags
-	rcmd.Flags().StringVar(quality, "quality", "", "Set VP9 quality (good, best, realtime)")
-	rcmd.Flags().StringVar(cpuUsed, "cpu-used", "", "Set VP9 CPU usage (0-8)")
+	cmd.Flags().StringVar(quality, "quality", "", "Set VP9 quality (good, best, realtime)")
+	cmd.Flags().StringVar(cpuUsed, "cpu-used", "", "Set VP9 CPU usage (0-8)")
 
 	// HLS flags
-	rcmd.Flags().StringVar(hlsManifestId, "hls-manifest-id", "", "Set HLS manifest ID")
-	rcmd.Flags().Int64Var(hlsTime, "hls-time", 0, "Set HLS segment duration in seconds (1-10)")
-	rcmd.Flags().StringVar(hlsSegmentType, "hls-segment-type", "", "Set HLS segment type (mpegts, fmp4)")
-	rcmd.Flags().BoolVar(hlsEnc, "hls-enc", false, "Enable HLS encryption")
-	rcmd.Flags().StringVar(hlsEncKey, "hls-enc-key", "", "Set HLS encryption key")
-	rcmd.Flags().StringVar(hlsEncKeyUrl, "hls-enc-key-url", "", "Set HLS encryption key URL")
-	rcmd.Flags().StringVar(hlsEncIv, "hls-enc-iv", "", "Set HLS encryption IV")
+	cmd.Flags().StringVar(hlsManifestId, "hls-manifest-id", "", "Set HLS manifest ID")
+	cmd.Flags().Int64Var(hlsTime, "hls-time", 0, "Set HLS segment duration in seconds (1-10)")
+	cmd.Flags().StringVar(hlsSegmentType, "hls-segment-type", "", "Set HLS segment type (mpegts, fmp4)")
+	cmd.Flags().BoolVar(hlsEnc, "hls-enc", false, "Enable HLS encryption")
+	cmd.Flags().StringVar(hlsEncKey, "hls-enc-key", "", "Set HLS encryption key")
+	cmd.Flags().StringVar(hlsEncKeyUrl, "hls-enc-key-url", "", "Set HLS encryption key URL")
+	cmd.Flags().StringVar(hlsEncIv, "hls-enc-iv", "", "Set HLS encryption IV")
 
 	// JPG flags
-	rcmd.Flags().Int64Var(interval, "interval", 0, "Set frame extraction interval in seconds (1-60)")
-	rcmd.Flags().BoolVar(sprite, "sprite", false, "Generate sprite sheet")
+	cmd.Flags().Int64Var(interval, "interval", 0, "Set frame extraction interval in seconds (1-60)")
+	cmd.Flags().BoolVar(sprite, "sprite", false, "Generate sprite sheet")
 
-	rcmd.MarkFlagRequired("input")
+	cmd.MarkFlagRequired("input")
 
-	rcmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
+	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
-	rcmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
 		if chunkifyCmd.Format == "" && chunkifyCmd.Output == "" {
 			return nil
 		}
