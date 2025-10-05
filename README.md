@@ -44,6 +44,7 @@ Useful links:
   - [VP9 Settings](#vp9-settings)
   - [HLS Settings](#hls-settings)
   - [JPG Settings](#jpg-settings)
+- [JSON Output](#json-output)
 - [Chunkify API Integration](#chunkify-api-integration)
   - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
     
@@ -119,8 +120,12 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 ```
 
 > [!TIP]
-> If --format is omitted, but the --output is set, we will match the file extension to the appropriate format:
-> .mp4 → mp4/h264, .webm → webm/vp9, .m3u8 → hls/h264, and .jpg → jpg
+> If `--format` is omitted, but the `--output` is set, we will match the file extension to the appropriate format:
+> 
+> - `.mp4` → `mp4/h264`
+> - `.webm` → `webm/vp9`
+> - `.m3u8` → `hls/h264`
+> - `.jpg` → `jpg`
 
 Sometimes, it's better to know what the input specs are before transcoding. Use `--input` without setting `--format` and it will only upload / make available the source video:
 
@@ -292,7 +297,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `--interval` | int | Set frame extraction interval in seconds | 1-60 |
 | `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
 
-### JSON Output
+## JSON Output
 
 It's possible to output the progress in JSON format by passing the `--json` flag.
 
@@ -332,7 +337,9 @@ When integrating Chunkify into your app, you must rely on webhooks to receive ev
 Start forwarding webhooks to your local server
 
 ```
-chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
+chunkify listen \
+  --forward-to http://localhost:3000/webhooks/chunkify \
+  --webhook-secret <secret-key>
 ```
 
 By default, it will forward all events, but you can specify the ones you are interested in:
