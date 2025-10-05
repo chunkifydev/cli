@@ -62,14 +62,13 @@ By default, the number of transcoders and their type will be selected automatica
 To define them yourself use `--transcoders` and `--vcpu` like this:
 
 ```
-chunkify \
-  -i video.mp4 \
-  -o video_720p.mp4 \
-  -f mp4/h264 \
-  -s 1280x720 \
-  --crf 24 \
-  --transcoders 10 \
-  --vcpu 8
+chunkify -i video.mp4 \
+         -o video_720p.mp4 \
+         -f mp4/h264 \
+         -s 1280x720 \
+         --crf 24 \
+         --transcoders 10 \
+         --vcpu 8
 ```
 
 > [!TIP]
@@ -84,13 +83,12 @@ chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --
 If a video has already been uploaded to Chunkify, you can simply use the source ID as input:
 
 ```
-chunkify \
-  -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
-  -o video_av1_1080p.mp4 \
-  -f mp4/av1 \
-  -s 1920x1080 \
-  --crf 34 \
-  --preset 7
+chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
+         -o video_av1_1080p.mp4 \
+         -f mp4/av1 \
+         -s 1920x1080 \
+         --crf 34 \
+         --preset 7
 ```
 
 ### Formats
@@ -114,30 +112,28 @@ Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
 > Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `gop` is necessary.
 
 ```
-chunkify \
-  -i video.mp4 \
-  -o video_540p.m3u8 \
-  -f hls/h264 \
-  -s 540x0 \
-  -g 120 \
-  --x264keyint 120 \
-  --vb 800000 \
-  --ab 128000
+chunkify -i video.mp4 \
+         -o video_540p.m3u8 \
+         -f hls/h264 \
+         -s 540x0 \
+         -g 120 \
+         --x264keyint 120 \
+         --vb 800000 \
+         --ab 128000
 ```
 
 Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
 
 ```
-chunkify \
-  -i video.mp4 \
-  -o video_720p.m3u8 \
-  -f hls/h264 \
-  -s 720x0 \
-  -g 120 \
-  --x264keyint 120 \
-  --vb 1200000 \
-  --ab 128000 \
-  --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
+chunkify -i video.mp4 \
+         -o video_720p.m3u8 \
+         -f hls/h264 \
+         -s 720x0 \
+         -g 120 \
+         --x264keyint 120 \
+         --vb 1200000 \
+         --ab 128000 \
+         --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
 ```
 
 > [!NOTE]
