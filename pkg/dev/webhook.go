@@ -31,15 +31,12 @@ type Command struct {
 	Config  *config.Config // Configuration for the notifications command
 }
 
-// cmd is a package-level variable holding the current Command instance
-var cmd *Command
-
 // NewCommand creates and configures a new notifications root command
 func NewCommand(config *config.Config) *Command {
 	var hostname string
 	req := WebhookProxy{}
 
-	cmd = &Command{
+	cmd := &Command{
 		Config: config,
 		Command: &cobra.Command{
 			Use:     "listen",

@@ -38,21 +38,40 @@ type ChunkifyCommand struct {
 type Command struct {
 	Command *cobra.Command // The root cobra command for notifications
 	Config  *config.Config // Configuration for the notifications command
+	App     *App           // The TUI app
 }
 
 func NewCommand(cfg *config.Config) *Command {
+	app := &App{}
 	cmd := &Command{
+		App:    app,
 		Config: cfg,
 		Command: &cobra.Command{
 			Use:   "chunkify",
 			Short: "Transcode videos with Chunkify",
 			Long:  "Transcode videos with Chunkify",
-			RunE: func(cmd *cobra.Command, args []string) error {
-				return Execute(cfg)
+			Run: func(cmd *cobra.Command, args []string) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				app.Status = Starting
+				app.Progress = NewProgress()
+				app.Ctx = ctx
+				app.CancelFunc = cancel
+				app.Done = false
+				app.DownloadedFiles = map[string]chunkify.File{}
+				app.Client = cfg.Client
+
+				// Start all background work in a goroutine
+				go app.executeWorkflow(app.Ctx)
+
+				// Run TUI synchronously - this will block until the TUI exits
+				app.Run()
 			},
 		},
 	}
-	BindFlags(cmd.Command)
+
+	BindFlags(app, cmd.Command)
 	return cmd
 }
 
@@ -63,21 +82,6 @@ func init() {
 		return
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, nil)))
-}
-
-func Execute(cfg *config.Config) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	app := NewApp(ctx, cancel, cfg)
-
-	// Start all background work in a goroutine
-	go app.executeWorkflow(ctx)
-
-	// Run TUI synchronously - this will block until the TUI exits
-	app.Run()
-
-	return nil
 }
 
 // executeWorkflow runs all the background work and communicates with the TUI via channels

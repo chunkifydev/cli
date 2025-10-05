@@ -13,9 +13,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	chunkify "github.com/chunkifydev/chunkify-go"
-	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/formatter"
-	"github.com/google/uuid"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -95,32 +93,8 @@ func NewProgress() *Progress {
 	}
 }
 
-// NewApp creates a new TUI instance with the given progress tracker
-func NewApp(ctx context.Context, cancelFunc context.CancelFunc, cfg *config.Config) App {
-	spin.Spinner = spinner.MiniDot
-
-	app := App{
-		Client:          cfg.Client,
-		Status:          Starting,
-		Progress:        NewProgress(),
-		Ctx:             ctx,
-		CancelFunc:      cancelFunc,
-		Done:            false,
-		DownloadedFiles: map[string]chunkify.File{},
-		Command: &ChunkifyCommand{
-			Id:                  uuid.New().String(),
-			Input:               chunkifyCmd.Input,
-			Output:              chunkifyCmd.Output,
-			Format:              chunkifyCmd.Format,
-			JobFormatParams:     chunkifyCmd.JobFormatParams,
-			JobTranscoderParams: chunkifyCmd.JobTranscoderParams,
-		},
-	}
-
-	return app
-}
-
 func (t App) Init() tea.Cmd {
+	spin.Spinner = spinner.MiniDot
 	return tea.Batch(tickCmd(), spin.Tick)
 }
 
@@ -354,10 +328,7 @@ func (t App) transcodingView() (string, string) {
 	}
 
 	for _, transcoder := range t.Transcoders {
-		bar := progressBar(transcoder.Status, transcoder.Progress, progressBarWidth)
-
-		//view += fmt.Sprintf("%s%s%s %s %.0f%%\n", indent, indent, chunkNumStr, bar, transcoder.Progress)
-		view += bar
+		view += progressBar(transcoder.Status, transcoder.Progress, progressBarWidth)
 
 		totalFps += transcoder.Fps
 		totalSpeed += transcoder.Speed

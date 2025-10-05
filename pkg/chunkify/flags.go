@@ -9,10 +9,9 @@ import (
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/cli/pkg/formatter"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
-
-var chunkifyCmd ChunkifyCommand
 
 // Transcoder flags
 var (
@@ -84,12 +83,12 @@ var (
 )
 
 // BindFlags attaches root-level flags used by the root command
-func BindFlags(cmd *cobra.Command) {
-	chunkifyCmd = ChunkifyCommand{}
+func BindFlags(app *App, cmd *cobra.Command) {
+	app.Command = &ChunkifyCommand{Id: uuid.New().String()}
 
-	cmd.Flags().StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
-	cmd.Flags().StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
-	cmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
+	cmd.Flags().StringVarP(&app.Command.Output, "output", "o", "", "Output file path")
+	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
 
 	cmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
 	cmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
@@ -141,26 +140,28 @@ func BindFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if chunkifyCmd.Format == "" && chunkifyCmd.Output == "" {
+		// If no format or output is specified, we don't need to validate anything
+		if app.Command.Format == "" && app.Command.Output == "" {
 			return nil
 		}
 
 		// Set default format based on output file extension
-		if chunkifyCmd.Format == "" {
-			switch path.Ext(chunkifyCmd.Output) {
+		if app.Command.Format == "" {
+			switch path.Ext(app.Command.Output) {
 			case ".mp4":
-				chunkifyCmd.Format = string(chunkify.FormatMp4H264)
+				app.Command.Format = string(chunkify.FormatMp4H264)
 			case ".webm":
-				chunkifyCmd.Format = string(chunkify.FormatWebmVp9)
+				app.Command.Format = string(chunkify.FormatWebmVp9)
 			case ".m3u8":
-				chunkifyCmd.Format = string(chunkify.FormatHlsH264)
+				app.Command.Format = string(chunkify.FormatHlsH264)
 			case ".jpg":
-				chunkifyCmd.Format = string(chunkify.FormatJpg)
+				app.Command.Format = string(chunkify.FormatJpg)
 			default:
-				return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(chunkifyCmd.Output))
+				return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(app.Command.Output))
 			}
 		}
 
+		// Check if the format is valid
 		if !slices.Contains([]chunkify.FormatName{
 			chunkify.FormatMp4H264,
 			chunkify.FormatMp4H265,
@@ -170,19 +171,21 @@ func BindFlags(cmd *cobra.Command) {
 			chunkify.FormatHlsH265,
 			chunkify.FormatHlsAv1,
 			chunkify.FormatJpg,
-		}, chunkify.FormatName(chunkifyCmd.Format)) {
-			return fmt.Errorf("invalid format: %s", chunkifyCmd.Format)
+		}, chunkify.FormatName(app.Command.Format)) {
+			return fmt.Errorf("invalid format: %s", app.Command.Format)
 		}
 
+		// Set the number of transcoders and their type
 		if transcoders != nil && *transcoders > 0 {
-			chunkifyCmd.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
+			app.Command.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
 				Quantity: *transcoders,
 				Type:     fmt.Sprintf("%dvCPU", *transcoderVcpu),
 			}
 		}
 
+		// Set the storage path
 		if storagePath != nil && *storagePath != "" {
-			chunkifyCmd.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
+			app.Command.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
 				Path: storagePath,
 			}
 		}
@@ -245,7 +248,8 @@ func BindFlags(cmd *cobra.Command) {
 			return err
 		}
 
-		switch chunkifyCmd.Format {
+		// validate format settings according to the format
+		switch app.Command.Format {
 		case string(chunkify.FormatMp4H264):
 			if err := validateH264Flags(); err != nil {
 				return err
@@ -289,14 +293,14 @@ func BindFlags(cmd *cobra.Command) {
 		}
 
 		// build job format params according to all format flags
-		setJobFormatParams()
+		setJobFormatParams(app)
 
 		return nil
 	}
 }
 
-func setJobFormatParams() {
-	chunkifyCmd.JobFormatParams = chunkify.JobCreateFormatParams{}
+func setJobFormatParams(app *App) {
+	app.Command.JobFormatParams = chunkify.JobCreateFormatParams{}
 
 	videoCommon := &chunkify.Video{
 		Width:        width,
@@ -315,7 +319,7 @@ func setJobFormatParams() {
 		AudioBitrate: audioBitrate,
 	}
 
-	switch chunkifyCmd.Format {
+	switch app.Command.Format {
 	case string(chunkify.FormatMp4H264):
 		h264Params := &chunkify.H264{
 			Video:      videoCommon,
@@ -325,7 +329,7 @@ func setJobFormatParams() {
 			Level:      level,
 			X264KeyInt: x264KeyInt,
 		}
-		chunkifyCmd.JobFormatParams.Mp4H264 = h264Params
+		app.Command.JobFormatParams.Mp4H264 = h264Params
 	case string(chunkify.FormatMp4H265):
 		h265Params := &chunkify.H265{
 			Video:      videoCommon,
@@ -335,7 +339,7 @@ func setJobFormatParams() {
 			Level:      level,
 			X265KeyInt: x265KeyInt,
 		}
-		chunkifyCmd.JobFormatParams.Mp4H265 = h265Params
+		app.Command.JobFormatParams.Mp4H265 = h265Params
 	case string(chunkify.FormatWebmVp9):
 		vp9Params := &chunkify.Vp9{
 			Video:   videoCommon,
@@ -343,7 +347,7 @@ func setJobFormatParams() {
 			Quality: quality,
 			CpuUsed: cpuUsed,
 		}
-		chunkifyCmd.JobFormatParams.WebmVp9 = vp9Params
+		app.Command.JobFormatParams.WebmVp9 = vp9Params
 	case string(chunkify.FormatMp4Av1):
 		av1Params := &chunkify.Av1{
 			Video:    videoCommon,
@@ -352,7 +356,7 @@ func setJobFormatParams() {
 			Profilev: profilev,
 			Level:    level,
 		}
-		chunkifyCmd.JobFormatParams.Mp4Av1 = av1Params
+		app.Command.JobFormatParams.Mp4Av1 = av1Params
 	case string(chunkify.FormatHlsH264):
 		hlsH264Params := &chunkify.HlsH264{
 			Hls: &chunkify.Hls{
@@ -374,7 +378,7 @@ func setJobFormatParams() {
 				X264KeyInt: x264KeyInt,
 			},
 		}
-		chunkifyCmd.JobFormatParams.HlsH264 = hlsH264Params
+		app.Command.JobFormatParams.HlsH264 = hlsH264Params
 	case string(chunkify.FormatHlsH265):
 		hlsH265Params := &chunkify.HlsH265{
 			Hls: &chunkify.Hls{
@@ -394,7 +398,7 @@ func setJobFormatParams() {
 				X265KeyInt: x265KeyInt,
 			},
 		}
-		chunkifyCmd.JobFormatParams.HlsH265 = hlsH265Params
+		app.Command.JobFormatParams.HlsH265 = hlsH265Params
 	case string(chunkify.FormatHlsAv1):
 		hlsAv1Params := &chunkify.HlsAv1{
 			Hls: &chunkify.Hls{
@@ -413,7 +417,7 @@ func setJobFormatParams() {
 				Level:    level,
 			},
 		}
-		chunkifyCmd.JobFormatParams.HlsAv1 = hlsAv1Params
+		app.Command.JobFormatParams.HlsAv1 = hlsAv1Params
 	case string(chunkify.FormatJpg):
 		jpgParams := &chunkify.Jpg{
 			Image: &chunkify.Image{
@@ -423,6 +427,6 @@ func setJobFormatParams() {
 				Sprite:   sprite,
 			},
 		}
-		chunkifyCmd.JobFormatParams.Jpg = jpgParams
+		app.Command.JobFormatParams.Jpg = jpgParams
 	}
 }
