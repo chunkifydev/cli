@@ -20,16 +20,16 @@ For local development, the Chunkify CLI provides a convenient command to forward
 
 Installing the latest version:
 
-```bash
-$ curl -L https://chunkify.dev/install.sh | sh
+```
+curl -L https://chunkify.dev/install.sh | sh
 ```
 
 ## Getting Started
 
 1. After the installation, the first step is to authenticate with your Chunkify account:
 
-```bash
-$ chunkify auth login
+```
+chunkify auth login
 ```
 
 2. The CLI will open your browser and ask you to select one of your teams for authentication.
@@ -39,15 +39,15 @@ $ chunkify auth login
 Another way to authenticate is to setup environment variables:
 
 ```bash
-$ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
+export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 ```
 
 ## Usage
 
 You can use the chunkify CLI to transcode a local video, a URL, or a source ID if it was already uploaded to Chunkify.
 
-```bash
-$ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+```
+chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
 It will upload the video to Chunkify, transcode it into MP4 H264 and download it to your local disk.
@@ -55,8 +55,8 @@ It will upload the video to Chunkify, transcode it into MP4 H264 and download it
 By default, the number of transcoders and their type will be selected automatically according to the input and output specs.
 To define them yourself use `--transcoders` and `--vcpu` like this:
 
-```bash
-$ chunkify \
+```
+chunkify \
   -i video.mp4 \
   -o video_720p.mp4 \
   -f mp4/h264 \
@@ -71,14 +71,14 @@ $ chunkify \
 
 You can also transcode a video from an HTTP URL:
 
-```bash
-$ chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+```
+chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
 If a video has already been uploaded to Chunkify, you can simply use the source ID as input:
 
-```bash
-$ chunkify \
+```
+chunkify \
   -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
   -o video_av1_1080p.mp4 \
   -f mp4/av1 \
@@ -107,8 +107,8 @@ Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
 > [!WARNING]
 > Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `gop` is necessary.
 
-```bash
-$ chunkify \
+```
+chunkify \
   -i video.mp4 \
   -o video_540p.m3u8 \
   -f hls/h264 \
@@ -121,8 +121,8 @@ $ chunkify \
 
 Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
 
-```bash
-$ chunkify \
+```
+chunkify \
   -i video.mp4 \
   -o video_720p.m3u8 \
   -f hls/h264 \
@@ -139,7 +139,7 @@ $ chunkify \
 
 Now we have 2 renditions that belong to the same manifest:
 
-```bash
+```
 manifest.m3u8
 video_540p.mp4
 video_540p.m3u8
@@ -151,14 +151,14 @@ video_720p.m3u8
 
 To generate thumbnails every 10 seconds:
 
-```bash
-$ chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
+```
+chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 ```
 
 If lots of thumbnails are required, it's recommended to generate a sprite image instead of many single images. A sprite image is a single image containing many thumbnails arranged in a grid, which is more efficient when there are hundreds of them to download to display a preview.
 
-```bash
-$ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
+```
+chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 ```
 
 > [!NOTE]
@@ -239,8 +239,8 @@ $ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 
 When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the command `listen` to forward webhooks to your local server URL which is normally not available publicly.
 
-```bash
-$ chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
+```
+chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
 Setting up localdev webhook...
 
 Start proxying notifications matching '*' to http://localhost:3000/webhooks/chunkify
@@ -251,8 +251,8 @@ Start proxying notifications matching '*' to http://localhost:3000/webhooks/chun
 
 By default, it will forward all events, but you can specify the ones you are interested in:
 
-```bash
-$ chunkify listen \
+```
+chunkify listen \
   --forward-to http://localhost:3000/webhooks/chunkify \
   --webhook-secret <secret-key> \
   --events job.completed \
@@ -269,8 +269,8 @@ The proxy will:
 
 ### All commands and flags
 
-```bash
-$ chunkify --help
+```
+chunkify --help
 
     ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
   ██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
@@ -340,10 +340,6 @@ Use "chunkify [command] --help" for more information about a command.
 ### Prerequisites
 
 -   Go 1.x or higher
-
-## Support
-
-For support, please visit [Chunkify Support](https://chunkify.dev/support) or open an issue in the GitHub repository.
 
 ## Contributing
 
