@@ -141,163 +141,167 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		// If no format or output is specified, we don't need to validate anything
-		if app.Command.Format == "" && app.Command.Output == "" {
-			return nil
+		return setupCommand(app)
+	}
+}
+
+func setupCommand(app *App) error {
+	// If no format or output is specified, we don't need to validate anything
+	if app.Command.Format == "" && app.Command.Output == "" {
+		return nil
+	}
+
+	// Set default format based on output file extension
+	if app.Command.Format == "" {
+		switch path.Ext(app.Command.Output) {
+		case ".mp4":
+			app.Command.Format = string(chunkify.FormatMp4H264)
+		case ".webm":
+			app.Command.Format = string(chunkify.FormatWebmVp9)
+		case ".m3u8":
+			app.Command.Format = string(chunkify.FormatHlsH264)
+		case ".jpg":
+			app.Command.Format = string(chunkify.FormatJpg)
+		default:
+			return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(app.Command.Output))
+		}
+	}
+
+	// Check if the format is valid
+	if !slices.Contains([]chunkify.FormatName{
+		chunkify.FormatMp4H264,
+		chunkify.FormatMp4H265,
+		chunkify.FormatMp4Av1,
+		chunkify.FormatWebmVp9,
+		chunkify.FormatHlsH264,
+		chunkify.FormatHlsH265,
+		chunkify.FormatHlsAv1,
+		chunkify.FormatJpg,
+	}, chunkify.FormatName(app.Command.Format)) {
+		return fmt.Errorf("invalid format: %s", app.Command.Format)
+	}
+
+	// Set the number of transcoders and their type
+	if transcoders != nil && *transcoders > 0 {
+		app.Command.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
+			Quantity: *transcoders,
+			Type:     fmt.Sprintf("%dvCPU", *transcoderVcpu),
+		}
+	}
+
+	// Set the storage path
+	if storagePath != nil && *storagePath != "" {
+		app.Command.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
+			Path: storagePath,
+		}
+	}
+
+	// shortcut to set width and height from resolution flag
+	if resolution != nil && *resolution != "" {
+		parts := strings.Split(*resolution, "x")
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid resolution: %s", *resolution)
 		}
 
-		// Set default format based on output file extension
-		if app.Command.Format == "" {
-			switch path.Ext(app.Command.Output) {
-			case ".mp4":
-				app.Command.Format = string(chunkify.FormatMp4H264)
-			case ".webm":
-				app.Command.Format = string(chunkify.FormatWebmVp9)
-			case ".m3u8":
-				app.Command.Format = string(chunkify.FormatHlsH264)
-			case ".jpg":
-				app.Command.Format = string(chunkify.FormatJpg)
-			default:
-				return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(app.Command.Output))
-			}
+		resWidth, err := strconv.ParseInt(parts[0], 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid width: %s", parts[0])
 		}
-
-		// Check if the format is valid
-		if !slices.Contains([]chunkify.FormatName{
-			chunkify.FormatMp4H264,
-			chunkify.FormatMp4H265,
-			chunkify.FormatMp4Av1,
-			chunkify.FormatWebmVp9,
-			chunkify.FormatHlsH264,
-			chunkify.FormatHlsH265,
-			chunkify.FormatHlsAv1,
-			chunkify.FormatJpg,
-		}, chunkify.FormatName(app.Command.Format)) {
-			return fmt.Errorf("invalid format: %s", app.Command.Format)
+		resHeight, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid height: %s", parts[1])
 		}
+		width = &resWidth
+		height = &resHeight
+		resolution = nil
+	}
 
-		// Set the number of transcoders and their type
-		if transcoders != nil && *transcoders > 0 {
-			app.Command.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
-				Quantity: *transcoders,
-				Type:     fmt.Sprintf("%dvCPU", *transcoderVcpu),
-			}
+	// Convert bitrate like "1200K", "2M" to bits (int64)
+	// for convenience
+	if videoBitrateStr != nil && *videoBitrateStr != "" {
+		videoBitrateInt, err := formatter.ParseFileSize(*videoBitrateStr)
+		if err != nil {
+			return fmt.Errorf("invalid video bitrate: %s", *videoBitrateStr)
 		}
+		videoBitrate = &videoBitrateInt
+	}
 
-		// Set the storage path
-		if storagePath != nil && *storagePath != "" {
-			app.Command.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
-				Path: storagePath,
-			}
+	if audioBitrateStr != nil && *audioBitrateStr != "" {
+		audioBitrateInt, err := formatter.ParseFileSize(*audioBitrateStr)
+		if err != nil {
+			return fmt.Errorf("invalid audio bitrate: %s", *audioBitrateStr)
 		}
+		audioBitrate = &audioBitrateInt
+	}
 
-		// shortcut to set width and height from resolution flag
-		if resolution != nil && *resolution != "" {
-			parts := strings.Split(*resolution, "x")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid resolution: %s", *resolution)
-			}
-
-			resWidth, err := strconv.ParseInt(parts[0], 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid width: %s", parts[0])
-			}
-			resHeight, err := strconv.ParseInt(parts[1], 10, 64)
-			if err != nil {
-				return fmt.Errorf("invalid height: %s", parts[1])
-			}
-			width = &resWidth
-			height = &resHeight
-			resolution = nil
+	if maxrateStr != nil && *maxrateStr != "" {
+		maxrateInt, err := formatter.ParseFileSize(*maxrateStr)
+		if err != nil {
+			return fmt.Errorf("invalid maximum bitrate: %s", *maxrateStr)
 		}
+		maxrate = &maxrateInt
+	}
 
-		// Convert bitrate like "1200K", "2M" to bits (int64)
-		// for convenience
-		if videoBitrateStr != nil && *videoBitrateStr != "" {
-			videoBitrateInt, err := formatter.ParseFileSize(*videoBitrateStr)
-			if err != nil {
-				return fmt.Errorf("invalid video bitrate: %s", *videoBitrateStr)
-			}
-			videoBitrate = &videoBitrateInt
+	if bufsizeStr != nil && *bufsizeStr != "" {
+		bufsizeInt, err := formatter.ParseFileSize(*bufsizeStr)
+		if err != nil {
+			return fmt.Errorf("invalid buffer size: %s", *bufsizeStr)
 		}
+		bufsize = &bufsizeInt
+	}
 
-		if audioBitrateStr != nil && *audioBitrateStr != "" {
-			audioBitrateInt, err := formatter.ParseFileSize(*audioBitrateStr)
-			if err != nil {
-				return fmt.Errorf("invalid audio bitrate: %s", *audioBitrateStr)
-			}
-			audioBitrate = &audioBitrateInt
-		}
+	if err := validateCommonVideoFlags(); err != nil {
+		return err
+	}
 
-		if maxrateStr != nil && *maxrateStr != "" {
-			maxrateInt, err := formatter.ParseFileSize(*maxrateStr)
-			if err != nil {
-				return fmt.Errorf("invalid maximum bitrate: %s", *maxrateStr)
-			}
-			maxrate = &maxrateInt
-		}
-
-		if bufsizeStr != nil && *bufsizeStr != "" {
-			bufsizeInt, err := formatter.ParseFileSize(*bufsizeStr)
-			if err != nil {
-				return fmt.Errorf("invalid buffer size: %s", *bufsizeStr)
-			}
-			bufsize = &bufsizeInt
-		}
-
-		if err := validateCommonVideoFlags(); err != nil {
+	// validate format settings according to the format
+	switch app.Command.Format {
+	case string(chunkify.FormatMp4H264):
+		if err := validateH264Flags(); err != nil {
 			return err
 		}
 
-		// validate format settings according to the format
-		switch app.Command.Format {
-		case string(chunkify.FormatMp4H264):
-			if err := validateH264Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatMp4H265):
-			if err := validateH265Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatMp4Av1):
-			if err := validateAv1Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatWebmVp9):
-			if err := validateWebmVp9Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatJpg):
-			if err := validateJpgFlags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatHlsH264):
-			if err := validateHlsH264Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatHlsH265):
-			if err := validateHlsH265Flags(); err != nil {
-				return err
-			}
-
-		case string(chunkify.FormatHlsAv1):
-			if err := validateHlsAv1Flags(); err != nil {
-				return err
-			}
-
+	case string(chunkify.FormatMp4H265):
+		if err := validateH265Flags(); err != nil {
+			return err
 		}
 
-		// build job format params according to all format flags
-		setJobFormatParams(app)
+	case string(chunkify.FormatMp4Av1):
+		if err := validateAv1Flags(); err != nil {
+			return err
+		}
 
-		return nil
+	case string(chunkify.FormatWebmVp9):
+		if err := validateWebmVp9Flags(); err != nil {
+			return err
+		}
+
+	case string(chunkify.FormatJpg):
+		if err := validateJpgFlags(); err != nil {
+			return err
+		}
+
+	case string(chunkify.FormatHlsH264):
+		if err := validateHlsH264Flags(); err != nil {
+			return err
+		}
+
+	case string(chunkify.FormatHlsH265):
+		if err := validateHlsH265Flags(); err != nil {
+			return err
+		}
+
+	case string(chunkify.FormatHlsAv1):
+		if err := validateHlsAv1Flags(); err != nil {
+			return err
+		}
+
 	}
+
+	// build job format params according to all format flags
+	setJobFormatParams(app)
+
+	return nil
 }
 
 func setJobFormatParams(app *App) {
