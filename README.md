@@ -101,7 +101,7 @@ chunkify -i video.mp4 \
 > [!TIP]
 > When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't upload the video more than once.
 
-You can also transcode a video from an HTTP URL:
+You can also transcode a video publicly available via HTTP:
 
 ```
 chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
@@ -118,7 +118,7 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
          --preset 7
 ```
 
-If you prefer getting the video specs before transcoding, use `--input` without setting `--format`:
+Sometimes, it's better to know what the input specs are before transcoding. Use `--input` without setting `--format` and it will only upload / make available the source video:
 
 ```
 chunkify -i chunkify-animation-logo.mp4
@@ -139,6 +139,8 @@ chunkify -i chunkify-animation-logo.mp4
 
   Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
+
+Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting the `--input` to the source ID or the same local file (if uploaded from disk).
 
 ### HLS Packaging
 
