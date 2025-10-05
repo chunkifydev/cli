@@ -25,12 +25,13 @@ const (
 )
 
 type ChunkifyCommand struct {
-	Id                  string
-	Input               string
-	Output              string
-	Format              string
-	JobFormatParams     chunkify.JobCreateFormatParams
-	JobTranscoderParams *chunkify.JobCreateTranscoderParams
+	Id                     string
+	Input                  string
+	Output                 string
+	Format                 string
+	JobFormatParams        chunkify.JobCreateFormatParams
+	JobTranscoderParams    *chunkify.JobCreateTranscoderParams
+	JobCreateStorageParams *chunkify.JobCreateStorageParams
 }
 
 // Command represents the root notifications command and configuration
@@ -135,9 +136,19 @@ func (app *App) executeWorkflow(ctx context.Context) {
 			return
 		}
 		app.Progress.Files <- files
-		if err := downloadFiles(ctx, app, files); err != nil {
+		downloadedFiles, err := downloadFiles(ctx, app, files)
+		if err != nil {
 			app.setError(err)
 			return
+		}
+
+		// Post process files if format is jpg or hls
+		// this is to rename the paths inside m3u8 and vtt files to the correct name
+		if app.Command.Format == string(chunkify.FormatJpg) || strings.HasPrefix(app.Command.Format, "hls") {
+			if err := hooks.Process(app.Command.Format, app.Job.Id, files, downloadedFiles); err != nil {
+				app.setError(err)
+				return
+			}
 		}
 	}
 
@@ -147,34 +158,21 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	app.Progress.Status <- Completed
 }
 
-func downloadFiles(ctx context.Context, app *App, files []chunkify.File) error {
+func downloadFiles(ctx context.Context, app *App, files []chunkify.File) ([]string, error) {
 	app.Progress.Status <- Downloading
 
 	slog.Info("Downloading files", "files", files)
 	downloadedFiles := []string{}
-	var oldManifestContent []byte
 
 	for _, file := range files {
 		// Check if context was cancelled before each download
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("download cancelled")
+			return nil, fmt.Errorf("download cancelled")
 		default:
 		}
 
 		filepath := filename(file, app.Command.Output)
-
-		// check if we have a manifest.m3u8 already
-		// if so we will merge it with the new manifest.m3u8
-		if strings.HasSuffix(filepath, "manifest.m3u8") {
-			if _, err := os.Stat(filepath); err == nil {
-				manifestContent, err := os.ReadFile(filepath)
-				if err != nil {
-					return fmt.Errorf("read manifest file: %w", err)
-				}
-				oldManifestContent = manifestContent
-			}
-		}
 
 		if err := DownloadFile(ctx, file, filepath, app.Progress.DownloadProgress); err == nil {
 			app.Progress.DownloadedFiles <- file
@@ -182,20 +180,7 @@ func downloadFiles(ctx context.Context, app *App, files []chunkify.File) error {
 		}
 	}
 
-	// If format is jpg
-	// rename all vtt cues to match the filename set in --output flag
-	if app.Command.Format == string(chunkify.FormatJpg) {
-		if err := hooks.ProcessVtt(downloadedFiles, app.Job.Id); err != nil {
-			return fmt.Errorf("post process vtt: %w", err)
-		}
-	} else if strings.HasPrefix(app.Command.Format, "hls") {
-
-		if err := hooks.ProcessM3u8(downloadedFiles, app.Job.Id, oldManifestContent); err != nil {
-			return fmt.Errorf("post process m3u8: %w", err)
-		}
-	}
-
-	return nil
+	return downloadedFiles, nil
 }
 
 func jobHasFailed(status string) bool {
@@ -346,6 +331,7 @@ func (a *App) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 		SourceId:      source.Id,
 		Format:        a.Command.JobFormatParams,
 		Transcoder:    a.Command.JobTranscoderParams,
+		Storage:       a.Command.JobCreateStorageParams,
 		HlsManifestId: hlsManifestId,
 		Metadata: chunkify.JobCreateParamsMetadata{
 			"chunkify_execution_id": a.Command.Id,

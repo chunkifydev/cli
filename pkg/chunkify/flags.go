@@ -18,6 +18,11 @@ var (
 	transcoderVcpu = new(int64)
 )
 
+// Storage flags
+var (
+	storagePath = new(string)
+)
+
 // Common video flags
 var (
 	resolution   = new(string)
@@ -77,8 +82,11 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.Flags().StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
 	rcmd.Flags().StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
 	rcmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+
 	rcmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
-	rcmd.Flags().Int64Var(transcoderVcpu, "vcpu", 8, "vCPU per transcoder (4, 8, or 16)")
+	rcmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
+
+	rcmd.Flags().StringVar(storagePath, "storage-path", "", "Storage absolute path")
 
 	// Common video settings
 	rcmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
@@ -146,6 +154,12 @@ func BindFlags(rcmd *cobra.Command) {
 			chunkifyCmd.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
 				Quantity: *transcoders,
 				Type:     fmt.Sprintf("%dvCPU", *transcoderVcpu),
+			}
+		}
+
+		if storagePath != nil && *storagePath != "" {
+			chunkifyCmd.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
+				Path: storagePath,
 			}
 		}
 

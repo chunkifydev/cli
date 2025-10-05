@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func ProcessVtt(downloadedFiles []string, jobId string) error {
+func ProcessVtt(downloadedFiles []string, basename string) error {
 	var vttContent []byte
 	var imageBasename string
 	var vttPath string
@@ -29,7 +29,7 @@ func ProcessVtt(downloadedFiles []string, jobId string) error {
 		}
 	}
 
-	vttContent = []byte(strings.ReplaceAll(string(vttContent), jobId, imageBasename))
+	vttContent = []byte(strings.ReplaceAll(string(vttContent), basename, imageBasename))
 	if err := os.WriteFile(vttPath, vttContent, 0644); err != nil {
 		return fmt.Errorf("write vtt file: %w", err)
 	}

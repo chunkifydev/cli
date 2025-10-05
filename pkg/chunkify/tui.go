@@ -464,7 +464,7 @@ func (t App) summaryView() string {
 		speed += transcoder.Speed
 	}
 
-	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
+	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n\n", indent)
 	// if format is not set, we show the source ID
 	if t.Command.Format == "" && t.Source != nil {
 		view += fmt.Sprintf("%sSource ID: %s\n\n", indent, t.Source.Id)
@@ -475,12 +475,12 @@ func (t App) summaryView() string {
 		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
 		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Job.SourceId)
 
-		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
-		view += formatConfig(t.Job.Format.Config)
-
 		if t.Job.HlsManifestId != nil {
 			view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, *t.Job.HlsManifestId)
 		}
+
+		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
+		view += formatConfig(t.Job.Format.Config)
 		view += "\n"
 
 		view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)

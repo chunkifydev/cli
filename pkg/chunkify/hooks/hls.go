@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func ProcessM3u8(downloadedFiles []string, jobId string, oldManifestContent []byte) error {
+func ProcessM3u8(downloadedFiles []string, basename string, oldManifestContent []byte) error {
 	var (
 		m3u8Content, manifestContent []byte
 		videoBasename                string
@@ -41,11 +41,11 @@ func ProcessM3u8(downloadedFiles []string, jobId string, oldManifestContent []by
 		}
 	}
 
-	m3u8Content = []byte(strings.ReplaceAll(string(m3u8Content), jobId, videoBasename))
+	m3u8Content = []byte(strings.ReplaceAll(string(m3u8Content), basename, videoBasename))
 	if err := os.WriteFile(m3u8Path, m3u8Content, 0644); err != nil {
 		return fmt.Errorf("write m3u8 file: %w", err)
 	}
-	manifestContent = []byte(strings.ReplaceAll(string(manifestContent), jobId, videoBasename))
+	manifestContent = []byte(strings.ReplaceAll(string(manifestContent), basename, videoBasename))
 	if err := os.WriteFile(manifestPath, manifestContent, 0644); err != nil {
 		return fmt.Errorf("write manifest file: %w", err)
 	}
