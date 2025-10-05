@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	_ "embed"
@@ -104,8 +105,11 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 
 // init initializes the CLI by setting up configuration and registering all available commands
 func init() {
-	chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
-	fmt.Println("\n" + chunkifyBanner + "\n")
+	if !slices.Contains(os.Args, "--json") {
+		chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
+		fmt.Println("\n" + chunkifyBanner + "\n")
+	}
+
 	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
 		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
 	}

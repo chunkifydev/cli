@@ -119,12 +119,8 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 ```
 
 > [!TIP]
-> If `--format` is omitted, but the `--output` is set, we will match the file extension to the appropriate format:
-> 
-> - `.mp4` → `mp4/h264`
-> - `.webm` → `webm/vp9`
-> - `.m3u8` → `hls/h264`
-> - `.jpg` → `jpg`
+> If --format is omitted, but the --output is set, we will match the file extension to the appropriate format:
+> .mp4 → mp4/h264, .webm → webm/vp9, .m3u8 → hls/h264, and .jpg → jpg
 
 Sometimes, it's better to know what the input specs are before transcoding. Use `--input` without setting `--format` and it will only upload / make available the source video:
 
@@ -295,6 +291,26 @@ sprite-00000.jpg#xywh=320,0,160,160
 |------|------|-------------|-------|
 | `--interval` | int | Set frame extraction interval in seconds | 1-60 |
 | `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
+
+### JSON Output
+
+It's possible to output the progress in JSON format by passing the `--json` flag.
+
+```
+chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
+```
+
+```json
+{"status":"Queued","progress":0,"fps":0,"speed":"0.0x","out_time":0,"eta":""}
+{"status":"Queued","progress":0,"fps":0,"speed":"0.0x","out_time":3,"eta":""}
+{"status":"Ingesting","progress":20,"fps":0,"speed":"0.0x","out_time":3,"eta":""}
+{"status":"Transcoding","progress":40,"fps":100,"speed":"5x","out_time":3,"eta":""}
+{"status":"Transcoding","progress":70,"fps":100,"speed":"5x","out_time":3,"eta":""}
+{"status":"Merging","progress":90,"fps":12,"speed":"1.2x","out_time":3,"eta":""}
+{"status":"Merging","progress":100,"fps":12,"speed":"1.2x","out_time":3,"eta":""}
+{"status":"Downloading","progress":100,"fps":0,"speed":"105MB/s","out_time":0,"eta":"0s"}
+{"status":"Completed","progress":0,"fps":0,"speed":"","out_time":0,"eta":""}
+```
 
 ## Chunkify API Integration
 

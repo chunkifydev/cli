@@ -2,6 +2,7 @@ package chunkify
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -63,6 +64,11 @@ type App struct {
 	Done             bool
 	Ctx              context.Context
 	CancelFunc       context.CancelFunc
+
+	// Will only output in JSON format
+	// See JSONView()
+	JSON           bool
+	LastJSONOutput time.Time
 }
 
 func NewApp() *App {
@@ -70,6 +76,7 @@ func NewApp() *App {
 		Status:          Starting,
 		Progress:        NewProgress(),
 		DownloadedFiles: map[string]chunkify.File{},
+		LastJSONOutput:  time.Now(),
 	}
 }
 
@@ -107,7 +114,13 @@ func (t App) Init() tea.Cmd {
 }
 
 func (t App) Run() {
-	p := tea.NewProgram(t)
+	var p *tea.Program
+	if t.JSON {
+		// Disable Bubble Tea renderer in JSON mode to avoid whitespace artifacts
+		p = tea.NewProgram(t, tea.WithoutRenderer())
+	} else {
+		p = tea.NewProgram(t)
+	}
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
@@ -141,9 +154,19 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		// Check for updates from channels (non-blocking)
 		t, shouldQuit := t.checkChannels()
+
+		// if JSON mode is enabled, print the JSON to the terminal every second
+		if t.JSON {
+			if shouldQuit || t.Done || time.Since(t.LastJSONOutput) >= time.Second {
+				t.LastJSONOutput = time.Now()
+				fmt.Println(t.JSONView())
+			}
+		}
+
 		if shouldQuit {
 			return t, tea.Quit
 		}
+
 		return t, tickCmd()
 	default:
 		var cmd tea.Cmd
@@ -205,7 +228,68 @@ func (t App) checkChannels() (App, bool) {
 	return t, t.Done
 }
 
+type JSONOutput struct {
+	Status   string  `json:"status"`
+	Progress float64 `json:"progress"`
+	Fps      float64 `json:"fps"`
+	Speed    string  `json:"speed"`
+	OutTime  int64   `json:"out_time"`
+	Eta      string  `json:"eta"`
+}
+
+func (t App) JSONView() string {
+	fps := 0.0
+	speed := 0.0
+	outTime := int64(0)
+	progress := 0.0
+	eta := ""
+
+	speedStr := ""
+
+	switch t.Status {
+	case UploadingFromFile:
+		progress = t.UploadProgress.Progress
+		speedStr = formatter.Bitrate(int64(t.UploadProgress.Speed))
+		eta = t.UploadProgress.Eta.Round(time.Second).String()
+	case UploadingFromUrl:
+		progress = 100.0
+		speedStr = "N/A"
+		eta = t.UploadProgress.Eta.Round(time.Second).String()
+	case Downloading:
+		progress = t.DownloadProgress.Progress
+		speedStr = formatter.Bitrate(int64(t.DownloadProgress.Speed))
+		eta = t.DownloadProgress.Eta.Round(time.Second).String()
+	case Transcoding:
+		if t.Job != nil {
+
+			for _, transcoder := range t.Transcoders {
+				fps += transcoder.Fps
+				speed += transcoder.Speed
+				outTime += transcoder.OutTime
+			}
+
+			speedStr = fmt.Sprintf("%.1fx", speed)
+			progress = t.Job.Progress
+		}
+	}
+
+	out := JSONOutput{
+		Status:   t.getStatusString(),
+		Progress: progress,
+		Fps:      fps,
+		Speed:    speedStr,
+		OutTime:  outTime,
+		Eta:      eta,
+	}
+	j, _ := json.Marshal(out)
+	return string(j)
+}
+
 func (t App) View() string {
+	if t.JSON {
+		// No side-effects in View when JSON mode is on; Update handles printing
+		return ""
+	}
 	var view string
 	statusInfo := ""
 
@@ -262,7 +346,7 @@ func (t App) uploadView() (string, string) {
 	statusInfo := ""
 
 	if t.Status == UploadingFromFile {
-		statusInfo = fmt.Sprintf("%.1f%% (%.1f MB/s, ETA: %s)", t.UploadProgress.Progress, t.UploadProgress.Speed/(1024*1024), t.UploadProgress.Eta.Round(time.Second))
+		statusInfo = fmt.Sprintf("%.1f%% (%s, ETA: %s)", t.UploadProgress.Progress, formatter.Bitrate(int64(t.UploadProgress.Speed)), t.UploadProgress.Eta.Round(time.Second))
 
 		// Display upload progress
 		view = currentStepText(fmt.Sprintf("%s%s Uploading %s",
@@ -487,7 +571,7 @@ func (t App) getStatusString() string {
 		if t.Job != nil {
 			return cases.Title(language.English).String(t.Job.Status)
 		}
-		return "Transcoding"
+		return "Queued"
 	case Downloading:
 		return "Downloading"
 	case Completed:

@@ -86,6 +86,7 @@ var (
 func BindFlags(app *App, cmd *cobra.Command) {
 	app.Command = &ChunkifyCommand{Id: uuid.New().String()}
 
+	cmd.Flags().BoolVar(&app.JSON, "json", false, "Output in JSON format")
 	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
 	cmd.Flags().StringVarP(&app.Command.Output, "output", "o", "", "Output file path")
 	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
