@@ -89,6 +89,13 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	}
 	app.Progress.Source <- source
 
+	// No format specified, we are done
+	if app.Command.Format == "" {
+		time.Sleep(1 * time.Second)
+		app.Progress.Status <- Completed
+
+		return
+	}
 	// Create job
 	app.Job, err = app.CreateJob(source)
 	if err != nil {

@@ -91,6 +91,27 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
          --preset 7
 ```
 
+If you prefer getting the video specs before transcoding, use `--input` without setting `--format`:
+
+```
+chunkify -i chunkify-animation-logo.mp4
+
+    ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
+  ██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
+    ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
+
+  Chunkify CLI version: dev
+  https://chunkify.dev
+
+  ────────────────────────────────────────────────
+
+  ▮ Source: chunkify-animation-logo.mp4
+    Duration: 00:03 Size: 61KB Video: h264, 400x400, 149KB/s, 24.00fps
+
+  ────────────────────────────────────────────────
+  Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
+```
+
 ### Formats
 
 Depending on your plan, here are the supported formats:

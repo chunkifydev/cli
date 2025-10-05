@@ -76,7 +76,7 @@ func BindFlags(rcmd *cobra.Command) {
 
 	rcmd.Flags().StringVarP(&chunkifyCmd.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
 	rcmd.Flags().StringVarP(&chunkifyCmd.Output, "output", "o", "", "Output file path")
-	rcmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", string(chunkify.FormatMp4H264), "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+	rcmd.Flags().StringVarP(&chunkifyCmd.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
 	rcmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
 	rcmd.Flags().Int64Var(transcoderVcpu, "vcpu", 8, "vCPU per transcoder (4, 8, or 16)")
 
@@ -121,11 +121,14 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.Flags().BoolVar(sprite, "sprite", false, "Generate sprite sheet")
 
 	rcmd.MarkFlagRequired("input")
-	rcmd.MarkFlagRequired("output")
 
 	rcmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	rcmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		if chunkifyCmd.Format == "" {
+			return nil
+		}
+
 		if !slices.Contains([]chunkify.FormatName{
 			chunkify.FormatMp4H264,
 			chunkify.FormatMp4H265,

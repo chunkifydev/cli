@@ -237,7 +237,8 @@ func (t App) View() string {
 	}
 
 	// Display job progress
-	if t.Status >= Transcoding && t.Job != nil {
+	if t.Command.Format != "" && t.Status >= Transcoding && t.Job != nil {
+		view += "\n"
 		v, statusInfo = t.transcodingView()
 		view += v
 	}
@@ -299,7 +300,7 @@ func (t App) uploadView() (string, string) {
 func (t App) sourceView() (string, string) {
 	view := fmt.Sprintf("%s%s Source: %s\n", indent, completedIcon.String(), sourceName(t.Command.Input))
 	view += fmt.Sprintf("%sDuration: %s Size: %s Video: %s, %dx%d, %s, %.2ffps", indent+indent, formatter.Duration(t.Source.Duration), formatter.Size(t.Source.Size), t.Source.VideoCodec, t.Source.Width, t.Source.Height, formatter.Bitrate(t.Source.VideoBitrate), t.Source.VideoFramerate)
-	view += "\n\n"
+	view += "\n"
 	return view, t.Command.Format
 }
 
@@ -464,8 +465,15 @@ func (t App) summaryView() string {
 	}
 
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n", indent)
+	// if format is not set, we show the source ID
+	if t.Command.Format == "" && t.Source != nil {
+		view += fmt.Sprintf("%sSource ID: %s\n\n", indent, t.Source.Id)
+		return view
+	}
+
 	if t.Job != nil {
 		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
+		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Job.SourceId)
 
 		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
 		view += formatConfig(t.Job.Format.Config)
