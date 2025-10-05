@@ -14,7 +14,7 @@
   <a href="https://github.com/chunkifydev/cli/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/release.yml?style=flat-square&branch=main" /></a>
 </p>
 <p align="center">
-<img src="https://github.com/user-attachments/assets/c76a1557-6820-4df7-a2c0-8abfc0e64b80" alt="demo" width="640" />
+<img src="https://github.com/user-attachments/assets/40ec208e-d416-4b08-85fb-029b0a42c191" alt="demo" width="640" />
 </p>
 
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
