@@ -132,21 +132,21 @@ Sometimes, it's better to know what the input specs are before transcoding. Use 
 ```
 chunkify -i chunkify-animation-logo.mp4
 
-    ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
-  ██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
-    ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
+  ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
+██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
+  ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
 
-  Chunkify CLI version: dev
-  https://chunkify.dev
+Chunkify CLI version: dev
+https://chunkify.dev
 
-  ────────────────────────────────────────────────
+────────────────────────────────────────────────
 
-  ▮ Source: chunkify-animation-logo.mp4
-    Duration: 00:03 Size: 61KB Video: h264, 400x400, 149KB/s, 24.00fps
+▮ Source: chunkify-animation-logo.mp4
+  Duration: 00:03 Size: 61KB Video: h264, 400x400, 149KB/s, 24.00fps
 
-  ────────────────────────────────────────────────
+────────────────────────────────────────────────
 
-  Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
+Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
 Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting the `--input` to the source ID or the same local file (if uploaded from disk).
@@ -340,6 +340,30 @@ Start forwarding webhooks to your local server
 chunkify listen \
   --forward-to http://localhost:3000/webhooks/chunkify \
   --webhook-secret <secret-key>
+
+  ██   ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▖  ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖  ▗▖
+██    ▐▌   ▐▌▄▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌▗▞▘  █  ▐▌▗▖  ▝▚▞▘
+  ██  ▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌ ▐▌▗▄█▄▖▐▌     ▐▌
+
+Chunkify CLI version: dev
+https://chunkify.dev
+
+────────────────────────────────────────────────
+
+[mac.home] Start forwarding to http://localhost:3000/webhooks/chunkify
+
+Events:
+- job.completed
+- job.failed
+- job.cancelled
+- upload.completed
+- upload.failed
+- upload.expired
+
+────────────────────────────────────────────────
+
+[200 OK] notf_33f3pVlO3782tPF9CkioGK1IKTu job.completed (job_33f3ocg9Vg0o0gDgg5JpCCR3DzX)
+[200 OK] notf_33f3tiGWDw78SLHefdswGaL7UpB job.completed (job_33f3siy9JhMrlsIY69q2gHqL3bh)
 ```
 
 By default, it will forward all events, but you can specify the ones you are interested in:
@@ -348,9 +372,7 @@ By default, it will forward all events, but you can specify the ones you are int
 chunkify listen \
   --forward-to http://localhost:3000/webhooks/chunkify \
   --webhook-secret <secret-key> \
-  --events job.completed \
-  --events job.failed \
-  --events job.cancelled
+  --events job.completed,job.failed,job.cancelled
 ```
 
 What `chunkify listen` does under the hood:
