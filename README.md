@@ -195,15 +195,30 @@ To generate thumbnails every 10 seconds:
 chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 ```
 
-If lots of thumbnails are required, it's recommended to generate a sprite image instead of many single images. A sprite image is a single image containing many thumbnails arranged in a grid, which is more efficient when there are hundreds of them to download to display a preview.
+If many thumbnails are required, it's recommended to generate a sprite image instead of multiple individual images. A sprite image is a single image containing many thumbnails arranged in a grid, which is more efficient when there are hundreds of them to download for displaying a preview.
 
 ```
-chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
+chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 5 --sprite
 ```
 
 > [!NOTE]
 > For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering the player progress bar
 
+The VTT filename is always `images.vtt`. Here is how it looks like:
+
+```
+WEBVTT
+
+
+00:00:00.000 --> 00:00:05.000
+sprite-00000.jpg#xywh=0,0,160,160
+
+00:00:05.000 --> 00:00:10.000
+sprite-00000.jpg#xywh=160,0,160,160
+
+00:00:10.000 --> 00:00:15.000
+sprite-00000.jpg#xywh=320,0,160,160
+```
 
 ## Transcoding Parameters
 
