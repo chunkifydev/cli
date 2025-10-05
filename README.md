@@ -8,6 +8,7 @@
   </a>
 </p>
 <p align="center">The next generation Cloud transcoding service.</p>
+
 <p align="center">
   <a href="https://github.com/chunkifydev/cli/releases"><img src="https://img.shields.io/github/release/chunkifydev/cli.svg" alt="Latest Release"></a>
   <a href="https://github.com/chunkifydev/cli/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/release.yml?style=flat-square&branch=main" /></a>
@@ -20,15 +21,23 @@ The Chunkify CLI brings super-fast video transcoding to your terminal. With a si
 
 For local development, the Chunkify CLI provides a convenient command to [forward webhook notifications](#chunkify-api-integration) to your local application URL.
 
+Useful links:
+
+- [chunkify.dev](https://chunkify.dev)
+- [Documentation](https://chunkify.dev/docs)
+- [Dashboard](https://chunkify.dev/~)
+- [Sign up](https://chunkify.dev/signup)
+
+
 ## Table of Contents
 
 - [Installation](#installation)
 - [Authentication](#authentication)
 - [Quick Start with Chunkify](#quick-start-with-chunkify)
-  - [Transcode a video](#transcode-a-video)
-  - [HLS packaging](#hls-packaging)
-  - [Generate thumbnails](#generate-thumbnails)
-- [Transcoding parameters](#transcoding-parameters)
+  - [Transcode a Video](#transcode-a-video)
+  - [HLS Packaging](#hls-packaging)
+  - [Generate Thumbnails](#generate-thumbnails)
+- [Transcoding Parameters](#transcoding-parameters)
   - [Video Settings](#video-settings)
   - [Audio Settings](#audio-settings)
   - [H.264/H.265/AV1 Settings](#h264h265av1-settings)
@@ -68,7 +77,7 @@ export CHUNKIFY_PROJECT_TOKEN=sk_project_token
 
 You can use the chunkify CLI to transcode a local video, a URL, or a source ID if it was already uploaded to Chunkify.
 
-### Transcode a video
+### Transcode a Video
 
 ```
 chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
@@ -131,7 +140,7 @@ chunkify -i chunkify-animation-logo.mp4
   Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
-### HLS packaging
+### HLS Packaging
 
 Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
 
@@ -176,7 +185,7 @@ video_720p.mp4
 video_720p.m3u8
 ```
 
-### Generate thumbnails
+### Generate Thumbnails
 
 To generate thumbnails every 10 seconds:
 
@@ -194,7 +203,7 @@ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 4 --sprite
 > For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering the player progress bar
 
 
-## Transcoding parameters
+## Transcoding Parameters
 
 | Flag | Type | Description |
 |------|------|-------------|
