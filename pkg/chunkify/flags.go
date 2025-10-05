@@ -2,6 +2,7 @@ package chunkify
 
 import (
 	"fmt"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -140,8 +141,24 @@ func BindFlags(rcmd *cobra.Command) {
 	rcmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	rcmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if chunkifyCmd.Format == "" {
+		if chunkifyCmd.Format == "" && chunkifyCmd.Output == "" {
 			return nil
+		}
+
+		// Set default format based on output file extension
+		if chunkifyCmd.Format == "" {
+			switch path.Ext(chunkifyCmd.Output) {
+			case ".mp4":
+				chunkifyCmd.Format = string(chunkify.FormatMp4H264)
+			case ".webm":
+				chunkifyCmd.Format = string(chunkify.FormatWebmVp9)
+			case ".m3u8":
+				chunkifyCmd.Format = string(chunkify.FormatHlsH264)
+			case ".jpg":
+				chunkifyCmd.Format = string(chunkify.FormatJpg)
+			default:
+				return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(chunkifyCmd.Output))
+			}
 		}
 
 		if !slices.Contains([]chunkify.FormatName{
