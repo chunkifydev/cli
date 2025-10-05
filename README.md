@@ -44,6 +44,7 @@ Useful links:
   - [VP9 Settings](#vp9-settings)
   - [HLS Settings](#hls-settings)
   - [JPG Settings](#jpg-settings)
+- [JSON Output](#json-output)
 - [Chunkify API Integration](#chunkify-api-integration)
   - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
     
@@ -292,7 +293,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `--interval` | int | Set frame extraction interval in seconds | 1-60 |
 | `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
 
-### JSON Output
+## JSON Output
 
 It's possible to output the progress in JSON format by passing the `--json` flag.
 
