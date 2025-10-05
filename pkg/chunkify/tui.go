@@ -65,6 +65,14 @@ type App struct {
 	CancelFunc       context.CancelFunc
 }
 
+func NewApp() *App {
+	return &App{
+		Status:          Starting,
+		Progress:        NewProgress(),
+		DownloadedFiles: map[string]chunkify.File{},
+	}
+}
+
 type Progress struct {
 	Status           chan int
 	JobProgress      chan chunkify.Job

@@ -42,7 +42,8 @@ type Command struct {
 }
 
 func NewCommand(cfg *config.Config) *Command {
-	app := &App{}
+	app := NewApp()
+
 	cmd := &Command{
 		App:    app,
 		Config: cfg,
@@ -54,12 +55,8 @@ func NewCommand(cfg *config.Config) *Command {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
-				app.Status = Starting
-				app.Progress = NewProgress()
 				app.Ctx = ctx
 				app.CancelFunc = cancel
-				app.Done = false
-				app.DownloadedFiles = map[string]chunkify.File{}
 				app.Client = cfg.Client
 
 				// Start all background work in a goroutine
