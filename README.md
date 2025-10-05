@@ -333,7 +333,9 @@ When integrating Chunkify into your app, you must rely on webhooks to receive ev
 Start forwarding webhooks to your local server
 
 ```
-chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <secret-key>
+chunkify listen \
+  --forward-to http://localhost:3000/webhooks/chunkify \
+  --webhook-secret <secret-key>
 ```
 
 By default, it will forward all events, but you can specify the ones you are interested in:
