@@ -58,7 +58,7 @@ You need to have a Chunkify account to use the CLI. If you don't have one, you c
 Installing the latest version:
 
 ```
-curl -L https://chunkify.dev/install.sh | sh
+curl -fsSL https://chunkify.dev/install.sh | bash
 ```
 
 ## Authentication
