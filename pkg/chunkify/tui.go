@@ -39,7 +39,6 @@ var (
 	errorText        = lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Bold(true).Render
 	statusText       = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("42")).Padding(0, 1).Bold(true).Render
 	statusOrangeText = lipgloss.NewStyle().Foreground(lipgloss.Color("#000")).Background(lipgloss.Color("#E7AE59")).Padding(0, 1).Bold(true).Render
-	infoText         = lipgloss.NewStyle().Foreground(lipgloss.Color("#EEEEEE")).Render
 	grayText         = lipgloss.NewStyle().Foreground(lipgloss.Color("#59636e")).Render
 
 	indent    = "  "
@@ -323,7 +322,7 @@ func (t App) View() string {
 	}
 
 	if !t.Done {
-		view += fmt.Sprintf("\n\n%s%s %s\n", indent, statusText(t.getStatusString()), infoText(statusInfo))
+		view += fmt.Sprintf("\n\n%s%s statusinfo: %s\n", indent, statusText(t.getStatusString()), statusInfo)
 	} else {
 		view += t.summaryView()
 	}
