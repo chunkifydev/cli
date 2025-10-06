@@ -4,17 +4,15 @@ go 1.23.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.1
-	github.com/chunkifydev/chunkify-go v0.1.0
+	github.com/chunkifydev/chunkify-go v0.0.0-20251006074848-4c0ae55fc2ba
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/term v0.24.0
+	golang.org/x/text v0.18.0
 )
-
-replace github.com/chunkifydev/chunkify-go => ../chunkify-go
 
 require (
 	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/x/ansi v0.2.3 // indirect
 	github.com/charmbracelet/x/term v0.2.0 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
@@ -30,7 +28,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
 )
 
 require (
