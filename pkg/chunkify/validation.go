@@ -79,8 +79,9 @@ func validateH264Flags() error {
 			return fmt.Errorf("--profilev must be one of baseline, main, high, high10, high422, high444")
 		}
 	}
+
 	if level != nil && *level != 0 {
-		if slices.Contains([]int64{10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51}, *level) {
+		if !slices.Contains([]int64{10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51}, *level) {
 			return fmt.Errorf("--level must be one of 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51")
 		}
 	}
@@ -108,7 +109,7 @@ func validateH265Flags() error {
 		}
 	}
 	if level != nil && *level != 0 {
-		if slices.Contains([]int64{30, 31, 41}, *level) {
+		if !slices.Contains([]int64{30, 31, 41}, *level) {
 			return fmt.Errorf("--level must be one of 30, 31, 41")
 		}
 	}
@@ -136,7 +137,7 @@ func validateAv1Flags() error {
 		}
 	}
 	if level != nil && *level != 0 {
-		if slices.Contains([]int64{30, 31, 41}, *level) {
+		if !slices.Contains([]int64{30, 31, 41}, *level) {
 			return fmt.Errorf("--level must be one of 30, 31, 41")
 		}
 	}
@@ -162,7 +163,7 @@ func validateWebmVp9Flags() error {
 }
 
 func validateJpgFlags() error {
-	if interval == nil && *interval != 0 {
+	if interval != nil && *interval != 0 {
 		if *interval < 0 || *interval > 60 {
 			return fmt.Errorf("--interval must be between 0 and 60")
 		}
