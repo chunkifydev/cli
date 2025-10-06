@@ -141,7 +141,18 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		return setupCommand(app)
+		if err := setupCommand(app); err != nil {
+			return err
+		}
+
+		if err := validateTranscodeSettings(app); err != nil {
+			return err
+		}
+
+		// build job format params according to all format flags
+		setJobFormatParams(app)
+
+		return nil
 	}
 }
 
@@ -165,20 +176,6 @@ func setupCommand(app *App) error {
 		default:
 			return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(app.Command.Output))
 		}
-	}
-
-	// Check if the format is valid
-	if !slices.Contains([]chunkify.FormatName{
-		chunkify.FormatMp4H264,
-		chunkify.FormatMp4H265,
-		chunkify.FormatMp4Av1,
-		chunkify.FormatWebmVp9,
-		chunkify.FormatHlsH264,
-		chunkify.FormatHlsH265,
-		chunkify.FormatHlsAv1,
-		chunkify.FormatJpg,
-	}, chunkify.FormatName(app.Command.Format)) {
-		return fmt.Errorf("invalid format: %s", app.Command.Format)
 	}
 
 	// Set the number of transcoders and their type
@@ -250,6 +247,24 @@ func setupCommand(app *App) error {
 		bufsize = &bufsizeInt
 	}
 
+	return nil
+}
+
+func validateTranscodeSettings(app *App) error {
+	// Check if the format is valid
+	if !slices.Contains([]chunkify.FormatName{
+		chunkify.FormatMp4H264,
+		chunkify.FormatMp4H265,
+		chunkify.FormatMp4Av1,
+		chunkify.FormatWebmVp9,
+		chunkify.FormatHlsH264,
+		chunkify.FormatHlsH265,
+		chunkify.FormatHlsAv1,
+		chunkify.FormatJpg,
+	}, chunkify.FormatName(app.Command.Format)) {
+		return fmt.Errorf("invalid format: %s", app.Command.Format)
+	}
+
 	if err := validateCommonVideoFlags(); err != nil {
 		return err
 	}
@@ -297,9 +312,6 @@ func setupCommand(app *App) error {
 		}
 
 	}
-
-	// build job format params according to all format flags
-	setJobFormatParams(app)
 
 	return nil
 }
