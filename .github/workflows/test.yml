@@ -15,11 +15,12 @@ jobs:
                   go-version: "1.23.x"
                   check-latest: true
             - name: Get latest chunkify-go dependency
-              run: |
-                  cd ..
-                  git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/chunkifydev/chunkify-go.git
-                  cd chunkify-go
-                  git checkout main
+              uses: actions/checkout@v4
+              with:
+                  repository: chunkifydev/chunkify-go
+                  path: ../chunkify-go
+                  ref: main
+                  token: ${{ secrets.GITHUB_TOKEN }}
             - name: Download dependencies
               run: go mod download
             - name: Run tests
