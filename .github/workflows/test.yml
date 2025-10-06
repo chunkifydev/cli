@@ -17,7 +17,7 @@ jobs:
             - name: Get latest chunkify-go dependency
               run: |
                   cd ..
-                  git clone https://github.com/chunkifydev/chunkify-go.git
+                  git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/chunkifydev/chunkify-go.git
                   cd chunkify-go
                   git checkout main
             - name: Download dependencies
