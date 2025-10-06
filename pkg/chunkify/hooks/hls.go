@@ -2,7 +2,6 @@ package hooks
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path"
 	"slices"
@@ -62,7 +61,6 @@ func mergeManifest(manifestContent []byte, oldManifestContent []byte) []byte {
 			// and replace the next line (m3u8 path) with the next line from oldManifestLines
 			lineIndex := slices.Index(currentManifestLines, line)
 
-			slog.Info("Looking for line", "line", line, "lineIndex", lineIndex)
 			if lineIndex == -1 {
 				continue
 			}

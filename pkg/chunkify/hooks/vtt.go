@@ -22,11 +22,18 @@ func ProcessVtt(downloadedFiles []string, basename string) error {
 				return fmt.Errorf("read file: %w", err)
 			}
 		case ".jpg":
+			if imageBasename != "" {
+				continue
+			}
 			parts := strings.Split(path.Base(filepath), "-")
 			if len(parts) >= 2 {
 				imageBasename = strings.Join(parts[0:len(parts)-1], "-")
 			}
 		}
+	}
+
+	if imageBasename == "" {
+		return fmt.Errorf("image basename not found")
 	}
 
 	vttContent = []byte(strings.ReplaceAll(string(vttContent), basename, imageBasename))
