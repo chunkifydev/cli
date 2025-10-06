@@ -11,8 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/chunkifydev/cli/releases"><img src="https://img.shields.io/github/release/chunkifydev/cli.svg" alt="Latest Release"></a>
-  <a href="https://github.com/chunkifydev/cli/actions/workflows/release.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/release.yml?style=flat-square&branch=main" /></a>
-  <a href="https://github.com/chunkifydev/cli/actions/workflows/test.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/test.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://github.com/chunkifydev/cli/actions/workflows/test.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/test.yml?style=flat-square&branch=main" /></a>
 </p>
 <p align="center">
 <img src="https://github.com/user-attachments/assets/40ec208e-d416-4b08-85fb-029b0a42c191" alt="demo" width="640" />
