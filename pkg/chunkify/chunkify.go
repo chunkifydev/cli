@@ -293,9 +293,11 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 			return nil, fmt.Errorf("error listing sources: %s", err)
 		}
 		for _, source := range results.Items {
-			if v, ok := source.Metadata.(map[string]any); ok && v["chunkify_execution_id"] == a.Command.Id {
-				found = true
-				return &source, nil
+			if source.Metadata != nil {
+				if v, ok := source.Metadata["chunkify_execution_id"]; ok && v == a.Command.Id {
+					found = true
+					return &source, nil
+				}
 			}
 		}
 		time.Sleep(1 * time.Second)
@@ -315,11 +317,13 @@ func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
 		return nil, fmt.Errorf("error listing sources: %s", err)
 	}
 	for _, source := range sources.Items {
-		if v, ok := source.Metadata.(map[string]any); ok && v["md5"] == md5 {
-			if source.CreatedAt.Before(time.Now().Add(-12 * time.Hour)) {
-				return nil, fmt.Errorf("source is too old, upload again")
+		if source.Metadata != nil {
+			if v, ok := source.Metadata["md5"]; ok && v == md5 {
+				if source.CreatedAt.Before(time.Now().Add(-12 * time.Hour)) {
+					return nil, fmt.Errorf("source is too old, upload again")
+				}
+				return &source, nil
 			}
-			return &source, nil
 		}
 	}
 	return nil, fmt.Errorf("source not found")
