@@ -18,11 +18,12 @@ jobs:
               uses: actions/checkout@v4
               with:
                   repository: chunkifydev/chunkify-go
-                  path: ../chunkify-go
+                  path: chunkify-go
                   ref: main
                   token: ${{ secrets.GITHUB_TOKEN }}
             - name: Download dependencies
               run: go mod download
             - name: Run tests
               run: |
+                  mv chunkify-go/ ../
                   go test ./...
