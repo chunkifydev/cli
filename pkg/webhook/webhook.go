@@ -28,6 +28,28 @@ type Command struct {
 	Config  *config.Config // Configuration for the notifications command
 }
 
+type ChunkifyClientInterface interface {
+	NotificationList(params chunkify.NotificationListParams) (*chunkify.PaginatedResult[chunkify.Notification], error)
+	WebhookCreate(params chunkify.WebhookCreateParams) (chunkify.Webhook, error)
+	WebhookDelete(webhookId string) error
+}
+
+type ChunkifyClient struct {
+	Client *chunkify.Client
+}
+
+func (c *ChunkifyClient) NotificationList(params chunkify.NotificationListParams) (*chunkify.PaginatedResult[chunkify.Notification], error) {
+	return c.Client.NotificationList(params)
+}
+
+func (c *ChunkifyClient) WebhookCreate(params chunkify.WebhookCreateParams) (chunkify.Webhook, error) {
+	return c.Client.WebhookCreate(params)
+}
+
+func (c *ChunkifyClient) WebhookDelete(webhookId string) error {
+	return c.Client.WebhookDelete(webhookId)
+}
+
 // NewCommand creates and configures a new notifications root command
 func NewCommand(config *config.Config) *Command {
 	var hostname string
@@ -50,7 +72,7 @@ func NewCommand(config *config.Config) *Command {
 
 				webhookUrl := fmt.Sprintf("http://%s.chunkify.local", hostname)
 
-				req.Client = config.Client
+				req.Client = &ChunkifyClient{Client: config.Client}
 
 				webhook, err := req.createLocaldevWebhook(webhookUrl)
 				if err != nil {
@@ -102,7 +124,7 @@ func NewCommand(config *config.Config) *Command {
 
 // WebhookProxy represents the command for proxying notifications to a local URL
 type WebhookProxy struct {
-	Client                   *chunkify.Client        // Client to use to create the webhook
+	Client                   ChunkifyClientInterface // Client to use to create the webhook
 	localUrl                 string                  // Target URL to proxy notifications to
 	webhookSecret            string                  // Key used to sign proxied notifications
 	WebhookId                string                  // ID of the webhook receiving notifications
