@@ -18,5 +18,4 @@ jobs:
               run: go mod download
             - name: Run tests
               run: |
-                  mv chunkify-go/ ../
                   go test ./...
