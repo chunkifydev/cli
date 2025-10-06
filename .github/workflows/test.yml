@@ -14,6 +14,14 @@ jobs:
               with:
                   go-version: "1.23.x"
                   check-latest: true
-            - name: Run
+            - name: Get latest chunkify-go dependency
+              run: |
+                  cd ..
+                  git clone https://github.com/chunkifydev/chunkify-go.git
+                  cd chunkify-go
+                  git checkout main
+            - name: Download dependencies
+              run: go mod download
+            - name: Run tests
               run: |
                   go test ./...
