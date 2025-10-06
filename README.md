@@ -63,20 +63,19 @@ curl -fsSL https://chunkify.dev/install.sh | bash
 
 ## Authentication
 
-1. After the installation, the first step is to authenticate with your Chunkify account:
+After the installation, the first step is to set your project token:
 
 ```
-chunkify auth login
+chunkify config token <sk_project_token>
 ```
 
-2. The CLI will open your browser and ask you to select one of your teams for authentication.
+> [!TIP]
+> You will find the project token in your project settings page under the **Project access token** section. It's best to create a new token for the CLI.
 
-3. After authentication, the CLI will prompt you to select your project.
-
-Another way to authenticate is to setup environment variables with your project token:
+Another way to authenticate is to set the environment variable `CHUNKIFY_TOKEN`:
 
 ```bash
-export CHUNKIFY_PROJECT_TOKEN=sk_project_token
+export CHUNKIFY_TOKEN=sk_project_token
 ```
 
 ## Quick Start with Chunkify

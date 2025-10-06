@@ -25,7 +25,7 @@ const (
 var chunkifyBanner string
 
 // cfg holds the global configuration for the CLI defined in config pkg
-var cfg = &config.Config{ApiEndpoint: ChunkifyApiEndpoint}
+var cfg = &config.Config{Endpoint: ChunkifyApiEndpoint}
 
 // Commander defines the interface for command execution and view generation
 type Commander interface {
@@ -39,39 +39,19 @@ var rootCmd = &cobra.Command{}
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootCmd.PersistentPreRun = checkAccountSetup
+	rootCmd.PersistentPreRun = initChunkifyClient
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-// checkAccountSetup verifies and sets up authentication tokens based on the command being executed.
-// It handles different authentication requirements for various command types:
-// - auth commands may work without tokens
-// - projects and tokens commands require team token
-// - other commands require project token
-func checkAccountSetup(cmd *cobra.Command, args []string) {
-	// Early return if no parent command (shouldn't happen, but safer)
-	parent := cmd.Parent()
-	c := ""
-	if parent != nil {
-		c = parent.Name()
-	}
-
-	// Determine command type and handle accordingly
-	switch c {
-	case "auth":
-		// For auth, try to set team token (i.e if it not the first login)
-		if cfg.TeamToken == "" {
-			// Try to set team token, but don't fail if it doesn't exist
-			cfg.SetDefaultTeamToken() // Ignore error since it's optional for auth
-		}
-
-	default:
-		// All other commands require project token
-		if cfg.ProjectToken == "" {
-			if err := cfg.SetDefaultProjectToken(); err != nil {
-				printError(err)
+// initChunkifyClient verifies authentication tokens and initializes the Chunkify client.
+func initChunkifyClient(cmd *cobra.Command, args []string) {
+	// All commands require project token, except config
+	if cmd.Name() != "config" {
+		if cfg.Token == "" {
+			if err := cfg.SetToken(); err != nil {
+				fmt.Println(err)
 				os.Exit(1)
 			}
 		}
@@ -80,10 +60,9 @@ func checkAccountSetup(cmd *cobra.Command, args []string) {
 	// Initialize client with available tokens
 	client := chunkify.NewClientWithConfig(chunkify.Config{
 		AccessTokens: chunkify.AccessTokens{
-			TeamToken:    cfg.TeamToken,
-			ProjectToken: cfg.ProjectToken,
+			ProjectToken: cfg.Token,
 		},
-		BaseURL: cfg.ApiEndpoint,
+		BaseURL: cfg.Endpoint,
 	})
 
 	cfg.Client = &client
@@ -96,12 +75,17 @@ func init() {
 		fmt.Println("\n" + chunkifyBanner + "\n")
 	}
 
-	if os.Getenv("CHUNKIFY_API_ENDPOINT") != "" {
-		cfg.ApiEndpoint = os.Getenv("CHUNKIFY_API_ENDPOINT")
+	if os.Getenv("CHUNKIFY_ENDPOINT") != "" {
+		cfg.Endpoint = os.Getenv("CHUNKIFY_ENDPOINT")
+	} else {
+		apiEndpoint, err := config.Get("config.endpoint")
+		if err == nil && apiEndpoint != "" {
+			cfg.Endpoint = apiEndpoint
+		}
 	}
 
 	rootCmd = chunkifyCmd.NewCommand(cfg).Command
 	rootCmd.AddCommand(webhook.NewCommand(cfg).Command)
-	rootCmd.AddCommand(newAuthCmd(cfg))
 	rootCmd.AddCommand(VersionCmd)
+	rootCmd.AddCommand(config.NewCommand())
 }

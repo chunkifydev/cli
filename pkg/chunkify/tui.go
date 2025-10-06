@@ -322,7 +322,7 @@ func (t App) View() string {
 	}
 
 	if !t.Done {
-		view += fmt.Sprintf("\n\n%s%s statusinfo: %s\n", indent, statusText(t.getStatusString()), statusInfo)
+		view += fmt.Sprintf("\n\n%s%s %s\n", indent, statusText(t.getStatusString()), statusInfo)
 	} else {
 		view += t.summaryView()
 	}

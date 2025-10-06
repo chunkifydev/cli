@@ -197,4 +197,4 @@ fi
 
 
 echo -e "${GREEN}Chunkify CLI was installed successfully to $INSTALL_DIR${NC}"
-echo "Run 'chunkify auth login' to get started"
+echo "Run 'chunkify config token <sk_project_token>' to get started"
