@@ -242,7 +242,7 @@ func (t App) JSONView() string {
 	speed := 0.0
 	outTime := int64(0)
 	progress := 0.0
-	eta := ""
+	eta := "N/A"
 
 	speedStr := ""
 
@@ -250,16 +250,17 @@ func (t App) JSONView() string {
 	case UploadingFromFile:
 		progress = t.UploadProgress.Progress
 		speedStr = formatter.Bitrate(int64(t.UploadProgress.Speed))
-		eta = t.UploadProgress.Eta.Round(time.Second).String()
+		eta = formatter.Duration(int64(t.UploadProgress.Eta.Round(time.Second).Seconds()))
 	case UploadingFromUrl:
 		progress = 100.0
 		speedStr = "N/A"
-		eta = t.UploadProgress.Eta.Round(time.Second).String()
+		eta = formatter.Duration(int64(t.UploadProgress.Eta.Round(time.Second).Seconds()))
 	case Downloading:
 		progress = t.DownloadProgress.Progress
 		speedStr = formatter.Bitrate(int64(t.DownloadProgress.Speed))
-		eta = t.DownloadProgress.Eta.Round(time.Second).String()
+		eta = formatter.Duration(int64(t.DownloadProgress.Eta.Round(time.Second).Seconds()))
 	case Transcoding:
+		eta = "N/A"
 		if t.Job != nil {
 
 			for _, transcoder := range t.Transcoders {
