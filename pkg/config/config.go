@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
 	"github.com/spf13/cobra"
@@ -66,10 +67,12 @@ func NewCommand() *cobra.Command {
 Available configuration keys:
   token     - Chunkify project token
   endpoint  - Chunkify API endpoint URL
+  delete    - Delete config
 
 Examples:
   chunkify config token                    # Get project token
   chunkify config token sk_project_token   # Set token to sk_project_token
+  chunkify config delete                   # Delete config
 `,
 		Args: cobra.RangeArgs(1, 2),
 
@@ -77,6 +80,12 @@ Examples:
 			key := args[0]
 
 			switch key {
+			case "delete":
+				if err := DeleteAll(); err != nil {
+					return err
+				}
+				fmt.Println("Config deleted successfully")
+				return nil
 			case "token":
 				if len(args) == 1 {
 					// Get token
