@@ -97,8 +97,10 @@ Examples:
 					return nil
 				}
 				// Set token
-				value := args[1]
-				fmt.Println("setting", ConfigTokenKey, "to", value)
+				value := strings.TrimSpace(args[1])
+				if !strings.HasPrefix(value, "sk_project_") {
+					return fmt.Errorf("invalid token: %s. It should start with 'sk_project_'", value)
+				}
 				if err := Set(ConfigTokenKey, value); err != nil {
 					return err
 				}
@@ -115,7 +117,7 @@ Examples:
 					return nil
 				}
 				// Set endpoint
-				value := args[1]
+				value := strings.TrimSpace(args[1])
 				if err := Set(ConfigEndpointKey, value); err != nil {
 					return err
 				}
