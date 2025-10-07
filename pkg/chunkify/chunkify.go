@@ -49,8 +49,26 @@ func NewCommand(cfg *config.Config) *Command {
 		Config: cfg,
 		Command: &cobra.Command{
 			Use:   "chunkify",
-			Short: "Transcode videos with Chunkify",
-			Long:  "Transcode videos with Chunkify",
+			Short: "Transcode videos with Chunkify CLI",
+			Long: `Transcode videos with Chunkify CLI
+
+The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
+
+Examples:
+
+Make a video 1080p H264
+chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+
+Upload a video only and get the Source ID
+chunkify -i video.mp4
+
+Generate thumbnails
+chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
+
+Use specific profile to use a different project
+chunkify config token sk_project_token --profile your_profile
+chunkify -i video.mp4 -f mp4/av1 --preset 7 -o video_1080p.mp4 --profile your_profile
+`,
 			Run: func(cmd *cobra.Command, args []string) {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()

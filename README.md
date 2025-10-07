@@ -46,6 +46,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
   - [HLS Settings](#hls-settings)
   - [JPG Settings](#jpg-settings)
 - [JSON Output](#json-output)
+- [CLI Profiles](#cli-profiles)
 - [Chunkify API Integration](#chunkify-api-integration)
   - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
     
@@ -78,9 +79,11 @@ Another way to authenticate is to set the environment variable `CHUNKIFY_TOKEN`:
 export CHUNKIFY_TOKEN=sk_project_token
 ```
 
+If you multiple projects, you can use the `--profile` flag to use a different project token. See [CLI Profiles](#cli-profiles) for more details.
+
 ## Quick Start with Chunkify
 
-You can use the chunkify CLI to transcode a local video, a URL, or a source ID if it was already uploaded to Chunkify.
+You can use the Chunkify CLI to transcode a local video, a URL, or a source ID if it has already been uploaded to Chunkify.
 
 ### Transcode a Video
 
@@ -88,10 +91,10 @@ You can use the chunkify CLI to transcode a local video, a URL, or a source ID i
 chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
-It will upload the video to Chunkify, transcode it into MP4 H264 and download it to your local disk.
+It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
 
-By default, the number of transcoders and their type will be selected automatically according to the input and output specs.
-To define them yourself use `--transcoders` and `--vcpu` like this:
+By default, the number of transcoders and their type will be selected automatically according to the input and output specifications.
+To define them yourself, use `--transcoders` and `--vcpu` like this:
 
 ```
 chunkify -i video.mp4 \
@@ -104,15 +107,15 @@ chunkify -i video.mp4 \
 ```
 
 > [!TIP]
-> When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't upload the video more than once.
+> When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't need to upload the video more than once.
 
-You can also transcode a video publicly available via HTTP:
+You can also transcode a video that is publicly available via HTTP:
 
 ```
 chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
 ```
 
-If a video has already been uploaded to Chunkify, you can simply use the source ID as input:
+If a video has already been uploaded to Chunkify, you can simply use the source ID as the input:
 
 ```
 chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
@@ -124,14 +127,14 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 ```
 
 > [!TIP]
-> If `--format` is omitted, but the `--output` is set, we will match the file extension to the appropriate format:
+> If `--format` is omitted but `--output` is set, we will match the file extension to the appropriate format:
 > 
 > - `.mp4` → `mp4/h264`
 > - `.webm` → `webm/vp9`
 > - `.m3u8` → `hls/h264`
 > - `.jpg` → `jpg`
 
-Sometimes, it's better to know what the input specs are before transcoding. Use `--input` without setting `--format` and it will only upload / make available the source video:
+Sometimes, it's better to know what the input specifications are before transcoding. Use `--input` without setting `--format`, and it will only upload or make available the source video:
 
 ```
 chunkify -i chunkify-animation-logo.mp4
@@ -153,14 +156,14 @@ https://chunkify.dev
 Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
-Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting the `--input` to the source ID or the same local file (if uploaded from disk).
+Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting `--input` to the source ID or the same local file (if uploaded from disk).
 
 ### HLS Packaging
 
-Chunkify supports 3 HLS formats: `hls/h264` `hls/h265` and `hls/av1`.
+Chunkify supports 3 HLS formats: `hls/h264`, `hls/h265`, and `hls/av1`.
 
 > [!WARNING]
-> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H264), `--x265keyint` (H265). For `hls/av1`, only `--gop` is necessary.
+> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H.264), and `--x265keyint` (H.265). For `hls/av1`, only `--gop` is necessary.
 
 ```
 chunkify -i video.mp4 \
@@ -173,7 +176,7 @@ chunkify -i video.mp4 \
          --ab 128k
 ```
 
-Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID` which we will use for the next command:
+Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID`, which we will use for the next command:
 
 ```
 chunkify -i video.mp4 \
@@ -188,7 +191,7 @@ chunkify -i video.mp4 \
 ```
 
 > [!NOTE]
-> The video bitrate and/or the audio bitrate are mandatory for HLS output
+> The video bitrate and/or audio bitrate are mandatory for HLS output
 
 Now we have 2 renditions that belong to the same manifest:
 
@@ -215,9 +218,9 @@ chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 5 --sprite
 ```
 
 > [!NOTE]
-> For all JPG outputs, an `images.vtt` is generated which can be loaded by an HTML5 player to display a mini preview when hovering the player progress bar
+> For all JPG outputs, an `images.vtt` file is generated, which can be loaded by an HTML5 player to display a mini preview when hovering over the player progress bar
 
-The VTT filename is always `images.vtt`. Here is how it looks like:
+The VTT filename is always `images.vtt`. Here is how it looks:
 
 ```
 WEBVTT
@@ -238,9 +241,9 @@ sprite-00000.jpg#xywh=320,0,160,160
 | Flag | Type | Description |
 |------|------|-------------|
 | `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) |
-| `-o, --output` | string | Output file path | - |
+| `-o, --output` | string | Output file path |
 | `-f, --format` | string | `mp4/h264`, `mp4/h265`, `mp4/av1`, `webm/vp9`, `hls/h264`, `hls/h265`, `hls/av1`, `jpg` |
-| `--transcoders` | int | Number of transcoders to use | 
+| `--transcoders` | int | Number of transcoders to use |
 | `--vcpu` | int | vCPU per transcoder (4, 8, or 16) |
 
 ### Video Settings
@@ -254,7 +257,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `--maxrate` | string | Set maximum bitrate in bits per second | 100000-50000000. You can also use units like 2000K or 2M |
 | `--bufsize` | string | Set buffer size in bits | 100000-50000000. You can also use units like 2000K or 2M |
 | `--pixfmt` | string | Set pixel format | yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv444p12be |
-| `--vn` | bool | Disable video | - |
+| `--vn` | bool | Disable video |
 
 ### Audio Settings
 
@@ -262,18 +265,18 @@ sprite-00000.jpg#xywh=320,0,160,160
 |------|------|-------------|-------|
 | `--ab` | int | Set audio bitrate in bits per second | 32000-512000. You can also use units like 128K |
 | `--channels` | int | Set number of audio channels | 1, 2, 5, 7 |
-| `--an` | bool | Disable audio | - |
+| `--an` | bool | Disable audio |
 
 ### H.264/H.265/AV1 Settings
 
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
-| `--crf` | int | Set constant rate factor | H264/H265: 16-35, AV1: 16-63, VP9: 15-35 |
-| `--preset` | string | Set encoding preset | H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13 |
-| `--profilev` | string | Set video profile | H264: baseline, main, high, high10, high422, high444, H265/AV1: main, main10, mainstillpicture |
-| `--level` | int | Set encoding level | H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41 |
-| `--x264keyint` | int | H264 - Set x264 keyframe interval | - |
-| `--x265keyint` | int | H265 - Set x265 keyframe interval | - |
+| `--crf` | int | Set constant rate factor | H.264/H.265: 16-35, AV1: 16-63, VP9: 15-35 |
+| `--preset` | string | Set encoding preset | H.264/H.265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13 |
+| `--profilev` | string | Set video profile | H.264: baseline, main, high, high10, high422, high444, H.265/AV1: main, main10, mainstillpicture |
+| `--level` | int | Set encoding level | H.264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H.265: 30, 31, 41, AV1: 30, 31, 41 |
+| `--x264keyint` | int | H.264 - Set x264 keyframe interval | 1-300 |
+| `--x265keyint` | int | H.265 - Set x265 keyframe interval | 1-300 |
 
 ### VP9 Settings
 
@@ -286,20 +289,20 @@ sprite-00000.jpg#xywh=320,0,160,160
 
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
-| `--hls-manifest-id` | string | Set HLS manifest ID | - |
+| `--hls-manifest-id` | string | Set HLS manifest ID |
 | `--hls-time` | int | Set HLS segment duration in seconds | 1-10 |
 | `--hls-segment-type` | string | Set HLS segment type | mpegts, fmp4 |
-| `--hls-enc` | bool | Enable HLS encryption | - |
-| `--hls-enc-key` | string | Set HLS encryption key | - |
-| `--hls-enc-key-url` | string | Set HLS encryption key URL | - |
-| `--hls-enc-iv` | string | Set HLS encryption IV | - |
+| `--hls-enc` | bool | Enable HLS encryption |
+| `--hls-enc-key` | string | Set HLS encryption key |
+| `--hls-enc-key-url` | string | Set HLS encryption key URL |
+| `--hls-enc-iv` | string | Set HLS encryption IV |
 
 ### JPG Settings
 
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--interval` | int | Set frame extraction interval in seconds | 1-60 |
-| `--sprite` | bool | Generate sprite sheet instead of multiple JPG files | - |
+| `--sprite` | bool | Generate sprite sheet instead of multiple JPG files |
 
 ## JSON Output
 
@@ -321,14 +324,35 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 {"status":"Completed","progress":0,"fps":0,"speed":"","out_time":0,"eta":""}
 ```
 
+## CLI Profiles
+
+You may have multiple projects and want to use different project tokens for different tasks, or simply to differentiate between different environments.
+
+The CLI provides a global `--profile` flag to use different project tokens.
+
+First, let's save a new token for the `testing` profile:
+
+```
+chunkify config token sk_project_token --profile testing
+```
+
+Now you can use this profile with the `--profile` flag for transcoding:
+
+```
+chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21 --profile testing
+```
+
+> [!NOTE]
+> If no profile given, the CLI will use the default one
+
 ## Chunkify API Integration
 
 ### Receiving Webhook Notifications Locally
 
-When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the command `listen` to forward webhooks to your local server URL which is normally not available publicly.
+When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the `listen` command to forward webhooks to your local server URL, which is normally not available publicly.
 
 > [!NOTE]
-> First, you need to retrieve your webhook secret in your project settings page under Webhooks section.
+> First, you need to retrieve your webhook secret in your project settings page under the Webhooks section.
 
 <p align="center">
 <picture width="600">
@@ -338,7 +362,7 @@ When integrating Chunkify into your app, you must rely on webhooks to receive ev
 </picture>
 </p>
 
-Start forwarding webhooks to your local server
+Start forwarding webhooks to your local server:
 
 ```
 chunkify listen \
@@ -380,10 +404,10 @@ chunkify listen \
 ```
 
 What `chunkify listen` does under the hood:
--   Create a temporary webhook in your project
--   Forward all notifications to your local server
--   Sign requests with the webhook secret key
--   Clean up the webhook when you exit
+-   Creates a temporary webhook in your project
+-   Forwards all notifications to your local server
+-   Signs requests with the webhook secret key
+-   Cleans up the webhook when you exit
 
 ## Development
 

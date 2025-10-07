@@ -25,7 +25,7 @@ const (
 var chunkifyBanner string
 
 // cfg holds the global configuration for the CLI defined in config pkg
-var cfg = &config.Config{Endpoint: ChunkifyApiEndpoint}
+var cfg = &config.Config{}
 
 // Commander defines the interface for command execution and view generation
 type Commander interface {
@@ -51,9 +51,26 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 	if cmd.Name() != "config" {
 		if cfg.Token == "" {
 			if err := cfg.SetToken(); err != nil {
-				fmt.Println(err)
+				fmt.Printf("Authentication issue\n\n")
+				if cfg.Profile != "" {
+					fmt.Printf("Profile '%s' doesn't exist.\nRun `chunkify config token <sk_project_token> --profile %s` to link a project token to it.\n", cfg.Profile, cfg.Profile)
+				} else {
+					fmt.Printf("You haven't set your project token yet.\nRun `chunkify config token <sk_project_token>`\n")
+				}
 				os.Exit(1)
 			}
+		}
+	}
+
+	// Setting endpoint
+	endpoint := ChunkifyApiEndpoint
+
+	if os.Getenv("CHUNKIFY_ENDPOINT") != "" {
+		endpoint = os.Getenv("CHUNKIFY_ENDPOINT")
+	} else {
+		apiEndpoint, err := config.Get(cfg.ConfigKey("config.endpoint"))
+		if err == nil && apiEndpoint != "" {
+			endpoint = apiEndpoint
 		}
 	}
 
@@ -62,7 +79,7 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 		AccessTokens: chunkify.AccessTokens{
 			ProjectToken: cfg.Token,
 		},
-		BaseURL: cfg.Endpoint,
+		BaseURL: endpoint,
 	})
 
 	cfg.Client = &client
@@ -75,17 +92,10 @@ func init() {
 		fmt.Println("\n" + chunkifyBanner + "\n")
 	}
 
-	if os.Getenv("CHUNKIFY_ENDPOINT") != "" {
-		cfg.Endpoint = os.Getenv("CHUNKIFY_ENDPOINT")
-	} else {
-		apiEndpoint, err := config.Get("config.endpoint")
-		if err == nil && apiEndpoint != "" {
-			cfg.Endpoint = apiEndpoint
-		}
-	}
-
 	rootCmd = chunkifyCmd.NewCommand(cfg).Command
 	rootCmd.AddCommand(webhook.NewCommand(cfg).Command)
 	rootCmd.AddCommand(VersionCmd)
 	rootCmd.AddCommand(config.NewCommand())
+
+	rootCmd.PersistentFlags().StringVar(&cfg.Profile, "profile", "", "Use a specific profile. When not set, the default profile is used. See config command for more details.")
 }

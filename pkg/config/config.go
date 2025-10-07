@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
@@ -10,12 +11,19 @@ import (
 	"github.com/zalando/go-keyring"
 )
 
-// Config holds configuration settings for the CLI including API endpoint,
-// authentication tokens, client instance to use the library and output format preferences
+// Config holds configuration settings for the CLI including
+// authentication tokens, client instance to use the library and profiles
 type Config struct {
-	Endpoint string
-	Token    string
-	Client   *chunkify.Client
+	Token   string
+	Client  *chunkify.Client
+	Profile string
+}
+
+func (cfg *Config) ConfigKey(key string) string {
+	if cfg.Profile != "" {
+		return cfg.Profile + "." + key
+	}
+	return key
 }
 
 // KeyringServiceKey is the service name used for storing secrets in the system keyring
@@ -34,13 +42,13 @@ func (cfg *Config) SetToken() error {
 		return nil
 	}
 
-	tok, err := Get(ConfigTokenKey)
-	if err == nil && tok != "" {
-		cfg.Token = tok
-		return nil
+	tok, err := Get(cfg.ConfigKey(ConfigTokenKey))
+	if err != nil {
+		return err
 	}
 
-	return fmt.Errorf("you need to authenticate first by setting your project token.\nRun `chunkify config token <sk_project_token>`")
+	cfg.Token = tok
+	return nil
 }
 
 // Get retrieves a value from the system keyring using the KeyringServiceKey
@@ -59,6 +67,8 @@ func DeleteAll() error {
 }
 
 func NewCommand() *cobra.Command {
+	var profile string
+
 	cmd := &cobra.Command{
 		Use:   "config <key> [value]",
 		Short: "Manage configuration settings",
@@ -69,14 +79,36 @@ Available configuration keys:
   endpoint  - Chunkify API endpoint URL
   delete    - Delete config
 
+Set a profile with --profile <profile> to save different project tokens
+
 Examples:
   chunkify config token                    # Get project token
   chunkify config token sk_project_token   # Set token to sk_project_token
   chunkify config delete                   # Delete config
+
+  Use a specific profile
+  chunkify config token sk_project_token --profile your_profile
 `,
 		Args: cobra.RangeArgs(1, 2),
 
 		RunE: func(cmd *cobra.Command, args []string) error {
+			configKeyPrefix := ""
+
+			if profile != "" {
+				profile = strings.TrimSpace(profile)
+				profile = strings.ToLower(profile)
+
+				if len(profile) > 20 {
+					return fmt.Errorf("profile name is too long. It should be less than 20 characters")
+				}
+
+				// check if the profile is a valid: a-z0-9_
+				if !regexp.MustCompile(`^[a-z0-9_]+$`).MatchString(profile) {
+					return fmt.Errorf("invalid profile: %s. It should only contain letters, numbers and underscores", profile)
+				}
+				configKeyPrefix = profile + "."
+			}
+
 			key := args[0]
 
 			switch key {
@@ -87,13 +119,14 @@ Examples:
 				fmt.Println("Config deleted successfully")
 				return nil
 			case "token":
+				configKey := configKeyPrefix + ConfigTokenKey
 				if len(args) == 1 {
 					// Get token
-					tok, err := Get(ConfigTokenKey)
+					tok, err := Get(configKey)
 					if err != nil {
-						return fmt.Errorf("%s not found", ConfigTokenKey)
+						return fmt.Errorf("%s not found", configKey)
 					}
-					fmt.Println(tok)
+					fmt.Println(configKey, "=", tok)
 					return nil
 				}
 				// Set token
@@ -101,33 +134,36 @@ Examples:
 				if !strings.HasPrefix(value, "sk_project_") {
 					return fmt.Errorf("invalid token: %s. It should start with 'sk_project_'", value)
 				}
-				if err := Set(ConfigTokenKey, value); err != nil {
+				if err := Set(configKey, value); err != nil {
 					return err
 				}
-				fmt.Println(ConfigTokenKey, "set to", value)
+				fmt.Println("Set", configKey, "=", value)
 				return nil
 			case "endpoint":
+				configKey := configKeyPrefix + ConfigEndpointKey
 				if len(args) == 1 {
 					// Get endpoint
-					endpoint, err := Get(ConfigEndpointKey)
+					endpoint, err := Get(configKey)
 					if err != nil {
-						return fmt.Errorf("%s not found", ConfigEndpointKey)
+						return fmt.Errorf("%s not found", configKey)
 					}
-					fmt.Println(endpoint)
+					fmt.Println(configKey, "=", endpoint)
 					return nil
 				}
 				// Set endpoint
 				value := strings.TrimSpace(args[1])
-				if err := Set(ConfigEndpointKey, value); err != nil {
+				if err := Set(configKey, value); err != nil {
 					return err
 				}
-				fmt.Println(ConfigEndpointKey, "set to", value)
+				fmt.Println("Set", configKey, "=", value)
 				return nil
 			default:
 				return fmt.Errorf("invalid configuration key '%s'. Available keys: token, endpoint", key)
 			}
 		},
 	}
+
+	cmd.Flags().StringVar(&profile, "profile", "", "Use a specific profile. When not set, the default profile is used.")
 
 	return cmd
 }
