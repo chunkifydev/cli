@@ -251,6 +251,12 @@ func setupCommand(app *App) error {
 }
 
 func validateTranscodeSettings(app *App) error {
+	// don't validate format and format settings if no format or output is specified
+	// it will just upload the file and return the source ID
+	if app.Command.Format == "" && app.Command.Output == "" {
+		return nil
+	}
+
 	// Check if the format is valid
 	if !slices.Contains([]chunkify.FormatName{
 		chunkify.FormatMp4H264,
