@@ -79,7 +79,7 @@ Another way to authenticate is to set the environment variable `CHUNKIFY_TOKEN`:
 export CHUNKIFY_TOKEN=sk_project_token
 ```
 
-If you multiple projects, you can use the `--profile` flag to use a different project token. See [CLI Profiles](#cli-profiles) for more details.
+If you have multiple projects that you want to use with the CLI, simply use the `--profile` flag to use a different project token. See [CLI Profiles](#cli-profiles) for more details.
 
 ## Quick Start with Chunkify
 
