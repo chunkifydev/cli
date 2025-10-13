@@ -22,6 +22,7 @@ import (
 
 const (
 	ProgressUpdateInterval = 1 * time.Second
+	MetadataOrigin         = "chunkify/cli"
 )
 
 type ChunkifyCommand struct {
@@ -252,7 +253,8 @@ func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 	source, err := a.Client.SourceCreate(chunkify.SourceCreateParams{
 		Url: a.Command.Input,
 		Metadata: chunkify.SourceCreateParamsMetadata{
-			"chunkify_execution_id": a.Command.Id,
+			"origin":           MetadataOrigin,
+			"cli_execution_id": a.Command.Id,
 		},
 	})
 	if err != nil {
@@ -282,8 +284,9 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 
 	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
 		Metadata: chunkify.UploadCreateParamsMetadata{
-			"chunkify_execution_id": a.Command.Id,
-			"md5":                   md5,
+			"origin":           MetadataOrigin,
+			"cli_execution_id": a.Command.Id,
+			"md5":              md5,
 		},
 	})
 	if err != nil {
@@ -304,7 +307,7 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	for !found && retry < maxRetries {
 		results, err := a.Client.SourceList(chunkify.SourceListParams{
 			Metadata: map[string]string{
-				"chunkify_execution_id": a.Command.Id,
+				"cli_execution_id": a.Command.Id,
 			},
 		})
 		if err != nil {
@@ -312,7 +315,7 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		}
 		for _, source := range results.Items {
 			if source.Metadata != nil {
-				if v, ok := source.Metadata["chunkify_execution_id"]; ok && v == a.Command.Id {
+				if v, ok := source.Metadata["cli_execution_id"]; ok && v == a.Command.Id {
 					found = true
 					return &source, nil
 				}
@@ -357,7 +360,8 @@ func (a *App) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 		Storage:       a.Command.JobCreateStorageParams,
 		HlsManifestId: hlsManifestId,
 		Metadata: chunkify.JobCreateParamsMetadata{
-			"chunkify_execution_id": a.Command.Id,
+			"origin":           MetadataOrigin,
+			"cli_execution_id": a.Command.Id,
 		},
 	})
 
