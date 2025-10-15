@@ -40,6 +40,21 @@ var rootCmd = &cobra.Command{}
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	rootCmd.PersistentPreRun = initChunkifyClient
+
+	// Check for updates after each command
+	// TODO: check updates less often
+	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
+		if cmd.Name() == "update" {
+			return
+		}
+		upToDate, latestVersion := version.IsUpToDate()
+		if !upToDate {
+			fmt.Println("  ────────────────────────────────────────────────")
+			fmt.Println("  A new version of Chunkify CLI is available:", latestVersion)
+			fmt.Println("  Run `chunkify update` to update to the latest version.")
+		}
+	}
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
@@ -95,6 +110,7 @@ func init() {
 	rootCmd = chunkifyCmd.NewCommand(cfg).Command
 	rootCmd.AddCommand(webhook.NewCommand(cfg).Command)
 	rootCmd.AddCommand(VersionCmd)
+	rootCmd.AddCommand(CliUpdateCmd)
 	rootCmd.AddCommand(config.NewCommand())
 
 	rootCmd.PersistentFlags().StringVar(&cfg.Profile, "profile", "", "Use a specific profile. When not set, the default profile is used. See config command for more details.")
