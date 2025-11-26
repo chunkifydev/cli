@@ -5,7 +5,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -211,8 +211,11 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "chunkify-cli/webhook-proxy")
 
-	signature := generateSignature(notif.Payload, r.webhookSecret)
-	req.Header.Set("X-Chunkify-Signature", signature)
+	timestamp := time.Now()
+	signature := generateSignature(notif.Id, timestamp, notif.Payload, r.webhookSecret)
+	req.Header.Set("webhook-signature", signature)
+	req.Header.Set("webhook-id", notif.Id)
+	req.Header.Set("webhook-timestamp", fmt.Sprintf("%d", timestamp.Unix()))
 
 	// Make the HTTP request
 	client := &http.Client{}
@@ -271,8 +274,26 @@ func (r *WebhookProxy) shouldProxy(notif chunkify.Notification) bool {
 }
 
 // generateSignature creates an HMAC signature for the payload using the secret key
-func generateSignature(payloadString string, secretKey string) string {
-	h := hmac.New(sha256.New, []byte(secretKey))
-	h.Write([]byte(payloadString))
-	return hex.EncodeToString(h.Sum(nil))
+// Following the Standard Webhooks specification: signs "msgId.timestamp.payload"
+func generateSignature(id string, timestamp time.Time, payloadString string, secretKey string) string {
+	// Remove prefix
+	secret := strings.TrimPrefix(secretKey, "whsec_")
+
+	secretBytes, err := base64.StdEncoding.DecodeString(secret)
+	if err != nil {
+		fmt.Printf("Error decoding secret: %v\n", err)
+		return ""
+	}
+
+	// Create the string to sign
+	msgToSign := fmt.Sprintf("%s.%d.%s", id, timestamp.Unix(), payloadString)
+
+	h := hmac.New(sha256.New, secretBytes)
+	h.Write([]byte(msgToSign))
+
+	// Use base64 encoding instead of hex
+	sig := base64.StdEncoding.EncodeToString(h.Sum(nil))
+
+	// Return with v1 prefix
+	return "v1," + sig
 }
