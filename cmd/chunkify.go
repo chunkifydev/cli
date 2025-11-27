@@ -9,6 +9,7 @@ import (
 	_ "embed"
 
 	"github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/chunkify-go/option"
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/version"
@@ -90,12 +91,10 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 	}
 
 	// Initialize client with available tokens
-	client := chunkify.NewClientWithConfig(chunkify.Config{
-		AccessTokens: chunkify.AccessTokens{
-			ProjectToken: cfg.Token,
-		},
-		BaseURL: endpoint,
-	})
+	client := chunkify.NewClient(
+		option.WithProjectAccessToken(cfg.Token),
+		option.WithBaseURL(endpoint),
+	)
 
 	cfg.Client = &client
 }

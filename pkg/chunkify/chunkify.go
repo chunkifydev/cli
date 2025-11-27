@@ -30,9 +30,9 @@ type ChunkifyCommand struct {
 	Input                  string
 	Output                 string
 	Format                 string
-	JobFormatParams        chunkify.JobCreateFormatParams
-	JobTranscoderParams    *chunkify.JobCreateTranscoderParams
-	JobCreateStorageParams *chunkify.JobCreateStorageParams
+	JobFormatParams        chunkify.JobNewParamsFormatUnion
+	JobTranscoderParams    chunkify.JobNewParamsTranscoder
+	JobCreateStorageParams chunkify.JobNewParamsStorage
 }
 
 // Command represents the root notifications command and configuration
@@ -125,7 +125,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	}
 
 	// Start job progress monitoring
-	go app.StartJobProgress(ctx, app.Job.Id)
+	go app.StartJobProgress(ctx, app.Job.ID)
 
 	// Wait for job completion
 	select {
@@ -135,7 +135,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	}
 
 	// Check if job failed
-	if app.Job != nil && jobHasFailed(app.Job.Status) {
+	if app.Job != nil && jobHasFailed(string(app.Job.Status)) {
 		err := fmt.Errorf("job failed with status: %s: %s", app.Job.Status, app.Job.Error.Message)
 		app.setError(err)
 		return
@@ -150,13 +150,13 @@ func (app *App) executeWorkflow(ctx context.Context) {
 
 	// Download files if output is specified
 	if app.Command.Output != "" {
-		files, err := app.Client.JobListFiles(app.Job.Id)
+		files, err := app.Client.Jobs.Files.List(ctx, app.Job.ID)
 		if err != nil {
 			app.setError(err)
 			return
 		}
-		app.Progress.Files <- files
-		downloadedFiles, err := downloadFiles(ctx, app, files)
+		app.Progress.Files <- files.Data
+		downloadedFiles, err := downloadFiles(ctx, app, files.Data)
 		if err != nil {
 			app.setError(err)
 			return
@@ -164,8 +164,8 @@ func (app *App) executeWorkflow(ctx context.Context) {
 
 		// Post process files if format is jpg or hls
 		// this is to rename the paths inside m3u8 and vtt files to the correct name
-		if app.Command.Format == string(chunkify.FormatJpg) || strings.HasPrefix(app.Command.Format, "hls") {
-			if err := hooks.Process(app.Command.Format, app.Job.Id, files, downloadedFiles); err != nil {
+		if app.Command.Format == FormatJpg || strings.HasPrefix(app.Command.Format, "hls") {
+			if err := hooks.Process(app.Command.Format, app.Job.ID, files.Data, downloadedFiles); err != nil {
 				app.setError(err)
 				return
 			}
@@ -178,7 +178,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	app.Progress.Status <- Completed
 }
 
-func downloadFiles(ctx context.Context, app *App, files []chunkify.File) ([]string, error) {
+func downloadFiles(ctx context.Context, app *App, files []chunkify.APIFile) ([]string, error) {
 	app.Progress.Status <- Downloading
 
 	slog.Info("Downloading files", "files", files)
@@ -204,7 +204,7 @@ func downloadFiles(ctx context.Context, app *App, files []chunkify.File) ([]stri
 }
 
 func jobHasFailed(status string) bool {
-	return status == chunkify.JobStatusFailed || status == chunkify.JobStatusCancelled
+	return status == string(chunkify.JobStatusFailed) || status == string(chunkify.JobStatusCancelled)
 }
 
 func (a *App) setError(err error) {
@@ -228,11 +228,11 @@ func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
 
 	// the input is a source id (already uploaded)
 	if strings.HasPrefix(a.Command.Input, "src_") {
-		source, err := a.Client.Source(a.Command.Input)
+		source, err := a.Client.Sources.Get(ctx, a.Command.Input)
 		if err != nil {
 			return nil, err
 		}
-		return &source, nil
+		return source, nil
 	}
 
 	// it's a path file, check if it's a valid file
@@ -250,9 +250,9 @@ func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
 
 func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 	a.Progress.Status <- UploadingFromUrl
-	source, err := a.Client.SourceCreate(chunkify.SourceCreateParams{
-		Url: a.Command.Input,
-		Metadata: chunkify.SourceCreateParamsMetadata{
+	source, err := a.Client.Sources.New(context.Background(), chunkify.SourceNewParams{
+		URL: a.Command.Input,
+		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 		},
@@ -260,7 +260,7 @@ func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &source, nil
+	return source, nil
 }
 
 func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error) {
@@ -282,8 +282,8 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		return source, nil
 	}
 
-	upload, err := a.Client.UploadCreate(chunkify.UploadCreateParams{
-		Metadata: chunkify.UploadCreateParamsMetadata{
+	upload, err := a.Client.Uploads.New(context.Background(), chunkify.UploadNewParams{
+		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 			"md5":              md5,
@@ -296,7 +296,7 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	// Reset file pointer to the beginning
 	file.Seek(0, io.SeekStart)
 
-	if err := a.Client.UploadBlobWithProgress(ctx, file, upload, a.Progress.UploadProgress); err != nil {
+	if err := UploadBlobWithProgress(ctx, file, upload, a.Progress.UploadProgress); err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
 	}
 
@@ -305,15 +305,15 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	retry := 0
 	maxRetries := 30
 	for !found && retry < maxRetries {
-		results, err := a.Client.SourceList(chunkify.SourceListParams{
-			Metadata: map[string]string{
-				"cli_execution_id": a.Command.Id,
+		results, err := a.Client.Sources.List(context.Background(), chunkify.SourceListParams{
+			Metadata: [][]string{
+				{"cli_execution_id", a.Command.Id},
 			},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error listing sources: %s", err)
 		}
-		for _, source := range results.Items {
+		for _, source := range results.Data {
 			if source.Metadata != nil {
 				if v, ok := source.Metadata["cli_execution_id"]; ok && v == a.Command.Id {
 					found = true
@@ -329,15 +329,15 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 }
 
 func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
-	sources, err := a.Client.SourceList(chunkify.SourceListParams{
-		Metadata: map[string]string{
-			"md5": md5,
+	sources, err := a.Client.Sources.List(context.Background(), chunkify.SourceListParams{
+		Metadata: [][]string{
+			{"md5", md5},
 		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error listing sources: %s", err)
 	}
-	for _, source := range sources.Items {
+	for _, source := range sources.Data {
 		if source.Metadata != nil {
 			if v, ok := source.Metadata["md5"]; ok && v == md5 {
 				if source.CreatedAt.Before(time.Now().Add(-12 * time.Hour)) {
@@ -353,13 +353,13 @@ func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
 func (a *App) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 	a.Progress.Status <- Transcoding
 
-	job, err := a.Client.JobCreate(chunkify.JobCreateParams{
-		SourceId:      source.Id,
+	job, err := a.Client.Jobs.New(context.Background(), chunkify.JobNewParams{
+		SourceID:      source.ID,
 		Format:        a.Command.JobFormatParams,
 		Transcoder:    a.Command.JobTranscoderParams,
 		Storage:       a.Command.JobCreateStorageParams,
-		HlsManifestId: hlsManifestId,
-		Metadata: chunkify.JobCreateParamsMetadata{
+		HlsManifestID: chunkify.String(*hlsManifestId),
+		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 		},
@@ -368,7 +368,7 @@ func (a *App) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &job, nil
+	return job, nil
 }
 
 func (a *App) StartJobProgress(ctx context.Context, jobId string) {
@@ -381,30 +381,30 @@ func (a *App) StartJobProgress(ctx context.Context, jobId string) {
 			a.Progress.JobCompleted <- true
 			return
 		case <-ticker.C:
-			job, err := a.Client.Job(jobId)
+			job, err := a.Client.Jobs.Get(context.Background(), jobId)
 			if err != nil {
 				return
 			}
-			a.Job = &job
-			a.Progress.JobProgress <- job
+			a.Job = job
+			a.Progress.JobProgress <- *job
 
-			if job.Status == chunkify.JobStatusCompleted || jobHasFailed(job.Status) {
+			if job.Status == chunkify.JobStatusCompleted || jobHasFailed(string(job.Status)) {
 				a.Progress.JobCompleted <- true
 				break
 			}
 
-			transcoders, err := a.Client.JobListTranscoders(job.Id)
+			transcoders, err := a.Client.Jobs.Transcoders.List(context.Background(), job.ID)
 			if err != nil {
 				return
 			}
-			a.Progress.JobTranscoders <- transcoders
+			a.Progress.JobTranscoders <- transcoders.Data
 		}
 	}
 }
 
-func filename(file chunkify.File, output string) string {
+func filename(file chunkify.APIFile, output string) string {
 	fileBase := strings.Replace(path.Base(output), path.Ext(output), "", 1)
-	newFilename := strings.Replace(path.Base(file.Path), file.JobId, fileBase, 1)
+	newFilename := strings.Replace(path.Base(file.Path), file.JobID, fileBase, 1)
 	return path.Join(path.Dir(output), newFilename)
 }
 

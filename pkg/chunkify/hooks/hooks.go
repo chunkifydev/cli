@@ -12,7 +12,7 @@ import (
 
 const ManifestFileName = "manifest.m3u8"
 
-func Process(format string, defaultBasename string, files []chunkify.File, downloadedFiles []string) error {
+func Process(format string, defaultBasename string, files []chunkify.APIFile, downloadedFiles []string) error {
 	// For HLS, we need to merge the previous manifest.m3u8
 	var oldManifestContent []byte
 	var basename string
@@ -53,7 +53,7 @@ func Process(format string, defaultBasename string, files []chunkify.File, downl
 
 	// If format is jpg
 	// rename all vtt cues to match the filename set in --output flag
-	if format == string(chunkify.FormatJpg) {
+	if format == "jpg" {
 		if err := ProcessVtt(downloadedFiles, basename); err != nil {
 			return fmt.Errorf("post process vtt: %w", err)
 		}

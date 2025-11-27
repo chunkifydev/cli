@@ -13,6 +13,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	FormatMp4H264 = "mp4_h264"
+	FormatMp4H265 = "mp4_h265"
+	FormatMp4Av1  = "mp4_av1"
+	FormatWebmVp9 = "webm_vp9"
+	FormatHlsH264 = "hls_h264"
+	FormatHlsH265 = "hls_h265"
+	FormatHlsAv1  = "hls_av1"
+	FormatJpg     = "jpg"
+)
+
 // Transcoder flags
 var (
 	transcoders    = new(int64)
@@ -166,13 +177,13 @@ func setupCommand(app *App) error {
 	if app.Command.Format == "" {
 		switch path.Ext(app.Command.Output) {
 		case ".mp4":
-			app.Command.Format = string(chunkify.FormatMp4H264)
+			app.Command.Format = FormatMp4H264
 		case ".webm":
-			app.Command.Format = string(chunkify.FormatWebmVp9)
+			app.Command.Format = FormatWebmVp9
 		case ".m3u8":
-			app.Command.Format = string(chunkify.FormatHlsH264)
+			app.Command.Format = FormatHlsH264
 		case ".jpg":
-			app.Command.Format = string(chunkify.FormatJpg)
+			app.Command.Format = FormatJpg
 		default:
 			return fmt.Errorf("invalid output file extension: %s. Please provide a valid format with --format", path.Ext(app.Command.Output))
 		}
@@ -180,16 +191,16 @@ func setupCommand(app *App) error {
 
 	// Set the number of transcoders and their type
 	if transcoders != nil && *transcoders > 0 {
-		app.Command.JobTranscoderParams = &chunkify.JobCreateTranscoderParams{
-			Quantity: *transcoders,
+		app.Command.JobTranscoderParams = chunkify.JobNewParamsTranscoder{
+			Quantity: chunkify.Int(*transcoders),
 			Type:     fmt.Sprintf("%dvCPU", *transcoderVcpu),
 		}
 	}
 
 	// Set the storage path
 	if storagePath != nil && *storagePath != "" {
-		app.Command.JobCreateStorageParams = &chunkify.JobCreateStorageParams{
-			Path: storagePath,
+		app.Command.JobCreateStorageParams = chunkify.JobNewParamsStorage{
+			Path: chunkify.String(*storagePath),
 		}
 	}
 
@@ -258,16 +269,16 @@ func validateTranscodeSettings(app *App) error {
 	}
 
 	// Check if the format is valid
-	if !slices.Contains([]chunkify.FormatName{
-		chunkify.FormatMp4H264,
-		chunkify.FormatMp4H265,
-		chunkify.FormatMp4Av1,
-		chunkify.FormatWebmVp9,
-		chunkify.FormatHlsH264,
-		chunkify.FormatHlsH265,
-		chunkify.FormatHlsAv1,
-		chunkify.FormatJpg,
-	}, chunkify.FormatName(app.Command.Format)) {
+	if !slices.Contains([]string{
+		FormatMp4H264,
+		FormatMp4H265,
+		FormatMp4Av1,
+		FormatWebmVp9,
+		FormatHlsH264,
+		FormatHlsH265,
+		FormatHlsAv1,
+		FormatJpg,
+	}, app.Command.Format) {
 		return fmt.Errorf("invalid format: %s", app.Command.Format)
 	}
 
@@ -277,42 +288,42 @@ func validateTranscodeSettings(app *App) error {
 
 	// validate format settings according to the format
 	switch app.Command.Format {
-	case string(chunkify.FormatMp4H264):
+	case FormatMp4H264:
 		if err := validateH264Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatMp4H265):
+	case FormatMp4H265:
 		if err := validateH265Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatMp4Av1):
+	case FormatMp4Av1:
 		if err := validateAv1Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatWebmVp9):
+	case FormatWebmVp9:
 		if err := validateWebmVp9Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatJpg):
+	case FormatJpg:
 		if err := validateJpgFlags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatHlsH264):
+	case FormatHlsH264:
 		if err := validateHlsH264Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatHlsH265):
+	case FormatHlsH265:
 		if err := validateHlsH265Flags(); err != nil {
 			return err
 		}
 
-	case string(chunkify.FormatHlsAv1):
+	case FormatHlsAv1:
 		if err := validateHlsAv1Flags(); err != nil {
 			return err
 		}
@@ -323,133 +334,499 @@ func validateTranscodeSettings(app *App) error {
 }
 
 func setJobFormatParams(app *App) {
-	app.Command.JobFormatParams = chunkify.JobCreateFormatParams{}
-
-	videoCommon := &chunkify.Video{
-		Width:        width,
-		Height:       height,
-		Framerate:    framerate,
-		Gop:          gop,
-		Channels:     channels,
-		Maxrate:      maxrate,
-		Bufsize:      bufsize,
-		DisableAudio: disableAudio,
-		DisableVideo: disableVideo,
-		Duration:     duration,
-		Seek:         seek,
-		PixFmt:       pixfmt,
-		VideoBitrate: videoBitrate,
-		AudioBitrate: audioBitrate,
-	}
+	app.Command.JobFormatParams = chunkify.JobNewParamsFormatUnion{}
 
 	switch app.Command.Format {
-	case string(chunkify.FormatMp4H264):
-		h264Params := &chunkify.H264{
-			Video:      videoCommon,
-			Crf:        crf,
-			Preset:     preset,
-			Profilev:   profilev,
-			Level:      level,
-			X264KeyInt: x264KeyInt,
+	case string(FormatMp4H264):
+		h264Params := &chunkify.MP4H264Param{ID: FormatMp4H264}
+
+		if width != nil && *width > 0 {
+			h264Params.Width = chunkify.Int(*width)
 		}
-		app.Command.JobFormatParams.Mp4H264 = h264Params
-	case string(chunkify.FormatMp4H265):
-		h265Params := &chunkify.H265{
-			Video:      videoCommon,
-			Crf:        crf,
-			Preset:     preset,
-			Profilev:   profilev,
-			Level:      level,
-			X265KeyInt: x265KeyInt,
+		if height != nil && *height > 0 {
+			h264Params.Height = chunkify.Int(*height)
 		}
-		app.Command.JobFormatParams.Mp4H265 = h265Params
-	case string(chunkify.FormatWebmVp9):
-		vp9Params := &chunkify.Vp9{
-			Video:   videoCommon,
-			Crf:     crf,
-			Quality: quality,
-			CpuUsed: cpuUsed,
+		if framerate != nil && *framerate > 0 {
+			h264Params.Framerate = chunkify.Float(*framerate)
 		}
-		app.Command.JobFormatParams.WebmVp9 = vp9Params
-	case string(chunkify.FormatMp4Av1):
-		av1Params := &chunkify.Av1{
-			Video:    videoCommon,
-			Crf:      crf,
-			Preset:   preset,
-			Profilev: profilev,
-			Level:    level,
+		if gop != nil && *gop > 0 {
+			h264Params.Gop = chunkify.Int(*gop)
 		}
-		app.Command.JobFormatParams.Mp4Av1 = av1Params
-	case string(chunkify.FormatHlsH264):
-		hlsH264Params := &chunkify.HlsH264{
-			Hls: &chunkify.Hls{
-				HlsTime:        hlsTime,
-				HlsSegmentType: hlsSegmentType,
-				HlsEnc:         hlsEnc,
-				HlsEncKey:      hlsEncKey,
-				HlsEncKeyUrl:   hlsEncKeyUrl,
-				HlsEncIv:       hlsEncIv,
-				VideoBitrate:   videoBitrate,
-				AudioBitrate:   audioBitrate,
-			},
-			H264: &chunkify.H264{
-				Video:      videoCommon,
-				Crf:        crf,
-				Preset:     preset,
-				Profilev:   profilev,
-				Level:      level,
-				X264KeyInt: x264KeyInt,
-			},
+		if channels != nil && *channels > 0 {
+			h264Params.Channels = *channels
 		}
-		app.Command.JobFormatParams.HlsH264 = hlsH264Params
-	case string(chunkify.FormatHlsH265):
-		hlsH265Params := &chunkify.HlsH265{
-			Hls: &chunkify.Hls{
-				HlsTime:        hlsTime,
-				HlsSegmentType: hlsSegmentType,
-				HlsEnc:         hlsEnc,
-				HlsEncKey:      hlsEncKey,
-				HlsEncKeyUrl:   hlsEncKeyUrl,
-				HlsEncIv:       hlsEncIv,
-			},
-			H265: &chunkify.H265{
-				Video:      videoCommon,
-				Crf:        crf,
-				Preset:     preset,
-				Profilev:   profilev,
-				Level:      level,
-				X265KeyInt: x265KeyInt,
-			},
+		if maxrate != nil && *maxrate > 0 {
+			h264Params.Maxrate = chunkify.Int(*maxrate)
 		}
-		app.Command.JobFormatParams.HlsH265 = hlsH265Params
-	case string(chunkify.FormatHlsAv1):
-		hlsAv1Params := &chunkify.HlsAv1{
-			Hls: &chunkify.Hls{
-				HlsTime:        hlsTime,
-				HlsSegmentType: hlsSegmentType,
-				HlsEnc:         hlsEnc,
-				HlsEncKey:      hlsEncKey,
-				HlsEncKeyUrl:   hlsEncKeyUrl,
-				HlsEncIv:       hlsEncIv,
-			},
-			Av1: &chunkify.Av1{
-				Video:    videoCommon,
-				Crf:      crf,
-				Preset:   preset,
-				Profilev: profilev,
-				Level:    level,
-			},
+		if bufsize != nil && *bufsize > 0 {
+			h264Params.Bufsize = chunkify.Int(*bufsize)
 		}
-		app.Command.JobFormatParams.HlsAv1 = hlsAv1Params
-	case string(chunkify.FormatJpg):
-		jpgParams := &chunkify.Jpg{
-			Image: &chunkify.Image{
-				Width:    width,
-				Height:   height,
-				Interval: *interval,
-				Sprite:   sprite,
-			},
+		if pixfmt != nil && *pixfmt != "" {
+			h264Params.Pixfmt = chunkify.MP4H264Pixfmt(*pixfmt)
 		}
-		app.Command.JobFormatParams.Jpg = jpgParams
+		if disableAudio != nil && *disableAudio {
+			h264Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			h264Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			h264Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			h264Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			h264Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			h264Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+		if crf != nil && *crf > 0 {
+			h264Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			h264Params.Preset = chunkify.MP4H264Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			h264Params.Profilev = chunkify.MP4H264Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			h264Params.Level = *level
+		}
+		if x264KeyInt != nil && *x264KeyInt > 0 {
+			h264Params.X264Keyint = chunkify.Int(*x264KeyInt)
+		}
+
+		app.Command.JobFormatParams.OfMP4H264 = h264Params
+	case string(FormatMp4H265):
+		h265Params := &chunkify.MP4H265Param{ID: FormatMp4H265}
+
+		if width != nil && *width > 0 {
+			h265Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			h265Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			h265Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			h265Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			h265Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			h265Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			h265Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			h265Params.Pixfmt = chunkify.MP4H265Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			h265Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			h265Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			h265Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			h265Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			h265Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			h265Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+		if crf != nil && *crf > 0 {
+			h265Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			h265Params.Preset = chunkify.MP4H265Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			h265Params.Profilev = chunkify.MP4H265Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			h265Params.Level = *level
+		}
+		if x265KeyInt != nil && *x265KeyInt > 0 {
+			h265Params.X265Keyint = chunkify.Int(*x265KeyInt)
+		}
+		app.Command.JobFormatParams.OfMP4H265 = h265Params
+	case string(FormatWebmVp9):
+		vp9Params := &chunkify.WebmVp9Param{ID: FormatWebmVp9}
+
+		if width != nil && *width > 0 {
+			vp9Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			vp9Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			vp9Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			vp9Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			vp9Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			vp9Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			vp9Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			vp9Params.Pixfmt = chunkify.WebmVp9Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			vp9Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			vp9Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			vp9Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			vp9Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			vp9Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			vp9Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+
+		if crf != nil && *crf > 0 {
+			vp9Params.Crf = chunkify.Int(*crf)
+		}
+		if quality != nil && *quality != "" {
+			vp9Params.Quality = chunkify.WebmVp9Quality(*quality)
+		}
+		if cpuUsed != nil && *cpuUsed != "" {
+			vp9Params.CPUUsed = chunkify.WebmVp9CPUUsed(*cpuUsed)
+		}
+		app.Command.JobFormatParams.OfWebmVp9 = vp9Params
+	case string(FormatMp4Av1):
+		av1Params := &chunkify.MP4Av1Param{ID: FormatMp4Av1}
+
+		if width != nil && *width > 0 {
+			av1Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			av1Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			av1Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			av1Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			av1Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			av1Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			av1Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			av1Params.Pixfmt = chunkify.MP4Av1Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			av1Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			av1Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			av1Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			av1Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			av1Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			av1Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+
+		if crf != nil && *crf > 0 {
+			av1Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			av1Params.Preset = chunkify.MP4Av1Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			av1Params.Profilev = chunkify.MP4Av1Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			av1Params.Level = *level
+		}
+
+		app.Command.JobFormatParams.OfMP4Av1 = av1Params
+	case string(FormatHlsH264):
+		hlsH264Params := &chunkify.HlsH264Param{ID: FormatHlsH264}
+
+		if width != nil && *width > 0 {
+			hlsH264Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			hlsH264Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			hlsH264Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			hlsH264Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			hlsH264Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			hlsH264Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			hlsH264Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			hlsH264Params.Pixfmt = chunkify.HlsH264Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			hlsH264Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			hlsH264Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			hlsH264Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			hlsH264Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			hlsH264Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			hlsH264Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+
+		if hlsTime != nil && *hlsTime > 0 {
+			hlsH264Params.HlsTime = chunkify.Int(*hlsTime)
+		}
+		if hlsSegmentType != nil && *hlsSegmentType != "" {
+			hlsH264Params.HlsSegmentType = chunkify.HlsH264HlsSegmentType(*hlsSegmentType)
+		}
+		if hlsEnc != nil && *hlsEnc {
+			hlsH264Params.HlsEnc = chunkify.Bool(true)
+		}
+		if hlsEncKey != nil && *hlsEncKey != "" {
+			hlsH264Params.HlsEncKey = chunkify.String(*hlsEncKey)
+		}
+		if hlsEncKeyUrl != nil && *hlsEncKeyUrl != "" {
+			hlsH264Params.HlsEncKeyURL = chunkify.String(*hlsEncKeyUrl)
+		}
+		if hlsEncIv != nil && *hlsEncIv != "" {
+			hlsH264Params.HlsEncIv = chunkify.String(*hlsEncIv)
+		}
+		if crf != nil && *crf > 0 {
+			hlsH264Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			hlsH264Params.Preset = chunkify.HlsH264Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			hlsH264Params.Profilev = chunkify.HlsH264Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			hlsH264Params.Level = *level
+		}
+		if x264KeyInt != nil && *x264KeyInt > 0 {
+			hlsH264Params.X264Keyint = chunkify.Int(*x264KeyInt)
+		}
+
+		app.Command.JobFormatParams.OfHlsH264 = hlsH264Params
+	case string(FormatHlsH265):
+		hlsH265Params := &chunkify.HlsH265Param{ID: FormatHlsH265}
+		if width != nil && *width > 0 {
+			hlsH265Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			hlsH265Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			hlsH265Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			hlsH265Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			hlsH265Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			hlsH265Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			hlsH265Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			hlsH265Params.Pixfmt = chunkify.HlsH265Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			hlsH265Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			hlsH265Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			hlsH265Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			hlsH265Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			hlsH265Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			hlsH265Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+
+		if hlsTime != nil && *hlsTime > 0 {
+			hlsH265Params.HlsTime = chunkify.Int(*hlsTime)
+		}
+		if hlsSegmentType != nil && *hlsSegmentType != "" {
+			hlsH265Params.HlsSegmentType = chunkify.HlsH265HlsSegmentType(*hlsSegmentType)
+		}
+		if hlsEnc != nil && *hlsEnc {
+			hlsH265Params.HlsEnc = chunkify.Bool(true)
+		}
+		if hlsEncKey != nil && *hlsEncKey != "" {
+			hlsH265Params.HlsEncKey = chunkify.String(*hlsEncKey)
+		}
+		if hlsEncKeyUrl != nil && *hlsEncKeyUrl != "" {
+			hlsH265Params.HlsEncKeyURL = chunkify.String(*hlsEncKeyUrl)
+		}
+		if hlsEncIv != nil && *hlsEncIv != "" {
+			hlsH265Params.HlsEncIv = chunkify.String(*hlsEncIv)
+		}
+		if crf != nil && *crf > 0 {
+			hlsH265Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			hlsH265Params.Preset = chunkify.HlsH265Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			hlsH265Params.Profilev = chunkify.HlsH265Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			hlsH265Params.Level = *level
+		}
+		if x264KeyInt != nil && *x264KeyInt > 0 {
+			hlsH265Params.X265Keyint = chunkify.Int(*x265KeyInt)
+		}
+
+		app.Command.JobFormatParams.OfHlsH265 = hlsH265Params
+	case string(FormatHlsAv1):
+		hlsAv1Params := &chunkify.HlsAv1Param{ID: FormatHlsAv1}
+		if width != nil && *width > 0 {
+			hlsAv1Params.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			hlsAv1Params.Height = chunkify.Int(*height)
+		}
+		if framerate != nil && *framerate > 0 {
+			hlsAv1Params.Framerate = chunkify.Float(*framerate)
+		}
+		if gop != nil && *gop > 0 {
+			hlsAv1Params.Gop = chunkify.Int(*gop)
+		}
+		if channels != nil && *channels > 0 {
+			hlsAv1Params.Channels = *channels
+		}
+		if maxrate != nil && *maxrate > 0 {
+			hlsAv1Params.Maxrate = chunkify.Int(*maxrate)
+		}
+		if bufsize != nil && *bufsize > 0 {
+			hlsAv1Params.Bufsize = chunkify.Int(*bufsize)
+		}
+		if pixfmt != nil && *pixfmt != "" {
+			hlsAv1Params.Pixfmt = chunkify.HlsAv1Pixfmt(*pixfmt)
+		}
+		if disableAudio != nil && *disableAudio {
+			hlsAv1Params.DisableAudio = chunkify.Bool(true)
+		}
+		if disableVideo != nil && *disableVideo {
+			hlsAv1Params.DisableVideo = chunkify.Bool(true)
+		}
+		if duration != nil && *duration > 0 {
+			hlsAv1Params.Duration = chunkify.Int(*duration)
+		}
+		if seek != nil && *seek > 0 {
+			hlsAv1Params.Seek = chunkify.Int(*seek)
+		}
+		if videoBitrate != nil && *videoBitrate > 0 {
+			hlsAv1Params.VideoBitrate = chunkify.Int(*videoBitrate)
+		}
+		if audioBitrate != nil && *audioBitrate > 0 {
+			hlsAv1Params.AudioBitrate = chunkify.Int(*audioBitrate)
+		}
+
+		if hlsTime != nil && *hlsTime > 0 {
+			hlsAv1Params.HlsTime = chunkify.Int(*hlsTime)
+		}
+		if hlsSegmentType != nil && *hlsSegmentType != "" {
+			hlsAv1Params.HlsSegmentType = chunkify.HlsAv1HlsSegmentType(*hlsSegmentType)
+		}
+		if hlsEnc != nil && *hlsEnc {
+			hlsAv1Params.HlsEnc = chunkify.Bool(true)
+		}
+		if hlsEncKey != nil && *hlsEncKey != "" {
+			hlsAv1Params.HlsEncKey = chunkify.String(*hlsEncKey)
+		}
+		if hlsEncKeyUrl != nil && *hlsEncKeyUrl != "" {
+			hlsAv1Params.HlsEncKeyURL = chunkify.String(*hlsEncKeyUrl)
+		}
+		if hlsEncIv != nil && *hlsEncIv != "" {
+			hlsAv1Params.HlsEncIv = chunkify.String(*hlsEncIv)
+		}
+		if crf != nil && *crf > 0 {
+			hlsAv1Params.Crf = chunkify.Int(*crf)
+		}
+		if preset != nil && *preset != "" {
+			hlsAv1Params.Preset = chunkify.HlsAv1Preset(*preset)
+		}
+		if profilev != nil && *profilev != "" {
+			hlsAv1Params.Profilev = chunkify.HlsAv1Profilev(*profilev)
+		}
+		if level != nil && *level > 0 {
+			hlsAv1Params.Level = *level
+		}
+		app.Command.JobFormatParams.OfHlsAv1 = hlsAv1Params
+	case string(FormatJpg):
+		jpgParams := &chunkify.JpgParam{ID: FormatJpg}
+		if width != nil && *width > 0 {
+			jpgParams.Width = chunkify.Int(*width)
+		}
+		if height != nil && *height > 0 {
+			jpgParams.Height = chunkify.Int(*height)
+		}
+		if interval != nil && *interval > 0 {
+			jpgParams.Interval = *interval
+		}
+		if sprite != nil && *sprite {
+			jpgParams.Sprite = chunkify.Bool(true)
+		}
+		app.Command.JobFormatParams.OfJpg = jpgParams
 	}
 }

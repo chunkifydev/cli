@@ -2,8 +2,6 @@ package chunkify
 
 import (
 	"testing"
-
-	chunkify "github.com/chunkifydev/chunkify-go"
 )
 
 // Helper function to reset all global variables to nil
@@ -68,22 +66,22 @@ func TestSetupCommand_FormatFromOutputExtension(t *testing.T) {
 		{
 			name:           "mp4_extension",
 			output:         "video.mp4",
-			expectedFormat: string(chunkify.FormatMp4H264),
+			expectedFormat: string(FormatMp4H264),
 		},
 		{
 			name:           "webm_extension",
 			output:         "video.webm",
-			expectedFormat: string(chunkify.FormatWebmVp9),
+			expectedFormat: string(FormatWebmVp9),
 		},
 		{
 			name:           "m3u8_extension",
 			output:         "playlist.m3u8",
-			expectedFormat: string(chunkify.FormatHlsH264),
+			expectedFormat: string(FormatHlsH264),
 		},
 		{
 			name:           "jpg_extension",
 			output:         "image.jpg",
-			expectedFormat: string(chunkify.FormatJpg),
+			expectedFormat: string(FormatJpg),
 		},
 	}
 
@@ -155,14 +153,14 @@ func TestSetupCommand_InvalidFormat(t *testing.T) {
 
 func TestSetupCommand_ValidFormats(t *testing.T) {
 	validFormats := []string{
-		string(chunkify.FormatMp4H264),
-		string(chunkify.FormatMp4H265),
-		string(chunkify.FormatMp4Av1),
-		string(chunkify.FormatWebmVp9),
-		string(chunkify.FormatHlsH264),
-		string(chunkify.FormatHlsH265),
-		string(chunkify.FormatHlsAv1),
-		string(chunkify.FormatJpg),
+		FormatMp4H264,
+		FormatMp4H265,
+		FormatMp4Av1,
+		FormatWebmVp9,
+		FormatHlsH264,
+		FormatHlsH265,
+		FormatHlsAv1,
+		FormatJpg,
 	}
 
 	for _, format := range validFormats {
@@ -236,7 +234,7 @@ func TestSetupCommand_ResolutionParsing(t *testing.T) {
 
 			app := &App{
 				Command: &ChunkifyCommand{
-					Format: string(chunkify.FormatMp4H264),
+					Format: FormatMp4H264,
 					Output: "output.mp4",
 				},
 			}
@@ -296,7 +294,7 @@ func TestSetupCommand_BitrateParsing(t *testing.T) {
 
 			app := &App{
 				Command: &ChunkifyCommand{
-					Format: string(chunkify.FormatMp4H264),
+					Format: FormatMp4H264,
 					Output: "output.mp4",
 				},
 			}
@@ -331,7 +329,7 @@ func TestSetupCommand_TranscoderParams(t *testing.T) {
 
 	app := &App{
 		Command: &ChunkifyCommand{
-			Format: string(chunkify.FormatMp4H264),
+			Format: FormatMp4H264,
 			Output: "output.mp4",
 		},
 	}
@@ -341,11 +339,7 @@ func TestSetupCommand_TranscoderParams(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	if app.Command.JobTranscoderParams == nil {
-		t.Error("Expected JobTranscoderParams to be set")
-	}
-
-	if app.Command.JobTranscoderParams.Quantity != 2 {
+	if app.Command.JobTranscoderParams.Quantity.Value != 2 {
 		t.Errorf("Expected Quantity 2, got %d", app.Command.JobTranscoderParams.Quantity)
 	}
 
@@ -363,7 +357,7 @@ func TestSetupCommand_StorageParams(t *testing.T) {
 
 	app := &App{
 		Command: &ChunkifyCommand{
-			Format: string(chunkify.FormatMp4H264),
+			Format: FormatMp4H264,
 			Output: "output.mp4",
 		},
 	}
@@ -373,11 +367,7 @@ func TestSetupCommand_StorageParams(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	if app.Command.JobCreateStorageParams == nil {
-		t.Error("Expected JobCreateStorageParams to be set")
-	}
-
-	if app.Command.JobCreateStorageParams.Path == nil || *app.Command.JobCreateStorageParams.Path != storageVal {
-		t.Errorf("Expected Path %s, got %v", storageVal, app.Command.JobCreateStorageParams.Path)
+	if app.Command.JobCreateStorageParams.Path.Value != storageVal {
+		t.Errorf("Expected Path %s, got %v", storageVal, app.Command.JobCreateStorageParams.Path.Value)
 	}
 }

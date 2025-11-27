@@ -29,8 +29,8 @@ type Command struct {
 }
 
 type ChunkifyClientInterface interface {
-	NotificationList(params chunkify.NotificationListParams) (*chunkify.PaginatedResult[chunkify.Notification], error)
-	WebhookCreate(params chunkify.WebhookCreateParams) (chunkify.Webhook, error)
+	NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error)
+	WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error)
 	WebhookDelete(webhookId string) error
 }
 
@@ -38,16 +38,20 @@ type ChunkifyClient struct {
 	Client *chunkify.Client
 }
 
-func (c *ChunkifyClient) NotificationList(params chunkify.NotificationListParams) (*chunkify.PaginatedResult[chunkify.Notification], error) {
-	return c.Client.NotificationList(params)
+func (c *ChunkifyClient) NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
+	res, err := c.Client.Notifications.List(context.Background(), params)
+	if err != nil {
+		return nil, err
+	}
+	return res.Data, nil
 }
 
-func (c *ChunkifyClient) WebhookCreate(params chunkify.WebhookCreateParams) (chunkify.Webhook, error) {
-	return c.Client.WebhookCreate(params)
+func (c *ChunkifyClient) WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
+	return c.Client.Webhooks.New(context.Background(), params)
 }
 
 func (c *ChunkifyClient) WebhookDelete(webhookId string) error {
-	return c.Client.WebhookDelete(webhookId)
+	return c.Client.Webhooks.Delete(context.Background(), webhookId)
 }
 
 // NewCommand creates and configures a new notifications root command
@@ -80,9 +84,9 @@ func NewCommand(config *config.Config) *Command {
 					return
 				}
 
-				defer req.deleteLocalDevWebhook(webhook.Id)
+				defer req.deleteLocalDevWebhook(webhook.ID)
 
-				req.WebhookId = webhook.Id
+				req.WebhookId = webhook.ID
 
 				fmt.Printf("  [%s] Start forwarding to %s\n\n  Events:\n  - %s",
 					hostname,
@@ -112,8 +116,16 @@ func NewCommand(config *config.Config) *Command {
 		},
 	}
 
+	allEvents := []string{
+		string(chunkify.NotificationEventJobCompleted),
+		string(chunkify.NotificationEventJobFailed),
+		string(chunkify.NotificationEventUploadCompleted),
+		string(chunkify.NotificationEventUploadFailed),
+		string(chunkify.NotificationEventUploadExpired),
+	}
+
 	cmd.Command.Flags().StringVar(&req.localUrl, "forward-to", "", "The URL to forward webhook notifications to")
-	cmd.Command.Flags().StringSliceVar(&req.Events, "events", chunkify.NotificationEventsAll, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	cmd.Command.Flags().StringSliceVar(&req.Events, "events", allEvents, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
 	cmd.Command.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
 	cmd.Command.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
 
@@ -162,13 +174,13 @@ func (r *WebhookProxy) Run(ctx context.Context) error {
 func (r *WebhookProxy) toParams() chunkify.NotificationListParams {
 	limit := int64(10)
 	params := chunkify.NotificationListParams{
-		WebhookId: &r.WebhookId,
-		Limit:     &limit,
+		WebhookID: chunkify.String(r.WebhookId),
+		Limit:     chunkify.Int(limit),
 	}
 
 	if len(r.lastProxiedNotifications) > 0 {
-		createdGte := r.lastProxiedNotifications[len(r.lastProxiedNotifications)-1].CreatedAt.Format(time.RFC3339)
-		params.CreatedGte = &createdGte
+		createdGte := r.lastProxiedNotifications[len(r.lastProxiedNotifications)-1].CreatedAt.Unix()
+		params.Created.Gte = chunkify.Int(createdGte)
 	}
 
 	return params
@@ -184,15 +196,15 @@ func (r *WebhookProxy) Execute() ([]chunkify.Notification, error) {
 	// we filter the notifications by the given events
 	if len(r.Events) > 0 {
 		filteredNotifications := []chunkify.Notification{}
-		for _, notif := range notifications.Items {
-			if slices.Contains(r.Events, notif.Event) {
+		for _, notif := range notifications {
+			if slices.Contains(r.Events, string(notif.Event)) {
 				filteredNotifications = append(filteredNotifications, notif)
 			}
 		}
 		return filteredNotifications, nil
 	}
 
-	return notifications.Items, nil
+	return notifications, nil
 }
 
 // httpProxy forwards a notification to the configured local URL
@@ -225,21 +237,21 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 	fmt.Printf("  [%d %s] %s %s (%s)\n",
 		resp.StatusCode,
 		http.StatusText(resp.StatusCode),
-		notif.Id,
+		notif.ID,
 		notif.Event,
-		notif.ObjectId)
+		notif.ObjectID)
 }
 
 // createLocaldevWebhook sets up a webhook for local development
 func (r *WebhookProxy) createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
 	enabled := true
-	wh, err := r.Client.WebhookCreate(chunkify.WebhookCreateParams{Url: webhookUrl, Events: chunkify.NotificationEventsAll, Enabled: &enabled})
+	wh, err := r.Client.WebhookCreate(chunkify.WebhookNewParams{URL: webhookUrl, Events: r.Events, Enabled: chunkify.Bool(enabled)})
 	if err != nil {
 		fmt.Printf("Couldn't create localdev webhook for proxying: %s\n", err)
 		return chunkify.Webhook{}, err
 	}
 
-	return wh, nil
+	return *wh, nil
 }
 
 // deleteLocalDevWebhook removes the local development webhook
@@ -257,7 +269,7 @@ func (r *WebhookProxy) shouldProxy(notif chunkify.Notification) bool {
 	defer r.mut.Unlock()
 
 	for _, n := range r.lastProxiedNotifications {
-		if n.Id == notif.Id {
+		if n.ID == notif.ID {
 			return false
 		}
 	}

@@ -18,30 +18,24 @@ type MockChunkifyClient struct {
 	listError     error
 }
 
-func (m *MockChunkifyClient) NotificationList(params chunkify.NotificationListParams) (*chunkify.PaginatedResult[chunkify.Notification], error) {
+func (m *MockChunkifyClient) NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
 	if m.listError != nil {
 		return nil, m.listError
 	}
-	return &chunkify.PaginatedResult[chunkify.Notification]{
-		Items: m.notifications,
-	}, nil
+	return m.notifications, nil
 }
 
-func (m *MockChunkifyClient) WebhookCreate(params chunkify.WebhookCreateParams) (chunkify.Webhook, error) {
+func (m *MockChunkifyClient) WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
 	if m.createError != nil {
-		return chunkify.Webhook{}, m.createError
+		return nil, m.createError
 	}
 	webhook := chunkify.Webhook{
-		Id:      "wh_webhookid",
-		Url:     params.Url,
+		ID:      "wh_webhookid",
+		URL:     params.URL,
 		Events:  params.Events,
-		Enabled: *params.Enabled,
+		Enabled: params.Enabled.Value,
 	}
-	if m.webhooks == nil {
-		m.webhooks = make(map[string]chunkify.Webhook)
-	}
-	m.webhooks["wh_webhookid"] = webhook
-	return webhook, nil
+	return &webhook, nil
 }
 
 func (m *MockChunkifyClient) WebhookDelete(webhookId string) error {
@@ -59,12 +53,12 @@ func TestWebhookProxy_ToParams(t *testing.T) {
 
 	params := proxy.toParams()
 
-	if params.WebhookId == nil || *params.WebhookId != "wh_webhookid" {
-		t.Errorf("Expected WebhookId to be 'wh_webhookid', got %v", params.WebhookId)
+	if params.WebhookID.Value != "wh_webhookid" {
+		t.Errorf("Expected WebhookId to be 'wh_webhookid', got %v", params.WebhookID.Value)
 	}
 
-	if params.Limit == nil || *params.Limit != 10 {
-		t.Errorf("Expected Limit to be 10, got %v", params.Limit)
+	if params.Limit.Value != 10 {
+		t.Errorf("Expected Limit to be 10, got %v", params.Limit.Value)
 	}
 }
 
@@ -73,7 +67,7 @@ func TestWebhookProxy_ToParams_WithLastNotification(t *testing.T) {
 		WebhookId: "wh_webhookid",
 		lastProxiedNotifications: []chunkify.Notification{
 			{
-				Id:        "notf_notifid",
+				ID:        "notf_notifid",
 				CreatedAt: time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC),
 			},
 		},
@@ -81,21 +75,21 @@ func TestWebhookProxy_ToParams_WithLastNotification(t *testing.T) {
 
 	params := proxy.toParams()
 
-	if params.CreatedGte == nil {
+	if params.Created.Gte.Value > 0 {
 		t.Error("Expected CreatedGte to be set when lastProxiedNotifications is not empty")
 	}
 
-	expectedTime := "2023-01-01T12:00:00Z"
-	if *params.CreatedGte != expectedTime {
-		t.Errorf("Expected CreatedGte to be %s, got %s", expectedTime, *params.CreatedGte)
+	expectedTime := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC).Unix()
+	if params.Created.Gte.Value != expectedTime {
+		t.Errorf("Expected CreatedGte to be %d, got %d", expectedTime, params.Created.Gte.Value)
 	}
 }
 
 func TestWebhookProxy_Execute(t *testing.T) {
 	mockClient := &MockChunkifyClient{
 		notifications: []chunkify.Notification{
-			{Id: "notif_notifid1", Event: "job.completed"},
-			{Id: "notif_notifid2", Event: "job.failed"},
+			{ID: "notif_notifid1", Event: "job.completed"},
+			{ID: "notif_notifid2", Event: "job.failed"},
 		},
 	}
 
@@ -121,8 +115,8 @@ func TestWebhookProxy_Execute(t *testing.T) {
 func TestWebhookProxy_Execute_AllEvents(t *testing.T) {
 	mockClient := &MockChunkifyClient{
 		notifications: []chunkify.Notification{
-			{Id: "notif_notifid1", Event: "job.completed"},
-			{Id: "notif_notifid2", Event: "job.failed"},
+			{ID: "notif_notifid1", Event: "job.completed"},
+			{ID: "notif_notifid2", Event: "job.failed"},
 		},
 	}
 
@@ -146,7 +140,7 @@ func TestWebhookProxy_ShouldProxy(t *testing.T) {
 		lastProxiedNotifications: []chunkify.Notification{},
 	}
 
-	notif := chunkify.Notification{Id: "notf_notifid1"}
+	notif := chunkify.Notification{ID: "notf_notifid1"}
 
 	// First time should proxy
 	if !proxy.shouldProxy(notif) {
@@ -166,12 +160,12 @@ func TestWebhookProxy_ShouldProxy_MaxNotifications(t *testing.T) {
 
 	// Add 10 notifications
 	for i := 0; i < 10; i++ {
-		notif := chunkify.Notification{Id: "notif_notifid" + string(rune(i))}
+		notif := chunkify.Notification{ID: "notif_notifid" + string(rune(i))}
 		proxy.shouldProxy(notif)
 	}
 
 	// Add 11th notification - should remove the first one
-	notif11 := chunkify.Notification{Id: "notif_notifid11"}
+	notif11 := chunkify.Notification{ID: "notif_notifid11"}
 	proxy.shouldProxy(notif11)
 
 	if len(proxy.lastProxiedNotifications) != 10 {
@@ -179,7 +173,7 @@ func TestWebhookProxy_ShouldProxy_MaxNotifications(t *testing.T) {
 	}
 
 	// First notification should be gone
-	notif0 := chunkify.Notification{Id: "notif_notifid0"}
+	notif0 := chunkify.Notification{ID: "notif_notifid0"}
 	if !proxy.shouldProxy(notif0) {
 		t.Error("Expected shouldProxy to return true for notification that was removed from list")
 	}
@@ -233,9 +227,9 @@ func TestWebhookProxy_HttpProxy(t *testing.T) {
 	}
 
 	notif := chunkify.Notification{
-		Id:       "notf_test123",
+		ID:       "notf_test123",
 		Event:    "job.completed",
-		ObjectId: "job_123",
+		ObjectID: "job_123",
 		Payload:  `{"status": "job.completed"}`,
 	}
 
@@ -292,14 +286,14 @@ func TestWebhookProxy_HttpProxy_ShouldNotProxy(t *testing.T) {
 		localUrl:      server.URL,
 		webhookSecret: "test-secret",
 		lastProxiedNotifications: []chunkify.Notification{
-			{Id: "notf_test123"}, // Already seen notification
+			{ID: "notf_test123"}, // Already seen notification
 		},
 	}
 
 	notif := chunkify.Notification{
-		Id:       "notf_test123", // Same ID as already seen
+		ID:       "notf_test123", // Same ID as already seen
 		Event:    "job.completed",
-		ObjectId: "job_123",
+		ObjectID: "job_123",
 		Payload:  `{"status": "completed"}`,
 	}
 

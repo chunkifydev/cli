@@ -54,11 +54,11 @@ type App struct {
 	Progress         *Progress
 	Job              *chunkify.Job
 	Source           *chunkify.Source
-	Files            []chunkify.File
-	Transcoders      []chunkify.TranscoderStatus
-	UploadProgress   chunkify.UploadProgress
+	Files            []chunkify.APIFile
+	Transcoders      []chunkify.JobTranscoderListResponseData
+	UploadProgress   UploadProgress
 	DownloadProgress DownloadProgress
-	DownloadedFiles  map[string]chunkify.File
+	DownloadedFiles  map[string]chunkify.APIFile
 	Error            error
 	Done             bool
 	Ctx              context.Context
@@ -74,7 +74,7 @@ func NewApp() *App {
 	return &App{
 		Status:          Starting,
 		Progress:        NewProgress(),
-		DownloadedFiles: map[string]chunkify.File{},
+		DownloadedFiles: map[string]chunkify.APIFile{},
 		LastJSONOutput:  time.Now(),
 	}
 }
@@ -82,12 +82,12 @@ func NewApp() *App {
 type Progress struct {
 	Status           chan int
 	JobProgress      chan chunkify.Job
-	JobTranscoders   chan []chunkify.TranscoderStatus
+	JobTranscoders   chan []chunkify.JobTranscoderListResponseData
 	JobCompleted     chan bool
-	UploadProgress   chan chunkify.UploadProgress
+	UploadProgress   chan UploadProgress
 	DownloadProgress chan DownloadProgress
-	Files            chan []chunkify.File
-	DownloadedFiles  chan chunkify.File
+	Files            chan []chunkify.APIFile
+	DownloadedFiles  chan chunkify.APIFile
 	Source           chan *chunkify.Source
 	Error            chan error
 }
@@ -96,14 +96,14 @@ func NewProgress() *Progress {
 	return &Progress{
 		Status:           make(chan int, 1),
 		JobProgress:      make(chan chunkify.Job, 100),
-		JobTranscoders:   make(chan []chunkify.TranscoderStatus, 100),
+		JobTranscoders:   make(chan []chunkify.JobTranscoderListResponseData, 100),
 		JobCompleted:     make(chan bool, 1),
-		UploadProgress:   make(chan chunkify.UploadProgress, 100),
+		UploadProgress:   make(chan UploadProgress, 100),
 		DownloadProgress: make(chan DownloadProgress, 100),
-		DownloadedFiles:  make(chan chunkify.File, 100),
+		DownloadedFiles:  make(chan chunkify.APIFile, 100),
 		Source:           make(chan *chunkify.Source, 1),
 		Error:            make(chan error),
-		Files:            make(chan []chunkify.File, 100),
+		Files:            make(chan []chunkify.APIFile, 100),
 	}
 }
 
@@ -199,7 +199,7 @@ func (t App) checkChannels() (App, bool) {
 		}
 	case downloadedFile, ok := <-t.Progress.DownloadedFiles:
 		if ok {
-			t.DownloadedFiles[downloadedFile.Id] = downloadedFile
+			t.DownloadedFiles[downloadedFile.ID] = downloadedFile
 		}
 	case files, ok := <-t.Progress.Files:
 		if ok {
@@ -332,11 +332,11 @@ func (t App) View() string {
 
 func (t App) errorView() string {
 	var view string
-	if apiErr, ok := t.Error.(chunkify.ApiError); ok {
-		view = fmt.Sprintf("%s%s", indent, errorText(apiErr.Message))
-	} else {
-		view = fmt.Sprintf("%s%s", indent, errorText(t.Error.Error()))
-	}
+	//if apiErr, ok := t.Error.(chunkify.ChunkifyError); ok {
+	//	view = fmt.Sprintf("%s%s", indent, errorText(apiErr.Message))
+	//	} else {
+	view = fmt.Sprintf("%s%s", indent, errorText(t.Error.Error()))
+	//	}
 	view += "\n"
 	return view
 }
@@ -393,7 +393,7 @@ func (t App) transcodingView() (string, string) {
 	totalOutTime := int64(0)
 
 	for _, transcoder := range t.Transcoders {
-		if transcoder.Status == chunkify.TranscoderStatusCompleted {
+		if transcoder.Status == "completed" {
 			completedTranscoders++
 		}
 	}
@@ -466,7 +466,7 @@ func (t App) downloadView() (string, string) {
 	downloaded := false
 
 	for i, file := range t.Files {
-		_, downloaded = t.DownloadedFiles[file.Id]
+		_, downloaded = t.DownloadedFiles[file.ID]
 		if !downloaded {
 			currentFile = i - 1
 		}
@@ -509,7 +509,7 @@ func progressBar(status string, progress float64, width int) string {
 		if i < filled {
 			bar += "▮"
 		} else {
-			if status == chunkify.TranscoderStatusPending || status == chunkify.TranscoderStatusStarting {
+			if status == "pending" || status == "starting" {
 				bar += grayText("▯")
 			} else {
 				bar += "▯"
@@ -530,20 +530,20 @@ func (t App) summaryView() string {
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n\n", indent)
 	// if format is not set, we show the source ID
 	if t.Command.Format == "" && t.Source != nil {
-		view += fmt.Sprintf("%sSource ID: %s\n\n", indent, t.Source.Id)
+		view += fmt.Sprintf("%sSource ID: %s\n\n", indent, t.Source.ID)
 		return view
 	}
 
 	if t.Job != nil {
-		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.Id)
-		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Job.SourceId)
+		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.ID)
+		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Job.SourceID)
 
-		if t.Job.HlsManifestId != nil {
-			view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, *t.Job.HlsManifestId)
+		if t.Job.HlsManifestID != "" {
+			view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, t.Job.HlsManifestID)
 		}
 
 		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
-		view += formatConfig(t.Job.Format.Config)
+		view += formatConfig(t.Job.Format)
 		view += "\n"
 
 		view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)
@@ -569,7 +569,7 @@ func (t App) getStatusString() string {
 		return "Uploading"
 	case Transcoding:
 		if t.Job != nil {
-			return cases.Title(language.English).String(t.Job.Status)
+			return cases.Title(language.English).String(string(t.Job.Status))
 		}
 		return "Queued"
 	case Downloading:
@@ -585,16 +585,40 @@ func (t App) getStatusString() string {
 	}
 }
 
-func formatConfig(config map[string]any) string {
+func formatConfig(config chunkify.JobFormatUnion) string {
+	jsonBytes, _ := json.Marshal(config)
+	configMap := make(map[string]any)
+	err := json.Unmarshal(jsonBytes, &configMap)
+	if err != nil {
+		return ""
+	}
 	view := ""
-	if len(config) > 0 {
+	if len(configMap) > 0 {
 		keys := []string{}
-		for k := range config {
+		for k := range configMap {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
 		for _, k := range keys {
-			view += fmt.Sprintf("%s=%v ", k, config[k])
+			val := configMap[k]
+			switch v := val.(type) {
+			case string:
+				if v != "" {
+					view += fmt.Sprintf("%s=%s ", k, val)
+				}
+			case int, int64:
+				if val.(int) > 0 {
+					view += fmt.Sprintf("%s=%d ", k, val)
+				}
+			case float64:
+				if v > 0 {
+					view += fmt.Sprintf("%s=%.2f ", k, val)
+				}
+			case bool:
+				if v {
+					view += fmt.Sprintf("%s=%t ", k, val)
+				}
+			}
 		}
 	}
 

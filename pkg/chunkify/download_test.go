@@ -22,10 +22,10 @@ func TestProgressWriter_Write(t *testing.T) {
 	progressChan := make(chan DownloadProgress, 10)
 
 	// Create a test file
-	file := chunkify.File{
-		Id:   "file_123",
+	file := chunkify.APIFile{
+		ID:   "file_123",
 		Path: "test.txt",
-		Url:  "http://example.com/test.txt",
+		URL:  "http://example.com/test.txt",
 	}
 
 	// Create progress writer
@@ -65,8 +65,8 @@ func TestProgressWriter_Write(t *testing.T) {
 		if progress.TotalBytes != 100 {
 			t.Errorf("Expected TotalBytes 100, got %d", progress.TotalBytes)
 		}
-		if progress.File.Id != file.Id {
-			t.Errorf("Expected File.Id %s, got %s", file.Id, progress.File.Id)
+		if progress.File.ID != file.ID {
+			t.Errorf("Expected File.Id %s, got %s", file.ID, progress.File.ID)
 		}
 	case <-time.After(100 * time.Millisecond):
 		t.Error("Expected progress update but none received")
@@ -77,10 +77,10 @@ func TestProgressWriter_Write_NoTotal(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.File{
-		Id:   "file_456",
+	file := chunkify.APIFile{
+		ID:   "file_456",
 		Path: "test.txt",
-		Url:  "http://example.com/test.txt",
+		URL:  "http://example.com/test.txt",
 	}
 
 	pw := &progressWriter{
@@ -124,10 +124,10 @@ func TestProgressWriter_Write_ProgressCalculation(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.File{
-		Id:   "file_789",
+	file := chunkify.APIFile{
+		ID:   "file_789",
 		Path: "test.txt",
-		Url:  "http://example.com/test.txt",
+		URL:  "http://example.com/test.txt",
 	}
 
 	pw := &progressWriter{
@@ -192,10 +192,10 @@ func TestDownloadFile_Success(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.File{
-		Id:   "file_test",
+	file := chunkify.APIFile{
+		ID:   "file_test",
 		Path: "test.txt",
-		Url:  server.URL,
+		URL:  server.URL,
 	}
 
 	// Download the file
@@ -244,10 +244,10 @@ func TestDownloadFile_BadStatus(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.File{
-		Id:   "file_test",
+	file := chunkify.APIFile{
+		ID:   "file_test",
 		Path: "test.txt",
-		Url:  server.URL,
+		URL:  server.URL,
 	}
 
 	ctx := context.Background()
@@ -281,10 +281,10 @@ func TestDownloadFile_ContextCancellation(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.File{
-		Id:   "file_test",
+	file := chunkify.APIFile{
+		ID:   "file_test",
 		Path: "test.txt",
-		Url:  server.URL,
+		URL:  server.URL,
 	}
 
 	// Create a context that cancels quickly
@@ -326,10 +326,10 @@ func TestDownloadFile_ProgressUpdates(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 100)
 
-	file := chunkify.File{
-		Id:   "file_test",
+	file := chunkify.APIFile{
+		ID:   "file_test",
 		Path: "test.txt",
-		Url:  server.URL,
+		URL:  server.URL,
 	}
 
 	ctx := context.Background()
