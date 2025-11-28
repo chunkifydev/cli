@@ -78,7 +78,7 @@ func TestWebhookProxy_ToParams_WithLastNotification(t *testing.T) {
 
 	params := proxy.toParams()
 
-	if params.Created.Gte.Value > 0 {
+	if params.Created.Gte.Value == 0 {
 		t.Error("Expected CreatedGte to be set when lastProxiedNotifications is not empty")
 	}
 
