@@ -1,8 +1,11 @@
 package webhook
 
 import (
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -180,26 +183,50 @@ func TestWebhookProxy_ShouldProxy_MaxNotifications(t *testing.T) {
 }
 
 func TestGenerateSignature(t *testing.T) {
+	msgId := "notf_test123"
+	timestamp := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
 	payload := "test payload"
-	secret := "test secret"
+	// Base64 encode "test secret" and add whsec_ prefix
+	secretPlain := "test secret"
+	secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretPlain))
+	secret := "whsec_" + secretBase64
 
-	signature := generateSignature(payload, secret)
+	signature := generateSignature(msgId, timestamp, payload, secret)
 
 	if signature == "" {
 		t.Error("Expected signature to be generated")
 	}
 
+	// Test that signature starts with "v1," prefix
+	if !strings.HasPrefix(signature, "v1,") {
+		t.Errorf("Expected signature to start with 'v1,', got %s", signature)
+	}
+
 	// Test that same input produces same signature
-	signature2 := generateSignature(payload, secret)
+	signature2 := generateSignature(msgId, timestamp, payload, secret)
 	if signature != signature2 {
 		t.Error("Expected same signature for same input")
 	}
 
 	// Test that different payload produces different signature
 	payload2 := "different payload"
-	signature3 := generateSignature(payload2, secret)
+	signature3 := generateSignature(msgId, timestamp, payload2, secret)
 	if signature == signature3 {
 		t.Error("Expected different signature for different payload")
+	}
+
+	// Test that different msgId produces different signature
+	msgId2 := "notf_different"
+	signature4 := generateSignature(msgId2, timestamp, payload, secret)
+	if signature == signature4 {
+		t.Error("Expected different signature for different msgId")
+	}
+
+	// Test that different timestamp produces different signature
+	timestamp2 := time.Date(2023, 1, 1, 12, 0, 1, 0, time.UTC)
+	signature5 := generateSignature(msgId, timestamp2, payload, secret)
+	if signature == signature5 {
+		t.Error("Expected different signature for different timestamp")
 	}
 }
 
@@ -220,17 +247,24 @@ func TestWebhookProxy_HttpProxy(t *testing.T) {
 	}))
 	defer server.Close()
 
+	// Base64 encode "test-secret" and add whsec_ prefix
+	secretPlain := "test-secret"
+	secretBase64 := base64.StdEncoding.EncodeToString([]byte(secretPlain))
+	secretWithPrefix := "whsec_" + secretBase64
+
 	proxy := &WebhookProxy{
 		localUrl:                 server.URL,
-		webhookSecret:            "test-secret",
+		webhookSecret:            secretWithPrefix,
 		lastProxiedNotifications: []chunkify.Notification{},
 	}
 
+	timestamp := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
 	notif := chunkify.Notification{
-		ID:       "notf_test123",
-		Event:    "job.completed",
-		ObjectID: "job_123",
-		Payload:  `{"status": "job.completed"}`,
+		ID:        "notf_test123",
+		Event:     "job.completed",
+		ObjectID:  "job_123",
+		Payload:   `{"status": "job.completed"}`,
+		CreatedAt: timestamp,
 	}
 
 	// Call httpProxy
@@ -257,14 +291,39 @@ func TestWebhookProxy_HttpProxy(t *testing.T) {
 		t.Errorf("Expected User-Agent 'chunkify-cli/webhook-proxy', got %s", userAgent)
 	}
 
-	// Check signature header
-	signature := receivedRequest.Header.Get("X-Chunkify-Signature")
-	if signature == "" {
-		t.Error("Expected X-Chunkify-Signature header to be set")
+	// Check webhook-id header
+	webhookId := receivedRequest.Header.Get("webhook-id")
+	if webhookId != notif.Id {
+		t.Errorf("Expected webhook-id '%s', got %s", notif.Id, webhookId)
 	}
 
-	// Verify signature is correct
-	expectedSignature := generateSignature(notif.Payload, "test-secret")
+	// Check webhook-timestamp header
+	webhookTimestampStr := receivedRequest.Header.Get("webhook-timestamp")
+	if webhookTimestampStr == "" {
+		t.Fatal("Expected webhook-timestamp header to be set")
+	}
+
+	// Check signature header
+	signature := receivedRequest.Header.Get("webhook-signature")
+	if signature == "" {
+		t.Fatal("Expected webhook-signature header to be set")
+	}
+
+	// Verify signature format
+	if !strings.HasPrefix(signature, "v1,") {
+		t.Errorf("Expected signature to start with 'v1,', got %s", signature)
+	}
+
+	// Verify signature can be regenerated with the timestamp from header
+	// Parse timestamp from header
+	var timestampUnix int64
+	if _, err := fmt.Sscanf(webhookTimestampStr, "%d", &timestampUnix); err != nil {
+		t.Fatalf("Failed to parse webhook-timestamp: %v", err)
+	}
+	timestampFromHeader := time.Unix(timestampUnix, 0)
+
+	// Regenerate signature with same inputs
+	expectedSignature := generateSignature(notif.Id, timestampFromHeader, notif.Payload, secretWithPrefix)
 	if signature != expectedSignature {
 		t.Errorf("Expected signature %s, got %s", expectedSignature, signature)
 	}
