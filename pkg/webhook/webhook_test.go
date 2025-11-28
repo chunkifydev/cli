@@ -293,8 +293,8 @@ func TestWebhookProxy_HttpProxy(t *testing.T) {
 
 	// Check webhook-id header
 	webhookId := receivedRequest.Header.Get("webhook-id")
-	if webhookId != notif.Id {
-		t.Errorf("Expected webhook-id '%s', got %s", notif.Id, webhookId)
+	if webhookId != notif.ID {
+		t.Errorf("Expected webhook-id '%s', got %s", notif.ID, webhookId)
 	}
 
 	// Check webhook-timestamp header
@@ -323,7 +323,7 @@ func TestWebhookProxy_HttpProxy(t *testing.T) {
 	timestampFromHeader := time.Unix(timestampUnix, 0)
 
 	// Regenerate signature with same inputs
-	expectedSignature := generateSignature(notif.Id, timestampFromHeader, notif.Payload, secretWithPrefix)
+	expectedSignature := generateSignature(notif.ID, timestampFromHeader, notif.Payload, secretWithPrefix)
 	if signature != expectedSignature {
 		t.Errorf("Expected signature %s, got %s", expectedSignature, signature)
 	}

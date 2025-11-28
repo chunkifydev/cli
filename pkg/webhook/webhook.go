@@ -224,9 +224,9 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 	req.Header.Set("User-Agent", "chunkify-cli/webhook-proxy")
 
 	timestamp := time.Now()
-	signature := generateSignature(notif.Id, timestamp, notif.Payload, r.webhookSecret)
+	signature := generateSignature(notif.ID, timestamp, notif.Payload, r.webhookSecret)
 	req.Header.Set("webhook-signature", signature)
-	req.Header.Set("webhook-id", notif.Id)
+	req.Header.Set("webhook-id", notif.ID)
 	req.Header.Set("webhook-timestamp", fmt.Sprintf("%d", timestamp.Unix()))
 
 	// Make the HTTP request
