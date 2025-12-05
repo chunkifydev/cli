@@ -29,29 +29,29 @@ type Command struct {
 }
 
 type ChunkifyClientInterface interface {
-	NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error)
-	WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error)
-	WebhookDelete(webhookId string) error
+	NotificationList(ctx context.Context, params chunkify.NotificationListParams) ([]chunkify.Notification, error)
+	WebhookCreate(ctx context.Context, params chunkify.WebhookNewParams) (*chunkify.Webhook, error)
+	WebhookDelete(ctx context.Context, webhookId string) error
 }
 
 type ChunkifyClient struct {
 	Client *chunkify.Client
 }
 
-func (c *ChunkifyClient) NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
-	res, err := c.Client.Notifications.List(context.Background(), params)
+func (c *ChunkifyClient) NotificationList(ctx context.Context, params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
+	res, err := c.Client.Notifications.List(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 	return res.Data, nil
 }
 
-func (c *ChunkifyClient) WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
-	return c.Client.Webhooks.New(context.Background(), params)
+func (c *ChunkifyClient) WebhookCreate(ctx context.Context, params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
+	return c.Client.Webhooks.New(ctx, params)
 }
 
-func (c *ChunkifyClient) WebhookDelete(webhookId string) error {
-	return c.Client.Webhooks.Delete(context.Background(), webhookId)
+func (c *ChunkifyClient) WebhookDelete(ctx context.Context, webhookId string) error {
+	return c.Client.Webhooks.Delete(ctx, webhookId)
 }
 
 // NewCommand creates and configures a new notifications root command
@@ -74,17 +74,20 @@ func NewCommand(config *config.Config) *Command {
 					}
 				}
 
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
 				webhookUrl := fmt.Sprintf("http://%s.chunkify.local", hostname)
 
 				req.Client = &ChunkifyClient{Client: config.Client}
 
-				webhook, err := req.createLocaldevWebhook(webhookUrl)
+				webhook, err := req.createLocaldevWebhook(ctx, webhookUrl)
 				if err != nil {
 					fmt.Printf("Error creating localdev webhook: %s\n", err)
 					return
 				}
 
-				defer req.deleteLocalDevWebhook(webhook.ID)
+				defer req.deleteLocalDevWebhook(ctx, webhook.ID)
 
 				req.WebhookId = webhook.ID
 
@@ -94,9 +97,6 @@ func NewCommand(config *config.Config) *Command {
 					strings.Join(req.Events, "\n  - "))
 
 				fmt.Printf("\n\n  ────────────────────────────────────────────────\n\n")
-
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
 
 				sigChan := make(chan os.Signal, 1)
 				signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -154,7 +154,7 @@ func (r *WebhookProxy) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			notifications, err := r.Execute()
+			notifications, err := r.Execute(ctx)
 			if err != nil {
 				fmt.Printf("Error fetching notifications: %s\n", err)
 			}
@@ -187,8 +187,8 @@ func (r *WebhookProxy) toParams() chunkify.NotificationListParams {
 }
 
 // Execute fetches notifications from the API based on the command parameters
-func (r *WebhookProxy) Execute() ([]chunkify.Notification, error) {
-	notifications, err := r.Client.NotificationList(r.toParams())
+func (r *WebhookProxy) Execute(ctx context.Context) ([]chunkify.Notification, error) {
+	notifications, err := r.Client.NotificationList(ctx, r.toParams())
 	if err != nil {
 		return nil, err
 	}
@@ -246,9 +246,9 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 }
 
 // createLocaldevWebhook sets up a webhook for local development
-func (r *WebhookProxy) createLocaldevWebhook(webhookUrl string) (chunkify.Webhook, error) {
+func (r *WebhookProxy) createLocaldevWebhook(ctx context.Context, webhookUrl string) (chunkify.Webhook, error) {
 	enabled := true
-	wh, err := r.Client.WebhookCreate(chunkify.WebhookNewParams{URL: webhookUrl, Events: r.Events, Enabled: chunkify.Bool(enabled)})
+	wh, err := r.Client.WebhookCreate(ctx, chunkify.WebhookNewParams{URL: webhookUrl, Events: r.Events, Enabled: chunkify.Bool(enabled)})
 	if err != nil {
 		fmt.Printf("Couldn't create localdev webhook for proxying: %s\n", err)
 		return chunkify.Webhook{}, err
@@ -258,8 +258,8 @@ func (r *WebhookProxy) createLocaldevWebhook(webhookUrl string) (chunkify.Webhoo
 }
 
 // deleteLocalDevWebhook removes the local development webhook
-func (r *WebhookProxy) deleteLocalDevWebhook(webhookId string) error {
-	if err := r.Client.WebhookDelete(webhookId); err != nil {
+func (r *WebhookProxy) deleteLocalDevWebhook(ctx context.Context, webhookId string) error {
+	if err := r.Client.WebhookDelete(ctx, webhookId); err != nil {
 		fmt.Printf("Couldn't delete localdev webhook. You need to manually delete it. webhookId: %s, error: %s\n", webhookId, err)
 		return err
 	}

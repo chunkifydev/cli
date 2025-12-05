@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -21,14 +22,14 @@ type MockChunkifyClient struct {
 	listError     error
 }
 
-func (m *MockChunkifyClient) NotificationList(params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
+func (m *MockChunkifyClient) NotificationList(ctx context.Context, params chunkify.NotificationListParams) ([]chunkify.Notification, error) {
 	if m.listError != nil {
 		return nil, m.listError
 	}
 	return m.notifications, nil
 }
 
-func (m *MockChunkifyClient) WebhookCreate(params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
+func (m *MockChunkifyClient) WebhookCreate(ctx context.Context, params chunkify.WebhookNewParams) (*chunkify.Webhook, error) {
 	if m.createError != nil {
 		return nil, m.createError
 	}
@@ -41,7 +42,7 @@ func (m *MockChunkifyClient) WebhookCreate(params chunkify.WebhookNewParams) (*c
 	return &webhook, nil
 }
 
-func (m *MockChunkifyClient) WebhookDelete(webhookId string) error {
+func (m *MockChunkifyClient) WebhookDelete(ctx context.Context, webhookId string) error {
 	if m.deleteError != nil {
 		return m.deleteError
 	}
@@ -101,7 +102,7 @@ func TestWebhookProxy_Execute(t *testing.T) {
 		Events: []string{"job.completed"},
 	}
 
-	notifications, err := proxy.Execute()
+	notifications, err := proxy.Execute(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -128,7 +129,7 @@ func TestWebhookProxy_Execute_AllEvents(t *testing.T) {
 		Events: []string{}, // Empty events means all events
 	}
 
-	notifications, err := proxy.Execute()
+	notifications, err := proxy.Execute(context.Background())
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

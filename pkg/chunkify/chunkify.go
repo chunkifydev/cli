@@ -118,7 +118,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 		return
 	}
 	// Create job
-	app.Job, err = app.CreateJob(source)
+	app.Job, err = app.CreateJob(ctx, source)
 	if err != nil {
 		app.setError(err)
 		return
@@ -278,11 +278,11 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	}
 
 	// Try to find the source by MD5, so we don't upload the same file again
-	if source, err := a.GetSourceByMd5(md5); err == nil {
+	if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
 		return source, nil
 	}
 
-	upload, err := a.Client.Uploads.New(context.Background(), chunkify.UploadNewParams{
+	upload, err := a.Client.Uploads.New(ctx, chunkify.UploadNewParams{
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
@@ -305,7 +305,7 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	retry := 0
 	maxRetries := 30
 	for !found && retry < maxRetries {
-		results, err := a.Client.Sources.List(context.Background(), chunkify.SourceListParams{
+		results, err := a.Client.Sources.List(ctx, chunkify.SourceListParams{
 			Metadata: [][]string{
 				{"cli_execution_id", a.Command.Id},
 			},
@@ -328,8 +328,8 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	return nil, fmt.Errorf("source not found")
 }
 
-func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
-	sources, err := a.Client.Sources.List(context.Background(), chunkify.SourceListParams{
+func (a *App) GetSourceByMd5(ctx context.Context, md5 string) (*chunkify.Source, error) {
+	sources, err := a.Client.Sources.List(ctx, chunkify.SourceListParams{
 		Metadata: [][]string{
 			{"md5", md5},
 		},
@@ -350,10 +350,10 @@ func (a *App) GetSourceByMd5(md5 string) (*chunkify.Source, error) {
 	return nil, fmt.Errorf("source not found")
 }
 
-func (a *App) CreateJob(source *chunkify.Source) (*chunkify.Job, error) {
+func (a *App) CreateJob(ctx context.Context, source *chunkify.Source) (*chunkify.Job, error) {
 	a.Progress.Status <- Transcoding
 
-	job, err := a.Client.Jobs.New(context.Background(), chunkify.JobNewParams{
+	job, err := a.Client.Jobs.New(ctx, chunkify.JobNewParams{
 		SourceID:      source.ID,
 		Format:        a.Command.JobFormatParams,
 		Transcoder:    a.Command.JobTranscoderParams,
@@ -381,7 +381,7 @@ func (a *App) StartJobProgress(ctx context.Context, jobId string) {
 			a.Progress.JobCompleted <- true
 			return
 		case <-ticker.C:
-			job, err := a.Client.Jobs.Get(context.Background(), jobId)
+			job, err := a.Client.Jobs.Get(ctx, jobId)
 			if err != nil {
 				return
 			}
@@ -393,7 +393,7 @@ func (a *App) StartJobProgress(ctx context.Context, jobId string) {
 				break
 			}
 
-			transcoders, err := a.Client.Jobs.Transcoders.List(context.Background(), job.ID)
+			transcoders, err := a.Client.Jobs.Transcoders.List(ctx, job.ID)
 			if err != nil {
 				return
 			}
