@@ -88,7 +88,7 @@ You can use the Chunkify CLI to transcode a local video, a URL, or a source ID i
 ### Transcode a Video
 
 ```
-chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 ```
 
 It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
@@ -99,7 +99,7 @@ To define them yourself, use `--transcoders` and `--vcpu` like this:
 ```
 chunkify -i video.mp4 \
          -o video_720p.mp4 \
-         -f mp4/h264 \
+         -f mp4_h264 \
          -s 1280x720 \
          --crf 24 \
          --transcoders 10 \
@@ -112,7 +112,7 @@ chunkify -i video.mp4 \
 You can also transcode a video that is publicly available via HTTP:
 
 ```
-chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21
+chunkify -i https://cdn/video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 ```
 
 If a video has already been uploaded to Chunkify, you can simply use the source ID as the input:
@@ -120,7 +120,7 @@ If a video has already been uploaded to Chunkify, you can simply use the source 
 ```
 chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
          -o video_av1_1080p.mp4 \
-         -f mp4/av1 \
+         -f mp4_av1 \
          -s 1920x1080 \
          --crf 34 \
          --preset 7
@@ -129,9 +129,9 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 > [!TIP]
 > If `--format` is omitted but `--output` is set, we will match the file extension to the appropriate format:
 > 
-> - `.mp4` → `mp4/h264`
-> - `.webm` → `webm/vp9`
-> - `.m3u8` → `hls/h264`
+> - `.mp4` → `mp4_h264`
+> - `.webm` → `webm_vp9`
+> - `.m3u8` → `hls_h264`
 > - `.jpg` → `jpg`
 
 Sometimes, it's better to know what the input specifications are before transcoding. Use `--input` without setting `--format`, and it will only upload or make available the source video:
@@ -160,7 +160,7 @@ Now you can perfectly adapt your transcoding settings to your needs with a secon
 
 ### HLS Packaging
 
-Chunkify supports 3 HLS formats: `hls/h264`, `hls/h265`, and `hls/av1`.
+Chunkify supports 3 HLS formats: `hls_h264`, `hls_h265`, and `hls_av1`.
 
 > [!WARNING]
 > Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H.264), and `--x265keyint` (H.265). For `hls/av1`, only `--gop` is necessary.
@@ -168,7 +168,7 @@ Chunkify supports 3 HLS formats: `hls/h264`, `hls/h265`, and `hls/av1`.
 ```
 chunkify -i video.mp4 \
          -o video_540p.m3u8 \
-         -f hls/h264 \
+         -f hls_h264 \
          -s 540x0 \
          -g 120 \
          --x264keyint 120 \
@@ -181,7 +181,7 @@ Once the video is transcoded, the CLI will return a summary including the `HLS M
 ```
 chunkify -i video.mp4 \
          -o video_720p.m3u8 \
-         -f hls/h264 \
+         -f hls_h264 \
          -s 720x0 \
          -g 120 \
          --x264keyint 120 \
@@ -242,7 +242,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 |------|------|-------------|
 | `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) |
 | `-o, --output` | string | Output file path |
-| `-f, --format` | string | `mp4/h264`, `mp4/h265`, `mp4/av1`, `webm/vp9`, `hls/h264`, `hls/h265`, `hls/av1`, `jpg` |
+| `-f, --format` | string | `mp4_h264`, `mp4_h265`, `mp4_av1`, `webm_vp9`, `hls_h264`, `hls_h265`, `hls_av1`, `jpg` |
 | `--transcoders` | int | Number of transcoders to use |
 | `--vcpu` | int | vCPU per transcoder (4, 8, or 16) |
 
@@ -339,7 +339,7 @@ chunkify config token sk_project_token --profile testing
 Now you can use this profile with the `--profile` flag for transcoding:
 
 ```
-chunkify -i video.mp4 -o video_1080p.mp4 -f mp4/h264 -s 1920x1080 --crf 21 --profile testing
+chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --profile testing
 ```
 
 > [!NOTE]
