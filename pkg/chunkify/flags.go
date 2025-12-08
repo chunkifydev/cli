@@ -101,7 +101,7 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&app.JSON, "json", false, "Output in JSON format")
 	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
 	cmd.Flags().StringVarP(&app.Command.Output, "output", "o", "", "Output file path")
-	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4/h264, mp4/h265, mp4/av1, webm/vp9, hls/h264, hls/h265, hls/av1, jpg)")
+	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4_h264, mp4_h265, mp4_av1, webm_vp9, hls_h264, hls_h265, hls_av1, jpg)")
 
 	cmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
 	cmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
