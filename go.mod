@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.1
-	github.com/chunkifydev/chunkify-go v0.6.0
+	github.com/chunkifydev/chunkify-go v0.9.3
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/text v0.18.0
 )
@@ -25,7 +25,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/standard-webhooks/standard-webhooks/libraries v0.0.0-20250711233419-a173a6c0125c // indirect
+	github.com/standard-webhooks/standard-webhooks/libraries v0.0.0-20260113211855-b57537b4939a // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

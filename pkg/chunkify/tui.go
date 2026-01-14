@@ -54,11 +54,11 @@ type App struct {
 	Progress         *Progress
 	Job              *chunkify.Job
 	Source           *chunkify.Source
-	Files            []chunkify.APIFile
+	Files            []chunkify.JobFile
 	Transcoders      []chunkify.JobTranscoderListResponseData
 	UploadProgress   UploadProgress
 	DownloadProgress DownloadProgress
-	DownloadedFiles  map[string]chunkify.APIFile
+	DownloadedFiles  map[string]chunkify.JobFile
 	Error            error
 	Done             bool
 	Ctx              context.Context
@@ -74,7 +74,7 @@ func NewApp() *App {
 	return &App{
 		Status:          Starting,
 		Progress:        NewProgress(),
-		DownloadedFiles: map[string]chunkify.APIFile{},
+		DownloadedFiles: map[string]chunkify.JobFile{},
 		LastJSONOutput:  time.Now(),
 	}
 }
@@ -86,8 +86,8 @@ type Progress struct {
 	JobCompleted     chan bool
 	UploadProgress   chan UploadProgress
 	DownloadProgress chan DownloadProgress
-	Files            chan []chunkify.APIFile
-	DownloadedFiles  chan chunkify.APIFile
+	Files            chan []chunkify.JobFile
+	DownloadedFiles  chan chunkify.JobFile
 	Source           chan *chunkify.Source
 	Error            chan error
 }
@@ -100,10 +100,10 @@ func NewProgress() *Progress {
 		JobCompleted:     make(chan bool, 1),
 		UploadProgress:   make(chan UploadProgress, 100),
 		DownloadProgress: make(chan DownloadProgress, 100),
-		DownloadedFiles:  make(chan chunkify.APIFile, 100),
+		DownloadedFiles:  make(chan chunkify.JobFile, 100),
 		Source:           make(chan *chunkify.Source, 1),
 		Error:            make(chan error),
-		Files:            make(chan []chunkify.APIFile, 100),
+		Files:            make(chan []chunkify.JobFile, 100),
 	}
 }
 

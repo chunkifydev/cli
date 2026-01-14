@@ -12,7 +12,7 @@ import (
 
 const ManifestFileName = "manifest.m3u8"
 
-func Process(format string, defaultBasename string, files []chunkify.APIFile, downloadedFiles []string) error {
+func Process(format string, defaultBasename string, files []chunkify.JobFile, downloadedFiles []string) error {
 	// For HLS, we need to merge the previous manifest.m3u8
 	var oldManifestContent []byte
 	var basename string

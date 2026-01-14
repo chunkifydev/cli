@@ -13,7 +13,7 @@ import (
 )
 
 type DownloadProgress struct {
-	File         chunkify.APIFile
+	File         chunkify.JobFile
 	Progress     float64
 	TotalBytes   int64
 	WrittenBytes int64
@@ -29,7 +29,7 @@ type progressWriter struct {
 	lastUpdate   time.Time
 	updateEvery  time.Duration
 	progressChan chan DownloadProgress
-	file         chunkify.APIFile
+	file         chunkify.JobFile
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -71,7 +71,7 @@ func (pw *progressWriter) print(now time.Time) {
 }
 
 // DownloadFile streams a URL to `output` with console progress.
-func DownloadFile(ctx context.Context, file chunkify.APIFile, output string, progressChan chan DownloadProgress) error {
+func DownloadFile(ctx context.Context, file chunkify.JobFile, output string, progressChan chan DownloadProgress) error {
 	slog.Info("Downloading file", "file", file.Path, "output", output)
 
 	slog.Info("Output changed to", "output", output)

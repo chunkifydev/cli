@@ -178,7 +178,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	app.Progress.Status <- Completed
 }
 
-func downloadFiles(ctx context.Context, app *App, files []chunkify.APIFile) ([]string, error) {
+func downloadFiles(ctx context.Context, app *App, files []chunkify.JobFile) ([]string, error) {
 	app.Progress.Status <- Downloading
 
 	slog.Info("Downloading files", "files", files)
@@ -402,7 +402,7 @@ func (a *App) StartJobProgress(ctx context.Context, jobId string) {
 	}
 }
 
-func filename(file chunkify.APIFile, output string) string {
+func filename(file chunkify.JobFile, output string) string {
 	fileBase := strings.Replace(path.Base(output), path.Ext(output), "", 1)
 	newFilename := strings.Replace(path.Base(file.Path), file.JobID, fileBase, 1)
 	return path.Join(path.Dir(output), newFilename)

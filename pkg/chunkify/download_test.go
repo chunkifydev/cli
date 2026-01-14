@@ -22,7 +22,7 @@ func TestProgressWriter_Write(t *testing.T) {
 	progressChan := make(chan DownloadProgress, 10)
 
 	// Create a test file
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_123",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -77,7 +77,7 @@ func TestProgressWriter_Write_NoTotal(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_456",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -124,7 +124,7 @@ func TestProgressWriter_Write_ProgressCalculation(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_789",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -192,7 +192,7 @@ func TestDownloadFile_Success(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -244,7 +244,7 @@ func TestDownloadFile_BadStatus(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -281,7 +281,7 @@ func TestDownloadFile_ContextCancellation(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -326,7 +326,7 @@ func TestDownloadFile_ProgressUpdates(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 100)
 
-	file := chunkify.APIFile{
+	file := chunkify.JobFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
