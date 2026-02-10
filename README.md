@@ -24,6 +24,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 **Useful links:**
 
 - [chunkify.dev](https://chunkify.dev)
+- [ CLI documentation](https://chunkify.dev/docs/cli)
 - [Documentation](https://chunkify.dev/docs)
 - [Dashboard](https://chunkify.dev/~)
 - [Sign up](https://chunkify.dev/signup)
