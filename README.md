@@ -192,7 +192,7 @@ chunkify -i video.mp4 \
 ```
 
 > [!NOTE]
-> The video bitrate and/or audio bitrate are mandatory for HLS output
+> The video bitrate and/or audio bitrate are mandatory for HLS output unless `--per-title` is enabled.
 
 Now we have 2 renditions that belong to the same manifest:
 
@@ -259,6 +259,15 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `--bufsize` | string | Set buffer size in bits | 100000-50000000. You can also use units like 2000K or 2M |
 | `--pixfmt` | string | Set pixel format | yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv444p12be |
 | `--vn` | bool | Disable video |
+| `--per-title` | bool | Automatically select video rate-control settings for each source | Disabled by default |
+
+Use `--per-title` with any MP4, WebM, or HLS video format to let Chunkify select video quality and bitrate settings:
+
+```bash
+chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --per-title
+```
+
+Do not combine `--per-title` with `--crf`, `--vb`, `--maxrate`, or `--bufsize`. You can still set the audio bitrate with `--ab`. HLS outputs do not require a manual bitrate when `--per-title` is enabled. JPG output does not support per-title encoding.
 
 ### Audio Settings
 
