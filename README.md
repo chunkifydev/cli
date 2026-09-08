@@ -37,6 +37,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 - [Authentication](#authentication)
 - [Quick Start with Chunkify](#quick-start-with-chunkify)
   - [Transcode a Video](#transcode-a-video)
+  - [Per-title encoding](#per-title-encoding)
   - [HLS Packaging](#hls-packaging)
   - [Generate Thumbnails](#generate-thumbnails)
 - [Transcoding Parameters](#transcoding-parameters)
@@ -159,6 +160,35 @@ Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 
 Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting `--input` to the source ID or the same local file (if uploaded from disk).
 
+### Per-title encoding
+
+Use `--per-title` to let Chunkify select video quality and bitrate settings for your source and output resolution. It supports MP4, WebM, and HLS video formats and is disabled by default.
+
+To encode a 1080p H.264 video with per-title optimization:
+
+```bash
+chunkify -i video.mp4 \
+         -o video_1080p.mp4 \
+         -f mp4_h264 \
+         -s 1920x1080 \
+         --per-title
+```
+
+For an HLS rendition, you can let Chunkify choose the video bitrate while setting the audio bitrate yourself:
+
+```bash
+chunkify -i video.mp4 \
+         -o video_1080p.m3u8 \
+         -f hls_h264 \
+         -s 1920x1080 \
+         -g 120 \
+         --x264keyint 120 \
+         --ab 128k \
+         --per-title
+```
+
+Do not combine `--per-title` with `--crf`, `--vb`, `--maxrate`, or `--bufsize`. HLS outputs do not require a manual bitrate when `--per-title` is enabled. JPG output does not support per-title encoding.
+
 ### HLS Packaging
 
 Chunkify supports 3 HLS formats: `hls_h264`, `hls_h265`, and `hls_av1`.
@@ -261,13 +291,7 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `--vn` | bool | Disable video |
 | `--per-title` | bool | Automatically select video rate-control settings for each source | Disabled by default |
 
-Use `--per-title` with any MP4, WebM, or HLS video format to let Chunkify select video quality and bitrate settings:
-
-```bash
-chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --per-title
-```
-
-Do not combine `--per-title` with `--crf`, `--vb`, `--maxrate`, or `--bufsize`. You can still set the audio bitrate with `--ab`. HLS outputs do not require a manual bitrate when `--per-title` is enabled. JPG output does not support per-title encoding.
+See [Per-title encoding](#per-title-encoding) for examples and compatible settings.
 
 ### Audio Settings
 
