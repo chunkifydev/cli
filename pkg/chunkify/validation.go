@@ -65,6 +65,29 @@ func validateCommonVideoFlags() error {
 	return nil
 }
 
+func validatePerTitleFlags(format string) error {
+	if perTitle == nil || !*perTitle {
+		return nil
+	}
+	if format == FormatJpg {
+		return fmt.Errorf("--per-title is only supported for video formats")
+	}
+	for _, flag := range []struct {
+		name  string
+		value *int64
+	}{
+		{"crf", crf},
+		{"vb", videoBitrate},
+		{"maxrate", maxrate},
+		{"bufsize", bufsize},
+	} {
+		if flag.value != nil && *flag.value != 0 {
+			return fmt.Errorf("--per-title cannot be used with --%s", flag.name)
+		}
+	}
+	return nil
+}
+
 func validateH264Flags() error {
 	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 35) {
 		return fmt.Errorf("--crf must be between 16 and 35")
@@ -145,7 +168,7 @@ func validateAv1Flags() error {
 }
 
 func validateWebmVp9Flags() error {
-	if crf != nil && (*crf < 15 || *crf > 35) {
+	if crf != nil && !(perTitle != nil && *perTitle && *crf == 0) && (*crf < 15 || *crf > 35) {
 		return fmt.Errorf("--crf must be between 15 and 35")
 	}
 	if quality != nil && *quality != "" {
@@ -172,7 +195,7 @@ func validateJpgFlags() error {
 }
 
 func validateHlsFlags() error {
-	if (videoBitrate == nil || *videoBitrate == 0) && (audioBitrate == nil || *audioBitrate == 0) {
+	if (perTitle == nil || !*perTitle) && (videoBitrate == nil || *videoBitrate == 0) && (audioBitrate == nil || *audioBitrate == 0) {
 		return fmt.Errorf("--vb (video bitrate) or --ab (audio bitrate) are required when format is hls")
 	}
 

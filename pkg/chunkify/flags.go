@@ -47,6 +47,7 @@ var (
 	pixfmt       = new(string)
 	disableAudio = new(bool)
 	disableVideo = new(bool)
+	perTitle     = new(bool)
 	duration     = new(int64)
 	seek         = new(int64)
 
@@ -118,6 +119,7 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.Flags().StringVar(pixfmt, "pixfmt", "", "Set pixel format (yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be)")
 	cmd.Flags().BoolVar(disableAudio, "an", false, "Disable audio")
 	cmd.Flags().BoolVar(disableVideo, "vn", false, "Disable video")
+	cmd.Flags().BoolVar(perTitle, "per-title", false, "Automatically select video rate-control settings for each source")
 	cmd.Flags().Int64VarP(duration, "duration", "t", 0, "Set duration in seconds")
 	cmd.Flags().Int64Var(seek, "seek", 0, "Seek to position in seconds")
 	cmd.Flags().StringVar(videoBitrateStr, "vb", "", "Set video bitrate in bits per second (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
@@ -286,6 +288,9 @@ func validateTranscodeSettings(app *App) error {
 	if err := validateCommonVideoFlags(); err != nil {
 		return err
 	}
+	if err := validatePerTitleFlags(app.Command.Format); err != nil {
+		return err
+	}
 
 	// validate format settings according to the format
 	switch app.Command.Format {
@@ -351,6 +356,7 @@ func setJobFormatParams(app *App) {
 		setParam(&h264Params.Pixfmt, pixfmt)
 		setParam(&h264Params.DisableAudio, disableAudio)
 		setParam(&h264Params.DisableVideo, disableVideo)
+		setParam(&h264Params.PerTitle, perTitle)
 		setParam(&h264Params.Duration, duration)
 		setParam(&h264Params.Seek, seek)
 		setParam(&h264Params.VideoBitrate, videoBitrate)
@@ -375,6 +381,7 @@ func setJobFormatParams(app *App) {
 		setParam(&h265Params.Pixfmt, pixfmt)
 		setParam(&h265Params.DisableAudio, disableAudio)
 		setParam(&h265Params.DisableVideo, disableVideo)
+		setParam(&h265Params.PerTitle, perTitle)
 		setParam(&h265Params.Duration, duration)
 		setParam(&h265Params.Seek, seek)
 		setParam(&h265Params.VideoBitrate, videoBitrate)
@@ -399,6 +406,7 @@ func setJobFormatParams(app *App) {
 		setParam(&av1Params.Pixfmt, pixfmt)
 		setParam(&av1Params.DisableAudio, disableAudio)
 		setParam(&av1Params.DisableVideo, disableVideo)
+		setParam(&av1Params.PerTitle, perTitle)
 		setParam(&av1Params.Duration, duration)
 		setParam(&av1Params.Seek, seek)
 		setParam(&av1Params.VideoBitrate, videoBitrate)
@@ -422,6 +430,7 @@ func setJobFormatParams(app *App) {
 		setParam(&vp9Params.Pixfmt, pixfmt)
 		setParam(&vp9Params.DisableAudio, disableAudio)
 		setParam(&vp9Params.DisableVideo, disableVideo)
+		setParam(&vp9Params.PerTitle, perTitle)
 		setParam(&vp9Params.Duration, duration)
 		setParam(&vp9Params.Seek, seek)
 		setParam(&vp9Params.VideoBitrate, videoBitrate)
@@ -451,6 +460,7 @@ func setJobFormatParams(app *App) {
 		setParam(&hlsH264Params.Pixfmt, pixfmt)
 		setParam(&hlsH264Params.DisableAudio, disableAudio)
 		setParam(&hlsH264Params.DisableVideo, disableVideo)
+		setParam(&hlsH264Params.PerTitle, perTitle)
 		setParam(&hlsH264Params.Duration, duration)
 		setParam(&hlsH264Params.Seek, seek)
 		setParam(&hlsH264Params.VideoBitrate, videoBitrate)
@@ -482,6 +492,7 @@ func setJobFormatParams(app *App) {
 		setParam(&hlsH265Params.Pixfmt, pixfmt)
 		setParam(&hlsH265Params.DisableAudio, disableAudio)
 		setParam(&hlsH265Params.DisableVideo, disableVideo)
+		setParam(&hlsH265Params.PerTitle, perTitle)
 		setParam(&hlsH265Params.Duration, duration)
 		setParam(&hlsH265Params.Seek, seek)
 		setParam(&hlsH265Params.VideoBitrate, videoBitrate)
@@ -513,6 +524,7 @@ func setJobFormatParams(app *App) {
 		setParam(&hlsAv1Params.Pixfmt, pixfmt)
 		setParam(&hlsAv1Params.DisableAudio, disableAudio)
 		setParam(&hlsAv1Params.DisableVideo, disableVideo)
+		setParam(&hlsAv1Params.PerTitle, perTitle)
 		setParam(&hlsAv1Params.Duration, duration)
 		setParam(&hlsAv1Params.Seek, seek)
 		setParam(&hlsAv1Params.VideoBitrate, videoBitrate)

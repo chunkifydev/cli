@@ -18,6 +18,7 @@ func resetGlobalFlags() {
 	pixfmt = nil
 	disableAudio = nil
 	disableVideo = nil
+	perTitle = nil
 	duration = nil
 	seek = nil
 	maxrate = nil
