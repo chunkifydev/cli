@@ -5,6 +5,14 @@
   "include-v-in-tag": true,
   "bootstrap-sha": "1f040eeaa69432a12e988e0ad01f401993cba606",
   "packages": {
-    ".": {}
+    ".": {
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
   }
 }

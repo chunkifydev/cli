@@ -59,7 +59,30 @@ You need to have a Chunkify account to use the CLI. If you don't have one, you c
 
 ## Installation
 
-Installing the latest version:
+### npm and npx
+
+With Node.js 22 or later, run the CLI without a global install:
+
+```bash
+npx @chunkify/cli@latest --help
+```
+
+Or install the `chunkify` command globally:
+
+```bash
+npm install -g @chunkify/cli
+chunkify version
+```
+
+The npm package supports macOS and Linux on x64 and ARM64, and Windows on x64. It includes the native binaries, so installation does not need Go, curl, or npm install scripts.
+
+Use `npx @chunkify/cli@latest` in place of `chunkify` in the examples below. To pin a version, use `npx @chunkify/cli@<version>` with a version published to npm.
+
+Update a global install with `npm install -g @chunkify/cli@latest`. For a project dependency, use `npm install --save-dev @chunkify/cli` and run it with `npx chunkify`.
+
+### Shell installer
+
+On macOS and Linux, install the latest version without Node.js:
 
 ```
 curl -fsSL https://cli.chunkify.sh | bash
@@ -503,6 +526,26 @@ What `chunkify listen` does under the hood:
 ### Prerequisites
 
 -   Go 1.x or higher
+
+### npm packaging
+
+Node.js 22 or later and Go 1.23 or later are required to build the npm package. There are no npm dependencies to install.
+
+```bash
+npm test
+npm run test:install
+npm pack
+```
+
+`npm pack` builds all five platform binaries from this checkout. `npm run test:install` packs the CLI, installs it into a temporary global prefix with install scripts disabled, and runs it through both the global command and npm exec, the command behind npx. CI runs these checks on macOS, Linux, and Windows.
+
+Release Please updates `package.json` alongside the Go release version. The release workflow attaches `chunkify-cli-<version>.tgz` to each GitHub release. Each npm package contains the matching CLI version.
+
+Before the first npm release, a maintainer must have publishing access to the `@chunkify` npm scope. Download the `.tgz` from the intended GitHub release, sign in with `npm login`, and publish that file with `npm publish ./chunkify-cli-<version>.tgz --access public`.
+
+Then configure an [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/) in the package settings for GitHub owner `chunkifydev`, repository `cli`, and workflow `release.yml`. Allow direct publishing with `npm publish`. Set the GitHub repository Actions variable `NPM_PUBLISH_ENABLED` to `true` to publish subsequent releases automatically. Publishing uses GitHub's identity token and does not require a stored npm token. Until enabled, the workflow only uploads the npm tarball to the GitHub release.
+
+If npm publishing fails after a GitHub release, rerun the failed npm job. To publish an already-created tarball manually, download it from that release and use the same `npm publish` command above.
 
 ## Contributing
 

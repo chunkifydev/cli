@@ -15,6 +15,16 @@ const (
 
 var Version = DevVersion
 
+// InstallMethod is set at build time for package-manager distributions.
+var InstallMethod string
+
+func UpdateInstructions() string {
+	if InstallMethod == "npm" {
+		return "Run `npm install -g @chunkify/cli@latest` to update a global install, or `npx @chunkify/cli@latest` to run the latest version."
+	}
+	return "Run `chunkify update` to update to the latest version."
+}
+
 func GetLatestVersion() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

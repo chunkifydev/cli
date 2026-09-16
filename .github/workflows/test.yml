@@ -19,3 +19,22 @@ jobs:
             - name: Run tests
               run: |
                   go test ./...
+
+    npm:
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, macos-latest, windows-latest]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-go@v5
+              with:
+                  go-version: "1.23.x"
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+            - name: Test npm launcher
+              run: npm test
+            - name: Test packed global install and npx
+              run: npm run test:install

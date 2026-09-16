@@ -1,0 +1,32 @@
+{
+  "name": "@chunkify/cli",
+  "version": "0.7.0",
+  "description": "Chunkify CLI for video transcoding and local webhook forwarding",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chunkifydev/cli.git"
+  },
+  "homepage": "https://chunkify.dev/docs/cli",
+  "bin": {
+    "chunkify": "npm/bin/chunkify.cjs"
+  },
+  "files": [
+    "npm/bin/",
+    "npm/native/"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "os": ["darwin", "linux", "win32"],
+  "cpu": ["x64", "arm64"],
+  "scripts": {
+    "prepack": "node scripts/build-npm.cjs",
+    "test": "node --test npm/test/*.test.cjs",
+    "test:install": "node scripts/test-npm.cjs"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

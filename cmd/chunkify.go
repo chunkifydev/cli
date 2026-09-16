@@ -45,14 +45,14 @@ func Execute() {
 	// Check for updates after each command
 	// TODO: check updates less often
 	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "update" {
+		if cmd.Name() == "update" || cmd.Name() == "version" {
 			return
 		}
 		upToDate, latestVersion := version.IsUpToDate()
 		if !upToDate {
 			fmt.Println("  ────────────────────────────────────────────────")
 			fmt.Println("  A new version of Chunkify CLI is available:", latestVersion)
-			fmt.Println("  Run `chunkify update` to update to the latest version.")
+			fmt.Println(" ", version.UpdateInstructions())
 		}
 	}
 
@@ -63,6 +63,10 @@ func Execute() {
 
 // initChunkifyClient verifies authentication tokens and initializes the Chunkify client.
 func initChunkifyClient(cmd *cobra.Command, args []string) {
+	if cmd.Name() == "version" || cmd.Name() == "update" {
+		return
+	}
+
 	// All commands require project token, except config
 	if cmd.Name() != "config" {
 		if cfg.Token == "" {
