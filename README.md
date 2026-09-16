@@ -37,6 +37,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 - [Authentication](#authentication)
 - [Quick Start with Chunkify](#quick-start-with-chunkify)
   - [Transcode a Video](#transcode-a-video)
+  - [Read from connected storage](#read-from-connected-storage)
   - [Per-title encoding](#per-title-encoding)
   - [HLS Packaging](#hls-packaging)
   - [Generate Thumbnails](#generate-thumbnails)
@@ -85,7 +86,7 @@ If you have multiple projects that you want to use with the CLI, simply use the 
 
 ## Quick Start with Chunkify
 
-You can use the Chunkify CLI to transcode a local video, a URL, or a source ID if it has already been uploaded to Chunkify.
+You can use the Chunkify CLI to transcode a local video, an HTTP URL, an existing source ID, or an object in connected storage using `store://`.
 
 ### Transcode a Video
 
@@ -176,6 +177,27 @@ Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
 Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting `--input` to the source ID or the same local file (if uploaded from disk).
+
+### Read from connected storage
+
+Use `store://` to read an existing object directly from external storage. This creates a source without uploading or copying the file:
+
+```bash
+chunkify -i store://videos/input.mp4 --source-storage-id stor_aws_example
+```
+
+To transcode and download the result using a saved storage connection:
+
+```bash
+chunkify config storage-id stor_aws_example
+chunkify -i store://videos/input.mp4 -o output.mp4
+```
+
+For source inputs, storage selection uses `--source-storage-id` first, then config `storage-id`, then the project's default storage. An explicit source storage ID takes precedence over config because it identifies the bucket containing the existing object. Output storage continues to follow the output rules above.
+
+Everything after `store://` is the exact object key, including any leading slash. The CLI does not add `base_prefix`, decode URL escapes, or normalize the path. Quote the input if the key contains spaces or shell characters, for example `-i 'store://videos/my clip.mp4'`. Keys must be 1 to 1024 UTF-8 bytes.
+
+The source storage must be external; `stor_chunkify_*` cannot be used for this input mode. The object must remain available while Chunkify processes it. `--source-storage-id` is only valid with `store://`, and upload storage flags cannot be combined with `store://`.
 
 ### Per-title encoding
 
@@ -288,7 +310,8 @@ sprite-00000.jpg#xywh=320,0,160,160
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) |
+| `-i, --input` | string | Local file, HTTP URL, source ID (`src_*`), or `store://object-key` |
+| `--source-storage-id` | string | External storage for `store://` input; takes precedence over config `storage-id` |
 | `-o, --output` | string | Output file path |
 | `-f, --format` | string | `mp4_h264`, `mp4_h265`, `mp4_av1`, `webm_vp9`, `hls_h264`, `hls_h265`, `hls_av1`, `jpg` |
 | `--transcoders` | int | Number of transcoders to use |

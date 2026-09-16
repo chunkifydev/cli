@@ -100,7 +100,8 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	app.Command = &ChunkifyCommand{Id: uuid.New().String()}
 
 	cmd.Flags().BoolVar(&app.JSON, "json", false, "Output in JSON format")
-	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
+	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video: local file, HTTP URL, source ID (src_*), or store://object-key")
+	cmd.Flags().StringVar(&app.Command.SourceStorageID, "source-storage-id", "", "External storage for store:// input (takes precedence over config storage-id)")
 	cmd.Flags().StringVarP(&app.Command.Output, "output", "o", "", "Output file path")
 	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4_h264, mp4_h265, mp4_av1, webm_vp9, hls_h264, hls_h265, hls_av1, jpg)")
 
@@ -161,6 +162,9 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		if err := app.validateSourceInput(); err != nil {
+			return err
+		}
 		if err := setupCommand(app); err != nil {
 			return err
 		}

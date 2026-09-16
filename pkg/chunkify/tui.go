@@ -31,6 +31,7 @@ const (
 	Completed
 	Failed
 	Cancelled
+	ReadingFromStorage
 )
 
 var (
@@ -359,6 +360,10 @@ func (t App) uploadView() (string, string) {
 		statusInfo = t.Command.Input
 		view += fmt.Sprintf("%s%s Uploaded from URL\n", indent, completedIcon.String())
 	}
+	if t.Status == ReadingFromStorage {
+		statusInfo = t.Command.Input
+		view = currentStepText(fmt.Sprintf("%s%s Reading source from storage\n", indent, spin.View()))
+	}
 
 	return view, statusInfo
 }
@@ -567,6 +572,8 @@ func (t App) getStatusString() string {
 		return "Uploading"
 	case UploadingFromFile:
 		return "Uploading"
+	case ReadingFromStorage:
+		return "Reading source"
 	case Transcoding:
 		if t.Job != nil {
 			return cases.Title(language.English).String(string(t.Job.Status))

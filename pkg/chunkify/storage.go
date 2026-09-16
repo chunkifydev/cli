@@ -31,13 +31,24 @@ func (a *App) storageObjectPath(storageID, explicitPath, category, filename, fla
 // configureStorage applies only the saved CLI storage override. With no config,
 // IDs and paths stay as supplied and the API resolves omitted IDs.
 func (a *App) configureStorage(storageID string) error {
+	storedSource := strings.HasPrefix(a.Command.Input, "store://")
+	if storedSource {
+		if a.Command.SourceStorageID == "" {
+			a.Command.SourceStorageID = storageID
+		}
+		if _, err := a.sourceStorageParams(); err != nil {
+			return err
+		}
+	}
 	if storageID == "" {
 		return nil
 	}
-	a.Command.UploadStorageID = storageID
+	if !storedSource {
+		a.Command.UploadStorageID = storageID
+	}
 	a.Command.OutputStorageID = storageID
 	input := a.Command.Input
-	if !strings.HasPrefix(input, "src_") && !strings.HasPrefix(input, "http://") && !strings.HasPrefix(input, "https://") {
+	if !storedSource && !strings.HasPrefix(input, "src_") && !strings.HasPrefix(input, "http://") && !strings.HasPrefix(input, "https://") {
 		uploadPath, err := a.storageObjectPath(storageID, a.Command.UploadStoragePath, "sources", input, "--upload-storage-path")
 		if err != nil {
 			return err

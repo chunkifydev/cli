@@ -33,6 +33,19 @@ func TestOutputStorageFlags(t *testing.T) {
 	}
 }
 
+func TestStoredSourceFlags(t *testing.T) {
+	command := chunkifyCmd.NewCommand(&config.Config{})
+	if err := command.Command.ParseFlags([]string{"-i", "store://videos/input.mp4", "--source-storage-id", "stor_aws_test", "-o", "output.mp4"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Command.PreRunE(command.Command, nil); err != nil {
+		t.Fatal(err)
+	}
+	if command.App.Command.SourceStorageID != "stor_aws_test" || command.App.Command.Input != "store://videos/input.mp4" {
+		t.Fatal("storage input flags were not retained")
+	}
+}
+
 func TestOutputStoragePathAliasesConflict(t *testing.T) {
 	command := chunkifyCmd.NewCommand(&config.Config{})
 	command.Command.SetOut(new(bytes.Buffer))

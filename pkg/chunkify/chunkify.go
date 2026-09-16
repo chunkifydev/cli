@@ -31,6 +31,7 @@ type ChunkifyCommand struct {
 	Input                  string
 	Output                 string
 	Format                 string
+	SourceStorageID        string
 	UploadStorageID        string
 	UploadStoragePath      string
 	OutputStorageID        string
@@ -66,6 +67,9 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 
 Upload a video only and get the Source ID
 chunkify -i video.mp4
+
+Read a video already in connected storage
+chunkify -i store://videos/input.mp4 --source-storage-id stor_aws_example -o output.mp4
 
 Generate thumbnails
 chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
@@ -226,6 +230,9 @@ func (a *App) setError(err error) {
 }
 
 func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
+	if strings.HasPrefix(a.Command.Input, "store://") {
+		return a.CreateSourceFromStorage(ctx)
+	}
 	// check input if it's a valid file or URL
 	if strings.HasPrefix(a.Command.Input, "https://") || strings.HasPrefix(a.Command.Input, "http://") {
 		// create source directly from URL
