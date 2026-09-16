@@ -37,6 +37,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 - [Authentication](#authentication)
 - [Quick Start with Chunkify](#quick-start-with-chunkify)
   - [Transcode a Video](#transcode-a-video)
+  - [Read from connected storage](#read-from-connected-storage)
   - [Per-title encoding](#per-title-encoding)
   - [HLS Packaging](#hls-packaging)
   - [Generate Thumbnails](#generate-thumbnails)
@@ -85,7 +86,7 @@ If you have multiple projects that you want to use with the CLI, simply use the 
 
 ## Quick Start with Chunkify
 
-You can use the Chunkify CLI to transcode a local video, a URL, or a source ID if it has already been uploaded to Chunkify.
+You can use the Chunkify CLI to transcode a local video, an HTTP URL, an existing source ID, or an object in connected storage using `store://`.
 
 ### Transcode a Video
 
@@ -94,6 +95,23 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 ```
 
 It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
+
+For local files, the CLI creates an upload session, transfers the file, and calls the completion endpoint before looking up the source. Temporary completion failures are retried without uploading the file again. Both requests must finish before the session expires. See the [video upload guide](https://chunkify.dev/docs/integration/video-upload).
+
+Save a storage connection for the CLI to use for both uploads and job outputs:
+
+```bash
+chunkify config storage-id stor_aws_example
+chunkify -i video.mp4 -o output.mp4
+```
+
+The configured ID takes precedence over both `--upload-storage-id` and `--output-storage-id`. For external storage, the CLI generates `chunkify-cli/sources/<execution-id>/<input-filename>` for uploads and `chunkify-cli/jobs/<execution-id>/<output-filename>` for outputs. When no local output filename is supplied, it uses `output` with the format's extension. Explicit `--upload-storage-path` and `--output-storage-path` values are preserved. Chunkify-managed storage, identified by `stor_chunkify_*`, uses API-generated paths and rejects explicit path flags for the corresponding operation.
+
+`--storage-path` remains a deprecated alias for `--output-storage-path`. Existing commands still work and print a deprecation warning.
+
+Without a configured storage ID, the CLI sends the IDs and paths supplied on the command line. Omitted IDs use the project's default storage. If that storage is external, you must supply `--upload-storage-path` for a local upload and `--output-storage-path` for job outputs. Upload paths are exact bucket keys; output paths are relative to the storage connection's `base_prefix`.
+
+Selecting upload storage through config or flags forces a new upload, even if the video was uploaded before. Generated paths use an execution ID to avoid collisions. An explicit path can overwrite an existing object.
 
 By default, the number of transcoders and their type will be selected automatically according to the input and output specifications.
 To define them yourself, use `--transcoders` and `--vcpu` like this:
@@ -159,6 +177,27 @@ Source ID: src_33dLly8jh7bQxVJ5L9LeMG3FAVc
 ```
 
 Now you can perfectly adapt your transcoding settings to your needs with a second command by either setting `--input` to the source ID or the same local file (if uploaded from disk).
+
+### Read from connected storage
+
+Use `store://` to read an existing object directly from external storage. This creates a source without uploading or copying the file:
+
+```bash
+chunkify -i store://videos/input.mp4 --source-storage-id stor_aws_example
+```
+
+To transcode and download the result using a saved storage connection:
+
+```bash
+chunkify config storage-id stor_aws_example
+chunkify -i store://videos/input.mp4 -o output.mp4
+```
+
+For source inputs, storage selection uses `--source-storage-id` first, then config `storage-id`, then the project's default storage. An explicit source storage ID takes precedence over config because it identifies the bucket containing the existing object. Output storage continues to follow the output rules above.
+
+Everything after `store://` is the exact object key, including any leading slash. The CLI does not add `base_prefix`, decode URL escapes, or normalize the path. Quote the input if the key contains spaces or shell characters, for example `-i 'store://videos/my clip.mp4'`. Keys must be 1 to 1024 UTF-8 bytes.
+
+The source storage must be external; `stor_chunkify_*` cannot be used for this input mode. The object must remain available while Chunkify processes it. `--source-storage-id` is only valid with `store://`, and upload storage flags cannot be combined with `store://`.
 
 ### Per-title encoding
 
@@ -271,11 +310,16 @@ sprite-00000.jpg#xywh=320,0,160,160
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `-i, --input` | string | Input video to transcode. It can be a file, HTTP URL or source ID (src_*) |
+| `-i, --input` | string | Local file, HTTP URL, source ID (`src_*`), or `store://object-key` |
+| `--source-storage-id` | string | External storage for `store://` input; takes precedence over config `storage-id` |
 | `-o, --output` | string | Output file path |
 | `-f, --format` | string | `mp4_h264`, `mp4_h265`, `mp4_av1`, `webm_vp9`, `hls_h264`, `hls_h265`, `hls_av1`, `jpg` |
 | `--transcoders` | int | Number of transcoders to use |
 | `--vcpu` | int | vCPU per transcoder (4, 8, or 16) |
+| `--upload-storage-id` | string | Storage for local uploads; overridden by config `storage-id` |
+| `--output-storage-id` | string | Storage for job outputs; overridden by config `storage-id` |
+| `--upload-storage-path` | string | Exact upload object key; generated for external storage when config `storage-id` is set |
+| `--output-storage-path` | string | Output path relative to `base_prefix`; generated for external storage when config `storage-id` is set |
 
 ### Video Settings
 
@@ -359,6 +403,17 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 ```
 
 ## CLI Profiles
+
+Storage configuration is saved per profile, like the project token:
+
+```bash
+chunkify config storage-id stor_aws_example --profile testing
+chunkify config storage-id --profile testing       # Show the saved ID
+chunkify -i video.mp4 -o output.mp4 --profile testing
+chunkify config storage-id "" --profile testing    # Clear the saved ID
+```
+
+This setting selects storage for CLI requests; it does not follow later changes to the project's default storage in the dashboard. Clear it to use the storage ID flags or the API default again.
 
 You may have multiple projects and want to use different project tokens for different tasks, or simply to differentiate between different environments.
 

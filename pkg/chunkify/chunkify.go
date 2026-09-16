@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -30,6 +31,10 @@ type ChunkifyCommand struct {
 	Input                  string
 	Output                 string
 	Format                 string
+	SourceStorageID        string
+	UploadStorageID        string
+	UploadStoragePath      string
+	OutputStorageID        string
 	JobFormatParams        chunkify.JobNewParamsFormatUnion
 	JobTranscoderParams    chunkify.JobNewParamsTranscoder
 	JobCreateStorageParams chunkify.JobNewParamsStorage
@@ -63,6 +68,9 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 Upload a video only and get the Source ID
 chunkify -i video.mp4
 
+Read a video already in connected storage
+chunkify -i store://videos/input.mp4 --source-storage-id stor_aws_example -o output.mp4
+
 Generate thumbnails
 chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
 
@@ -70,7 +78,13 @@ Use specific profile to use a different project
 chunkify config token sk_project_token --profile your_profile
 chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_profile
 `,
-			Run: func(cmd *cobra.Command, args []string) {
+			RunE: func(cmd *cobra.Command, args []string) error {
+				if err := cfg.LoadStorageID(); err != nil {
+					return err
+				}
+				if err := app.configureStorage(cfg.StorageID); err != nil {
+					return err
+				}
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -83,6 +97,7 @@ chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_pr
 
 				// Run TUI synchronously - this will block until the TUI exits
 				app.Run()
+				return nil
 			},
 		},
 	}
@@ -215,6 +230,9 @@ func (a *App) setError(err error) {
 }
 
 func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
+	if strings.HasPrefix(a.Command.Input, "store://") {
+		return a.CreateSourceFromStorage(ctx)
+	}
 	// check input if it's a valid file or URL
 	if strings.HasPrefix(a.Command.Input, "https://") || strings.HasPrefix(a.Command.Input, "http://") {
 		// create source directly from URL
@@ -251,7 +269,7 @@ func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
 func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 	a.Progress.Status <- UploadingFromUrl
 	source, err := a.Client.Sources.New(context.Background(), chunkify.SourceNewParams{
-		URL: a.Command.Input,
+		URL: chunkify.String(a.Command.Input),
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
@@ -277,55 +295,79 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		return nil, fmt.Errorf("error calculating file md5: %s", err)
 	}
 
-	// Try to find the source by MD5, so we don't upload the same file again
-	if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
-		return source, nil
+	// Reuse an existing source unless a specific upload destination was requested.
+	if a.Command.UploadStorageID == "" && a.Command.UploadStoragePath == "" {
+		if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
+			return source, nil
+		}
 	}
 
-	upload, err := a.Client.Uploads.New(ctx, chunkify.UploadNewParams{
+	params := chunkify.UploadNewParams{
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 			"md5":              md5,
 		},
-	})
+	}
+	if a.Command.UploadStorageID != "" {
+		params.Storage.ID = chunkify.String(a.Command.UploadStorageID)
+	}
+	if a.Command.UploadStoragePath != "" {
+		params.Storage.Path = chunkify.String(a.Command.UploadStoragePath)
+	}
+	upload, err := a.Client.Uploads.New(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("error creating upload: %s", err)
 	}
+	if upload.UploadURL == "" || upload.CompletionURL == "" {
+		return nil, fmt.Errorf("missing upload session URLs")
+	}
+	completionURL, err := url.Parse(upload.CompletionURL)
+	if err != nil || completionURL.Host == "" ||
+		(completionURL.Scheme != "https" && completionURL.Scheme != "http") ||
+		completionURL.Path == "" || strings.HasSuffix(completionURL.Path, "/") {
+		return nil, fmt.Errorf("invalid upload completion URL")
+	}
+	token := path.Base(completionURL.Path)
+
+	// Both the transfer and completion must finish before the session expires.
+	uploadCtx := ctx
+	if !upload.ExpiresAt.IsZero() {
+		var cancel context.CancelFunc
+		uploadCtx, cancel = context.WithDeadline(ctx, upload.ExpiresAt)
+		defer cancel()
+	}
 
 	// Reset file pointer to the beginning
-	file.Seek(0, io.SeekStart)
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("error rewinding upload file: %w", err)
+	}
 
-	if err := UploadBlobWithProgress(ctx, file, upload, a.Progress.UploadProgress); err != nil {
+	if err := UploadBlobWithProgress(uploadCtx, file, upload, a.Progress.UploadProgress); err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
 	}
 
-	found := false
-
-	retry := 0
-	maxRetries := 30
-	for !found && retry < maxRetries {
-		results, err := a.Client.Sources.List(ctx, chunkify.SourceListParams{
-			Metadata: [][]string{
-				{"cli_execution_id", a.Command.Id},
-			},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error listing sources: %s", err)
-		}
-		for _, source := range results.Data {
-			if source.Metadata != nil {
-				if v, ok := source.Metadata["cli_execution_id"]; ok && v == a.Command.Id {
-					found = true
-					return &source, nil
-				}
-			}
-		}
-		time.Sleep(1 * time.Second)
-		retry++
+	// The SDK omits project authentication and retries transient completion errors
+	// without repeating the file transfer.
+	if err := a.Client.Uploads.Complete(uploadCtx, token); err != nil {
+		// SDK errors include the request URL, whose token must stay private.
+		return nil, fmt.Errorf("error completing upload: %s", strings.ReplaceAll(err.Error(), token, "[redacted]"))
 	}
 
-	return nil, fmt.Errorf("source not found")
+	// Completion creates the source relationship before returning 204.
+	upload, err = a.Client.Uploads.Get(ctx, upload.ID)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving completed upload: %w", err)
+	}
+	if upload.SourceID == "" {
+		return nil, fmt.Errorf("completed upload has no source")
+	}
+
+	source, err := a.Client.Sources.Get(ctx, upload.SourceID)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving uploaded source: %w", err)
+	}
+	return source, nil
 }
 
 func (a *App) GetSourceByMd5(ctx context.Context, md5 string) (*chunkify.Source, error) {

@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.1
-	github.com/chunkifydev/chunkify-go v0.16.1
+	github.com/chunkifydev/chunkify-go v0.16.3
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/text v0.18.0
 )

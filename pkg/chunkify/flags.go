@@ -100,14 +100,21 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	app.Command = &ChunkifyCommand{Id: uuid.New().String()}
 
 	cmd.Flags().BoolVar(&app.JSON, "json", false, "Output in JSON format")
-	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video to transcode. It can be a file, HTTP URL or source ID (src_*)")
+	cmd.Flags().StringVarP(&app.Command.Input, "input", "i", "", "Input video: local file, HTTP URL, source ID (src_*), or store://object-key")
+	cmd.Flags().StringVar(&app.Command.SourceStorageID, "source-storage-id", "", "External storage for store:// input (takes precedence over config storage-id)")
 	cmd.Flags().StringVarP(&app.Command.Output, "output", "o", "", "Output file path")
 	cmd.Flags().StringVarP(&app.Command.Format, "format", "f", "", "Output format (mp4_h264, mp4_h265, mp4_av1, webm_vp9, hls_h264, hls_h265, hls_av1, jpg)")
 
 	cmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
 	cmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
 
-	cmd.Flags().StringVar(storagePath, "storage-path", "", "Storage absolute path")
+	cmd.Flags().StringVar(storagePath, "storage-path", "", "Output object path relative to the storage base prefix")
+	cmd.Flags().StringVar(storagePath, "output-storage-path", "", "Output object path relative to the storage base prefix")
+	cmd.Flags().MarkDeprecated("storage-path", "use --output-storage-path instead")
+	cmd.MarkFlagsMutuallyExclusive("storage-path", "output-storage-path")
+	cmd.Flags().StringVar(&app.Command.UploadStorageID, "upload-storage-id", "", "Storage for local uploads (overridden by config storage-id)")
+	cmd.Flags().StringVar(&app.Command.OutputStorageID, "output-storage-id", "", "Storage for job outputs (overridden by config storage-id)")
+	cmd.Flags().StringVar(&app.Command.UploadStoragePath, "upload-storage-path", "", "Exact object key for uploads to external storage, including the filename")
 
 	// Common video settings
 	cmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
@@ -155,6 +162,9 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.MarkFlagsRequiredTogether("transcoders", "vcpu")
 
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		if err := app.validateSourceInput(); err != nil {
+			return err
+		}
 		if err := setupCommand(app); err != nil {
 			return err
 		}
@@ -202,9 +212,10 @@ func setupCommand(app *App) error {
 
 	// Set the storage path
 	if storagePath != nil && *storagePath != "" {
-		app.Command.JobCreateStorageParams = chunkify.JobNewParamsStorage{
-			Path: chunkify.String(*storagePath),
-		}
+		app.Command.JobCreateStorageParams.Path = chunkify.String(*storagePath)
+	}
+	if app.Command.OutputStorageID != "" {
+		app.Command.JobCreateStorageParams.ID = chunkify.String(app.Command.OutputStorageID)
 	}
 
 	// shortcut to set width and height from resolution flag
