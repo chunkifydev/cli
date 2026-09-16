@@ -27,7 +27,7 @@ try {
 
   const globalBin = process.platform === 'win32' ? join(prefix, 'chunkify.cmd') : join(prefix, 'bin', 'chunkify');
   const globalRun = (args) => process.platform === 'win32'
-    ? execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `""${globalBin}" ${args.join(' ')}"`], { cwd: directory, encoding: 'utf8' })
+    ? execFileSync(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `""${globalBin}" ${args.join(' ')}"`], { cwd: directory, encoding: 'utf8', windowsVerbatimArguments: true })
     : execFileSync(globalBin, args, { cwd: directory, encoding: 'utf8' });
   assert.equal(globalRun(['version']).trim().split(/\r?\n/).at(-1), `Chunkify version v${version}`);
   assert.match(globalRun(['update']), /npm install -g @chunkify\/cli@latest/);
