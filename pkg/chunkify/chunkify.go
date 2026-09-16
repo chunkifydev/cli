@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -251,7 +252,7 @@ func (a *App) CreateSource(ctx context.Context) (*chunkify.Source, error) {
 func (a *App) CreateSourceFromUrl() (*chunkify.Source, error) {
 	a.Progress.Status <- UploadingFromUrl
 	source, err := a.Client.Sources.New(context.Background(), chunkify.SourceNewParams{
-		URL: a.Command.Input,
+		URL: chunkify.String(a.Command.Input),
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
@@ -277,55 +278,71 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		return nil, fmt.Errorf("error calculating file md5: %s", err)
 	}
 
-	// Try to find the source by MD5, so we don't upload the same file again
+	// Try to find the source by MD5, so we do not upload the same file again.
 	if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
 		return source, nil
 	}
 
-	upload, err := a.Client.Uploads.New(ctx, chunkify.UploadNewParams{
+	params := chunkify.UploadNewParams{
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 			"md5":              md5,
 		},
-	})
+	}
+	upload, err := a.Client.Uploads.New(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("error creating upload: %s", err)
 	}
+	if upload.UploadURL == "" || upload.CompletionURL == "" {
+		return nil, fmt.Errorf("missing upload session URLs")
+	}
+	completionURL, err := url.Parse(upload.CompletionURL)
+	if err != nil || completionURL.Host == "" ||
+		(completionURL.Scheme != "https" && completionURL.Scheme != "http") ||
+		completionURL.Path == "" || strings.HasSuffix(completionURL.Path, "/") {
+		return nil, fmt.Errorf("invalid upload completion URL")
+	}
+	token := path.Base(completionURL.Path)
+
+	// Both the transfer and completion must finish before the session expires.
+	uploadCtx := ctx
+	if !upload.ExpiresAt.IsZero() {
+		var cancel context.CancelFunc
+		uploadCtx, cancel = context.WithDeadline(ctx, upload.ExpiresAt)
+		defer cancel()
+	}
 
 	// Reset file pointer to the beginning
-	file.Seek(0, io.SeekStart)
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return nil, fmt.Errorf("error rewinding upload file: %w", err)
+	}
 
-	if err := UploadBlobWithProgress(ctx, file, upload, a.Progress.UploadProgress); err != nil {
+	if err := UploadBlobWithProgress(uploadCtx, file, upload, a.Progress.UploadProgress); err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
 	}
 
-	found := false
-
-	retry := 0
-	maxRetries := 30
-	for !found && retry < maxRetries {
-		results, err := a.Client.Sources.List(ctx, chunkify.SourceListParams{
-			Metadata: [][]string{
-				{"cli_execution_id", a.Command.Id},
-			},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("error listing sources: %s", err)
-		}
-		for _, source := range results.Data {
-			if source.Metadata != nil {
-				if v, ok := source.Metadata["cli_execution_id"]; ok && v == a.Command.Id {
-					found = true
-					return &source, nil
-				}
-			}
-		}
-		time.Sleep(1 * time.Second)
-		retry++
+	// The SDK omits project authentication and retries transient completion errors
+	// without repeating the file transfer.
+	if err := a.Client.Uploads.Complete(uploadCtx, token); err != nil {
+		// SDK errors include the request URL, whose token must stay private.
+		return nil, fmt.Errorf("error completing upload: %s", strings.ReplaceAll(err.Error(), token, "[redacted]"))
 	}
 
-	return nil, fmt.Errorf("source not found")
+	// Completion creates the source relationship before returning 204.
+	upload, err = a.Client.Uploads.Get(ctx, upload.ID)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving completed upload: %w", err)
+	}
+	if upload.SourceID == "" {
+		return nil, fmt.Errorf("completed upload has no source")
+	}
+
+	source, err := a.Client.Sources.Get(ctx, upload.SourceID)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving uploaded source: %w", err)
+	}
+	return source, nil
 }
 
 func (a *App) GetSourceByMd5(ctx context.Context, md5 string) (*chunkify.Source, error) {

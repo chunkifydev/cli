@@ -95,6 +95,8 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 
 It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
 
+For local files, the CLI creates an upload session, transfers the file, and calls the completion endpoint before looking up the source. Temporary completion failures are retried without uploading the file again. Both requests must finish before the session expires. See the [video upload guide](https://chunkify.dev/docs/integration/video-upload).
+
 By default, the number of transcoders and their type will be selected automatically according to the input and output specifications.
 To define them yourself, use `--transcoders` and `--vcpu` like this:
 

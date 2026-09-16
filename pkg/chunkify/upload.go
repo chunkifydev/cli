@@ -10,9 +10,10 @@ import (
 	"github.com/chunkifydev/chunkify-go"
 )
 
-// UploadBlobWithContext uploads a file to the specified URL.
+// UploadBlob uploads a file to the specified URL.
 // UploadCreate must be called first to get the URL of the upload.
 // The r parameter is the reader of the file to upload.
+// The caller must complete the upload session after the transfer succeeds.
 // Returns an error if the request fails.
 func UploadBlob(ctx context.Context, r io.Reader, uploadResponse *chunkify.Upload) error {
 	// http put request with reader
@@ -30,7 +31,7 @@ func UploadBlob(ctx context.Context, r io.Reader, uploadResponse *chunkify.Uploa
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to upload file: %s", resp.Status)
 	}
 
@@ -104,8 +105,11 @@ type UploadProgress struct {
 // UploadBlobWithProgress uploads a file to the specified URL and sends the progress to the progress channel.
 // UploadCreate must be called first to get the URL of the upload.
 // The r parameter is the reader of the file to upload.
+// The caller must complete the upload session after the transfer succeeds.
 // Returns an error if the request fails.
 func UploadBlobWithProgress(ctx context.Context, r io.Reader, uploadResponse *chunkify.Upload, progress chan UploadProgress) error {
+	defer close(progress)
+
 	// Determine total size if possible
 	var size int64 = -1
 	if seeker, ok := r.(io.Seeker); ok {
@@ -143,11 +147,6 @@ func UploadBlobWithProgress(ctx context.Context, r io.Reader, uploadResponse *ch
 	default:
 	}
 
-	defer func() {
-		// Ensure channel is closed by the producer when finished
-		close(progress)
-	}()
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -155,7 +154,7 @@ func UploadBlobWithProgress(ctx context.Context, r io.Reader, uploadResponse *ch
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("failed to upload file: %s", resp.Status)
 	}
 
