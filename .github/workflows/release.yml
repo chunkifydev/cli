@@ -67,3 +67,42 @@ jobs:
                   VERSION: ${{ needs.release-please.outputs.tag_name }}
                   ASSET: chunkify_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
               run: gh release upload "$VERSION" "$ASSET" --clobber
+
+    npm:
+        needs: [release-please, releases-matrix]
+        if: needs.release-please.outputs.release_created == 'true'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            id-token: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ needs.release-please.outputs.tag_name }}
+            - uses: actions/setup-go@v5
+              with:
+                  go-version: "1.23.x"
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+            - name: Install npm with trusted publishing support
+              run: npm install --global npm@11
+            - name: Check release version
+              env:
+                  RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+              run: node -e 'require("node:assert/strict").equal(`v${require("./package.json").version}`, process.env.RELEASE_TAG)'
+            - name: Test npm package
+              run: |
+                  npm test
+                  npm run test:install
+            - name: Pack npm release
+              run: npm pack
+            - name: Upload npm package to GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+                  VERSION: ${{ needs.release-please.outputs.tag_name }}
+              run: gh release upload "$VERSION" chunkify-cli-*.tgz --clobber
+            - name: Publish to npm
+              if: vars.NPM_PUBLISH_ENABLED == 'true'
+              run: npm publish chunkify-cli-*.tgz --access public

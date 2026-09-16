@@ -15,6 +15,10 @@ var CliUpdateCmd = &cobra.Command{
 	Short: "Update Chunkify CLI to the latest version",
 	Long:  `Update Chunkify CLI to the latest version`,
 	Run: func(cmd *cobra.Command, args []string) {
+		if version.InstallMethod == "npm" {
+			fmt.Println(version.UpdateInstructions())
+			return
+		}
 		upToDate, latestVersion := version.IsUpToDate()
 		if upToDate {
 			fmt.Printf("Chunkify CLI %s is up to date\n\n", latestVersion)
@@ -26,6 +30,11 @@ var CliUpdateCmd = &cobra.Command{
 }
 
 func UpdateCli() {
+	if version.InstallMethod == "npm" {
+		fmt.Println(version.UpdateInstructions())
+		return
+	}
+
 	if runtime.GOOS == "windows" {
 		fmt.Printf("Windows is not supported for automatic updates\n")
 		return
