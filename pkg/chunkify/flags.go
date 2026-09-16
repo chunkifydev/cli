@@ -107,7 +107,13 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.Flags().Int64Var(transcoders, "transcoders", 0, "Number of transcoders to use")
 	cmd.Flags().Int64Var(transcoderVcpu, "vcpu", 0, "vCPU per transcoder (4, 8, or 16)")
 
-	cmd.Flags().StringVar(storagePath, "storage-path", "", "Storage absolute path")
+	cmd.Flags().StringVar(storagePath, "storage-path", "", "Output object path relative to the storage base prefix")
+	cmd.Flags().StringVar(storagePath, "output-storage-path", "", "Output object path relative to the storage base prefix")
+	cmd.Flags().MarkDeprecated("storage-path", "use --output-storage-path instead")
+	cmd.MarkFlagsMutuallyExclusive("storage-path", "output-storage-path")
+	cmd.Flags().StringVar(&app.Command.UploadStorageID, "upload-storage-id", "", "Storage for local uploads (overridden by config storage-id)")
+	cmd.Flags().StringVar(&app.Command.OutputStorageID, "output-storage-id", "", "Storage for job outputs (overridden by config storage-id)")
+	cmd.Flags().StringVar(&app.Command.UploadStoragePath, "upload-storage-path", "", "Exact object key for uploads to external storage, including the filename")
 
 	// Common video settings
 	cmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
@@ -202,9 +208,10 @@ func setupCommand(app *App) error {
 
 	// Set the storage path
 	if storagePath != nil && *storagePath != "" {
-		app.Command.JobCreateStorageParams = chunkify.JobNewParamsStorage{
-			Path: chunkify.String(*storagePath),
-		}
+		app.Command.JobCreateStorageParams.Path = chunkify.String(*storagePath)
+	}
+	if app.Command.OutputStorageID != "" {
+		app.Command.JobCreateStorageParams.ID = chunkify.String(app.Command.OutputStorageID)
 	}
 
 	// shortcut to set width and height from resolution flag

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,9 +15,10 @@ import (
 // Config holds configuration settings for the CLI including
 // authentication tokens, client instance to use the library and profiles
 type Config struct {
-	Token   string
-	Client  *chunkify.Client
-	Profile string
+	Token     string
+	Client    *chunkify.Client
+	Profile   string
+	StorageID string
 }
 
 func (cfg *Config) ConfigKey(key string) string {
@@ -28,10 +30,25 @@ func (cfg *Config) ConfigKey(key string) string {
 
 // KeyringServiceKey is the service name used for storing secrets in the system keyring
 const (
-	KeyringServiceKey = "chunkify-cli"
-	ConfigEndpointKey = "config.endpoint"
-	ConfigTokenKey    = "config.token"
+	KeyringServiceKey  = "chunkify-cli"
+	ConfigEndpointKey  = "config.endpoint"
+	ConfigTokenKey     = "config.token"
+	ConfigStorageIDKey = "config.storage-id"
 )
+
+// LoadStorageID reads the selected profile's optional storage override.
+func (cfg *Config) LoadStorageID() error {
+	cfg.StorageID = ""
+	value, err := Get(cfg.ConfigKey(ConfigStorageIDKey))
+	if errors.Is(err, keyring.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("error reading storage-id config: %w", err)
+	}
+	cfg.StorageID = value
+	return nil
+}
 
 // SetToken attempts to set the project token from environment variables first,
 // falling back to the keyring if not found in environment.
@@ -77,6 +94,7 @@ func NewCommand() *cobra.Command {
 Available configuration keys:
   token     - Chunkify project token
   endpoint  - Chunkify API endpoint URL
+  storage-id - Storage for uploads and outputs; overrides both storage ID flags
   delete    - Delete config
 
 Set a profile with --profile <profile> to save different project tokens
@@ -85,6 +103,8 @@ Examples:
   chunkify config token                    # Get project token
   chunkify config token sk_project_token   # Set token to sk_project_token
   chunkify config delete                   # Delete config
+  chunkify config storage-id stor_aws_id   # Set CLI storage
+  chunkify config storage-id ""            # Clear CLI storage
 
   Use a specific profile
   chunkify config token sk_project_token --profile your_profile
@@ -112,6 +132,32 @@ Examples:
 			key := args[0]
 
 			switch key {
+			case "storage-id":
+				configKey := configKeyPrefix + ConfigStorageIDKey
+				if len(args) == 1 {
+					value, err := Get(configKey)
+					if err != nil {
+						return fmt.Errorf("%s not found", configKey)
+					}
+					cmd.Println(configKey, "=", value)
+					return nil
+				}
+				value := strings.TrimSpace(args[1])
+				if value == "" {
+					if err := keyring.Delete(KeyringServiceKey, configKey); err != nil && !errors.Is(err, keyring.ErrNotFound) {
+						return err
+					}
+					cmd.Println("Cleared", configKey)
+					return nil
+				}
+				if len(value) > 64 || !regexp.MustCompile(`^stor_[a-zA-Z0-9_-]+$`).MatchString(value) {
+					return fmt.Errorf("invalid storage-id: expected a storage ID starting with 'stor_' and at most 64 characters")
+				}
+				if err := Set(configKey, value); err != nil {
+					return err
+				}
+				cmd.Println("Set", configKey, "=", value)
+				return nil
 			case "delete":
 				if err := DeleteAll(); err != nil {
 					return err
@@ -158,7 +204,7 @@ Examples:
 				fmt.Println("Set", configKey, "=", value)
 				return nil
 			default:
-				return fmt.Errorf("invalid configuration key '%s'. Available keys: token, endpoint", key)
+				return fmt.Errorf("invalid configuration key '%s'. Available keys: token, endpoint, storage-id, delete", key)
 			}
 		},
 	}

@@ -24,6 +24,8 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 		putStatus        int
 		completionStatus int
 		completionURL    string
+		storageID        string
+		storagePath      string
 		missingSource    bool
 		alwaysFail       bool
 		expired          bool
@@ -43,6 +45,9 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 		{name: "missing URL", completionURL: "missing", wantError: "missing upload session URLs", wantRequests: []string{"lookup", "create"}},
 		{name: "invalid URL", completionURL: "://invalid", wantError: "invalid upload completion URL", wantRequests: []string{"lookup", "create"}},
 		{name: "expired session", expired: true, wantError: "context deadline exceeded", wantRequests: []string{"lookup", "create"}},
+		{name: "managed storage override", storageID: "stor_chunkify", putStatus: 200, completionStatus: 204, wantRequests: []string{"create", "put", "complete", "upload", "source"}},
+		{name: "external default", storagePath: "incoming/video.mp4", putStatus: 200, completionStatus: 204, wantRequests: []string{"create", "put", "complete", "upload", "source"}},
+		{name: "external override", storageID: "stor_external", storagePath: "incoming/video.mp4", putStatus: 200, completionStatus: 204, wantRequests: []string{"create", "put", "complete", "upload", "source"}},
 		{name: "missing source relationship", putStatus: 200, completionStatus: 204, missingSource: true, wantError: "completed upload has no source", wantRequests: []string{"lookup", "create", "put", "complete", "upload"}},
 		{name: "exhausted retries", putStatus: 200, completionStatus: 503, alwaysFail: true, wantError: "error completing upload", wantRequests: []string{"lookup", "create", "put", "complete", "complete", "complete"}},
 	} {
@@ -83,8 +88,19 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 						t.Error(err)
 					}
 					metadata = params.Metadata
-					if len(params.Storage) != 0 {
-						t.Errorf("unexpected storage fields: %v", params.Storage)
+					wantStorage := map[string]string{}
+					if tt.storageID != "" {
+						wantStorage["id"] = tt.storageID
+					}
+					if tt.storagePath != "" {
+						wantStorage["path"] = tt.storagePath
+					}
+					if len(wantStorage) == 0 {
+						if len(params.Storage) != 0 {
+							t.Errorf("unexpected storage fields: %v", params.Storage)
+						}
+					} else if !reflect.DeepEqual(params.Storage, wantStorage) {
+						t.Errorf("storage = %v, want %v", params.Storage, wantStorage)
 					}
 					completionURL := server.URL + "/api/uploads/completion/" + completionToken
 					if tt.completionURL == "missing" {
@@ -136,7 +152,7 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 			client := chunkify.NewClient(option.WithBaseURL(server.URL), option.WithProjectAccessToken("project-secret"))
 			app := NewApp()
 			app.Client = &client
-			app.Command = &ChunkifyCommand{Input: file, Id: executionID}
+			app.Command = &ChunkifyCommand{Input: file, Id: executionID, UploadStorageID: tt.storageID, UploadStoragePath: tt.storagePath}
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			source, err := app.CreateSourceFromFile(ctx)

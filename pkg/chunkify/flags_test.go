@@ -58,6 +58,20 @@ func TestSetupCommand_NoFormatOrOutput(t *testing.T) {
 	}
 }
 
+func TestSetupCommandOutputStorage(t *testing.T) {
+	resetGlobalFlags()
+	t.Cleanup(resetGlobalFlags)
+	value := "manual/output.mp4"
+	storagePath = &value
+	app := &App{Command: &ChunkifyCommand{Format: FormatMp4H264, OutputStorageID: "stor_aws_output"}}
+	if err := setupCommand(app); err != nil {
+		t.Fatal(err)
+	}
+	if got := app.Command.JobCreateStorageParams; got.ID.Value != "stor_aws_output" || got.Path.Value != value {
+		t.Fatalf("output storage flags were not mapped to job parameters: %+v", got)
+	}
+}
+
 func TestSetupCommand_FormatFromOutputExtension(t *testing.T) {
 	tests := []struct {
 		name           string

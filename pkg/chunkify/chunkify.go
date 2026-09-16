@@ -31,6 +31,9 @@ type ChunkifyCommand struct {
 	Input                  string
 	Output                 string
 	Format                 string
+	UploadStorageID        string
+	UploadStoragePath      string
+	OutputStorageID        string
 	JobFormatParams        chunkify.JobNewParamsFormatUnion
 	JobTranscoderParams    chunkify.JobNewParamsTranscoder
 	JobCreateStorageParams chunkify.JobNewParamsStorage
@@ -71,7 +74,13 @@ Use specific profile to use a different project
 chunkify config token sk_project_token --profile your_profile
 chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_profile
 `,
-			Run: func(cmd *cobra.Command, args []string) {
+			RunE: func(cmd *cobra.Command, args []string) error {
+				if err := cfg.LoadStorageID(); err != nil {
+					return err
+				}
+				if err := app.configureStorage(cfg.StorageID); err != nil {
+					return err
+				}
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
@@ -84,6 +93,7 @@ chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_pr
 
 				// Run TUI synchronously - this will block until the TUI exits
 				app.Run()
+				return nil
 			},
 		},
 	}
@@ -278,9 +288,11 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		return nil, fmt.Errorf("error calculating file md5: %s", err)
 	}
 
-	// Try to find the source by MD5, so we do not upload the same file again.
-	if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
-		return source, nil
+	// Reuse an existing source unless a specific upload destination was requested.
+	if a.Command.UploadStorageID == "" && a.Command.UploadStoragePath == "" {
+		if source, err := a.GetSourceByMd5(ctx, md5); err == nil {
+			return source, nil
+		}
 	}
 
 	params := chunkify.UploadNewParams{
@@ -289,6 +301,12 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 			"cli_execution_id": a.Command.Id,
 			"md5":              md5,
 		},
+	}
+	if a.Command.UploadStorageID != "" {
+		params.Storage.ID = chunkify.String(a.Command.UploadStorageID)
+	}
+	if a.Command.UploadStoragePath != "" {
+		params.Storage.Path = chunkify.String(a.Command.UploadStoragePath)
 	}
 	upload, err := a.Client.Uploads.New(ctx, params)
 	if err != nil {
