@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/chunkifydev/chunkify-go"
 	"github.com/chunkifydev/chunkify-go/option"
+	"github.com/chunkifydev/cli/pkg/api"
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/chunkifydev/cli/pkg/version"
@@ -40,12 +42,16 @@ var rootCmd = &cobra.Command{}
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	if isAPIInvocation(os.Args) {
+		rootCmd.SilenceErrors = true
+		rootCmd.SilenceUsage = true
+	}
 	rootCmd.PersistentPreRun = initChunkifyClient
 
 	// Check for updates after each command
 	// TODO: check updates less often
 	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "update" || cmd.Name() == "version" {
+		if cmd.Name() == "update" || cmd.Name() == "version" || isAPICommand(cmd) {
 			return
 		}
 		upToDate, latestVersion := version.IsUpToDate()
@@ -57,6 +63,9 @@ func Execute() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
+		if isAPIInvocation(os.Args) {
+			_ = json.NewEncoder(os.Stderr).Encode(map[string]string{"error": err.Error()})
+		}
 		os.Exit(1)
 	}
 }
@@ -66,9 +75,19 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 	if cmd.Name() == "version" || cmd.Name() == "update" {
 		return
 	}
+	if isAPICommand(cmd) {
+		for i := 0; i < len(args); i++ {
+			if args[i] == "--profile" && i+1 < len(args) {
+				cfg.Profile = args[i+1]
+				i++
+			} else if strings.HasPrefix(args[i], "--profile=") {
+				cfg.Profile = strings.TrimPrefix(args[i], "--profile=")
+			}
+		}
+	}
 
-	// All commands require project token, except config
-	if cmd.Name() != "config" {
+	// Regular commands require a project token. API actions load their own token.
+	if cmd.Name() != "config" && !isAPICommand(cmd) {
 		if cfg.Token == "" {
 			if err := cfg.SetToken(); err != nil {
 				fmt.Printf("Authentication issue\n\n")
@@ -105,7 +124,7 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 
 // init initializes the CLI by setting up configuration and registering all available commands
 func init() {
-	if !slices.Contains(os.Args, "--json") {
+	if !slices.Contains(os.Args, "--json") && !isAPIInvocation(os.Args) {
 		chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
 		fmt.Println("\n" + chunkifyBanner + "\n")
 	}
@@ -115,6 +134,31 @@ func init() {
 	rootCmd.AddCommand(VersionCmd)
 	rootCmd.AddCommand(CliUpdateCmd)
 	rootCmd.AddCommand(config.NewCommand())
+	rootCmd.AddCommand(api.NewCommand(cfg))
 
 	rootCmd.PersistentFlags().StringVar(&cfg.Profile, "profile", "", "Use a specific profile. When not set, the default profile is used. See config command for more details.")
+}
+
+func isAPICommand(cmd *cobra.Command) bool {
+	for cmd != nil {
+		if cmd.Name() == "api" {
+			return true
+		}
+		cmd = cmd.Parent()
+	}
+	return false
+}
+
+func isAPIInvocation(args []string) bool {
+	for i := 1; i < len(args); i++ {
+		if args[i] == "--profile" {
+			i++
+			continue
+		}
+		if strings.HasPrefix(args[i], "--profile=") {
+			continue
+		}
+		return args[i] == "api"
+	}
+	return false
 }

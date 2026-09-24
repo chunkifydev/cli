@@ -71,3 +71,81 @@ func TestLoadStorageIDReportsKeyringFailure(t *testing.T) {
 		t.Fatalf("expected keyring error, got %v", err)
 	}
 }
+
+func TestTeamTokenConfigAndProfiles(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("CHUNKIFY_TEAM_TOKEN", "")
+	cmd := NewCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{"team-token", "sk_team_secret1234", "--profile", "staging"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(output.String(), "sk_team_secret1234") {
+		t.Fatal("config output exposed the team token")
+	}
+	cfg := &Config{Profile: "staging"}
+	if err := cfg.SetTeamToken(); err != nil || cfg.TeamToken != "sk_team_secret1234" {
+		t.Fatalf("team token for profile: %q, %v", cfg.TeamToken, err)
+	}
+	cfg.Profile = "other"
+	if err := cfg.SetTeamToken(); !errors.Is(err, keyring.ErrNotFound) {
+		t.Fatalf("another profile inherited the token: %v", err)
+	}
+	t.Setenv("CHUNKIFY_TEAM_TOKEN", "sk_team_environment")
+	if err := cfg.SetTeamToken(); err != nil || cfg.TeamToken != "sk_team_environment" {
+		t.Fatalf("environment token: %q, %v", cfg.TeamToken, err)
+	}
+}
+
+func TestOpenAPIURLConfigAndProfiles(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("CHUNKIFY_OPENAPI_URL", "")
+	run := func(args ...string) error {
+		t.Helper()
+		cmd := NewCommand()
+		cmd.SetOut(new(bytes.Buffer))
+		cmd.SetErr(new(bytes.Buffer))
+		cmd.SetArgs(args)
+		return cmd.Execute()
+	}
+	const stagingURL = "https://staging.example.com/openapi.json"
+	if err := run("openapi-url", stagingURL, "--profile", "staging"); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &Config{Profile: "staging"}
+	if got, err := cfg.OpenAPIURL(); err != nil || got != stagingURL {
+		t.Fatalf("staging OpenAPI URL: %q, %v", got, err)
+	}
+	cfg.Profile = "other"
+	if got, err := cfg.OpenAPIURL(); err != nil || got != "" {
+		t.Fatalf("other profile inherited URL: %q, %v", got, err)
+	}
+	t.Setenv("CHUNKIFY_OPENAPI_URL", "https://override.example.com/schema.json")
+	if got, err := cfg.OpenAPIURL(); err != nil || got != "https://override.example.com/schema.json" {
+		t.Fatalf("environment override: %q, %v", got, err)
+	}
+	t.Setenv("CHUNKIFY_OPENAPI_URL", "")
+	if err := run("openapi-url", "", "--profile", "staging"); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Profile = "staging"
+	if got, err := cfg.OpenAPIURL(); err != nil || got != "" {
+		t.Fatalf("cleared URL: %q, %v", got, err)
+	}
+}
+
+func TestOpenAPIURLRejectsInvalidValues(t *testing.T) {
+	keyring.MockInit()
+	for _, value := range []string{"openapi.json", "ftp://example.com/openapi.json", "https://", "https://user:pass@example.com/openapi.json"} {
+		cmd := NewCommand()
+		cmd.SetOut(new(bytes.Buffer))
+		cmd.SetErr(new(bytes.Buffer))
+		cmd.SetArgs([]string{"openapi-url", value})
+		if err := cmd.Execute(); err == nil {
+			t.Errorf("accepted invalid URL %q", value)
+		}
+	}
+}
