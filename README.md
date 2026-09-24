@@ -50,6 +50,7 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
   - [JPG Settings](#jpg-settings)
 - [JSON Output](#json-output)
 - [CLI Profiles](#cli-profiles)
+- [Direct API commands](#direct-api-commands)
 - [Chunkify API Integration](#chunkify-api-integration)
   - [Receiving Webhook Notifications Locally](#receiving-webhook-notifications-locally)
     
@@ -456,6 +457,44 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --profile testing
 
 > [!NOTE]
 > If no profile given, the CLI will use the default one
+
+## Direct API commands
+
+Use `chunkify api <resource> <action>` to call the Chunkify API. These commands print JSON to standard output by default, with no banner or update notice. The CLI reads the [production OpenAPI definition](https://chunkify.dev/docs/openapi.json) to discover resources and actions, and caches it for one hour. If the docs site is unavailable, the last cached definition is used. Use `chunkify api --help` to list resources and `chunkify api projects --help` to list a resource's actions.
+
+Command names follow OpenAPI `operationId` values: `updateProject` becomes `projects update`, and `getJobFiles` becomes `job-files list` because its route returns a collection. New action verbs follow the same rule.
+
+```bash
+chunkify api jobs list --query limit=10 | jq '.data'
+chunkify api jobs get job_123
+chunkify api projects update my-project --data '{"name":"New name"}'
+chunkify api projects update my-project --data '{"storage_id":"stor_aws_example"}'
+chunkify api storages create --data @storage.json
+```
+
+Use `--data @-` to read a JSON body from standard input. Repeat `--query key=value` for multiple query parameters. Path IDs follow the action name, as shown by each command's `--help` output. The CLI prints the API's JSON response unchanged. If the API returns no body, it prints `{}`. Non-JSON responses, such as an asset preview, are printed as `{"encoding":"base64","data":"..."}`. Errors are JSON on standard error and cause a nonzero exit status.
+
+Project resources use the project token configured with `chunkify config token` or `CHUNKIFY_TOKEN`. Projects and access tokens use a team token:
+
+```bash
+chunkify config team-token <sk_team_token>
+# Or set CHUNKIFY_TEAM_TOKEN in the environment.
+chunkify api projects list
+```
+
+Both tokens can be saved under the same `--profile`. Team commands require only a team token; project commands require only a project token. The CLI stores configured tokens in the system keyring and masks them when showing config values.
+
+The request URL comes from `chunkify config endpoint` for the selected profile, or `CHUNKIFY_ENDPOINT` when set. The default is `https://api.chunkify.dev/v1`. The URL inside the OpenAPI document does not change where requests go.
+
+To use another OpenAPI definition for command discovery, save its URL in the same profile:
+
+```bash
+chunkify config endpoint https://staging-api.example.com/v1 --profile staging
+chunkify config openapi-url https://staging-api.example.com/openapi.json --profile staging
+chunkify api projects list --profile staging
+```
+
+`CHUNKIFY_OPENAPI_URL` overrides the saved OpenAPI URL. Without either setting, the CLI uses the production definition. Clear a saved URL with `chunkify config openapi-url "" --profile staging`.
 
 ## Chunkify API Integration
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chunkifydev/cli/pkg/api"
 	chunkifyCmd "github.com/chunkifydev/cli/pkg/chunkify"
 	"github.com/chunkifydev/cli/pkg/config"
 )
@@ -68,5 +69,37 @@ func TestPerTitleHlsCommand(t *testing.T) {
 	enabled, err := rootCmd.Flags().GetBool("per-title")
 	if err != nil || !enabled {
 		t.Fatalf("expected --per-title to enable optimization, got %v, %v", enabled, err)
+	}
+}
+
+func TestAPIInvocationSkipsBanner(t *testing.T) {
+	for _, args := range [][]string{
+		{"chunkify", "api", "projects", "list"},
+		{"chunkify", "--profile", "staging", "api", "projects", "list"},
+		{"chunkify", "--profile=staging", "api", "projects", "list"},
+	} {
+		if !isAPIInvocation(args) {
+			t.Fatalf("API invocation not recognized: %v", args)
+		}
+	}
+	if isAPIInvocation([]string{"chunkify", "-i", "api"}) {
+		t.Fatal("transcoding input named api was treated as an API command")
+	}
+}
+
+func TestTeamAPICommandDoesNotRequireProjectToken(t *testing.T) {
+	previous := cfg
+	cfg = &config.Config{}
+	t.Cleanup(func() { cfg = previous })
+	t.Setenv("CHUNKIFY_TOKEN", "")
+	t.Setenv("CHUNKIFY_TEAM_TOKEN", "sk_team_example")
+	t.Setenv("CHUNKIFY_ENDPOINT", "http://localhost:9999/v1")
+	apiCommand := api.NewCommand(cfg)
+	initChunkifyClient(apiCommand, []string{"projects", "list", "--profile", "staging"})
+	if cfg.Client == nil {
+		t.Fatal("team API command did not initialize the client")
+	}
+	if cfg.Profile != "staging" {
+		t.Fatalf("profile after api command was not selected: %q", cfg.Profile)
 	}
 }

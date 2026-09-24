@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -16,6 +17,7 @@ import (
 // authentication tokens, client instance to use the library and profiles
 type Config struct {
 	Token     string
+	TeamToken string
 	Client    *chunkify.Client
 	Profile   string
 	StorageID string
@@ -30,10 +32,12 @@ func (cfg *Config) ConfigKey(key string) string {
 
 // KeyringServiceKey is the service name used for storing secrets in the system keyring
 const (
-	KeyringServiceKey  = "chunkify-cli"
-	ConfigEndpointKey  = "config.endpoint"
-	ConfigTokenKey     = "config.token"
-	ConfigStorageIDKey = "config.storage-id"
+	KeyringServiceKey   = "chunkify-cli"
+	ConfigEndpointKey   = "config.endpoint"
+	ConfigTokenKey      = "config.token"
+	ConfigTeamTokenKey  = "config.team-token"
+	ConfigStorageIDKey  = "config.storage-id"
+	ConfigOpenAPIURLKey = "config.openapi-url"
 )
 
 // LoadStorageID reads the selected profile's optional storage override.
@@ -68,6 +72,36 @@ func (cfg *Config) SetToken() error {
 	return nil
 }
 
+// SetTeamToken loads the team token from the environment or the selected profile.
+func (cfg *Config) SetTeamToken() error {
+	cfg.TeamToken = os.Getenv("CHUNKIFY_TEAM_TOKEN")
+	if cfg.TeamToken != "" {
+		return nil
+	}
+	tok, err := Get(cfg.ConfigKey(ConfigTeamTokenKey))
+	if err != nil {
+		return err
+	}
+	cfg.TeamToken = tok
+	return nil
+}
+
+// OpenAPIURL returns the selected profile's API definition URL, with the
+// environment variable taking precedence. An empty value means use the default.
+func (cfg *Config) OpenAPIURL() (string, error) {
+	if value := os.Getenv("CHUNKIFY_OPENAPI_URL"); value != "" {
+		return value, nil
+	}
+	value, err := Get(cfg.ConfigKey(ConfigOpenAPIURLKey))
+	if errors.Is(err, keyring.ErrNotFound) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("error reading openapi-url config: %w", err)
+	}
+	return value, nil
+}
+
 // Get retrieves a value from the system keyring using the KeyringServiceKey
 func Get(key string) (string, error) {
 	return keyring.Get(KeyringServiceKey, key)
@@ -92,16 +126,21 @@ func NewCommand() *cobra.Command {
 		Long: `Manage configuration settings for chunkify.
 
 Available configuration keys:
-  token     - Chunkify project token
-  endpoint  - Chunkify API endpoint URL
-  storage-id - Storage for uploads and outputs; overrides both storage ID flags
-  delete    - Delete config
+  token       - Chunkify project token
+  team-token  - Chunkify team token
+  endpoint    - Chunkify API endpoint URL
+  openapi-url - OpenAPI definition URL for direct API commands
+  storage-id  - Storage for uploads and outputs; overrides both storage ID flags
+  delete      - Delete config
 
-Set a profile with --profile <profile> to save different project tokens
+Set a profile with --profile <profile> to save separate settings for each profile.
 
 Examples:
   chunkify config token                    # Get project token
   chunkify config token sk_project_token   # Set token to sk_project_token
+  chunkify config team-token sk_team_token  # Set team token
+  chunkify config openapi-url https://example.com/openapi.json # Set API definition URL
+  chunkify config openapi-url ""               # Use the default API definition
   chunkify config delete                   # Delete config
   chunkify config storage-id stor_aws_id   # Set CLI storage
   chunkify config storage-id ""            # Clear CLI storage
@@ -164,26 +203,59 @@ Examples:
 				}
 				fmt.Println("Config deleted successfully")
 				return nil
-			case "token":
+			case "token", "team-token":
+				isTeam := key == "team-token"
 				configKey := configKeyPrefix + ConfigTokenKey
+				prefix := "sk_project_"
+				if isTeam {
+					configKey = configKeyPrefix + ConfigTeamTokenKey
+					prefix = "sk_team_"
+				}
 				if len(args) == 1 {
 					// Get token
 					tok, err := Get(configKey)
 					if err != nil {
 						return fmt.Errorf("%s not found", configKey)
 					}
-					fmt.Println(configKey, "=", tok)
+					cmd.Println(configKey, "=", maskToken(tok))
 					return nil
 				}
 				// Set token
 				value := strings.TrimSpace(args[1])
-				if !strings.HasPrefix(value, "sk_project_") {
-					return fmt.Errorf("invalid token: %s. It should start with 'sk_project_'", value)
+				if !strings.HasPrefix(value, prefix) {
+					return fmt.Errorf("invalid %s: expected a token starting with '%s'", key, prefix)
 				}
 				if err := Set(configKey, value); err != nil {
 					return err
 				}
-				fmt.Println("Set", configKey, "=", value)
+				cmd.Println("Set", configKey, "=", maskToken(value))
+				return nil
+			case "openapi-url":
+				configKey := configKeyPrefix + ConfigOpenAPIURLKey
+				if len(args) == 1 {
+					value, err := Get(configKey)
+					if err != nil {
+						return fmt.Errorf("%s not found", configKey)
+					}
+					cmd.Println(configKey, "=", value)
+					return nil
+				}
+				value := strings.TrimSpace(args[1])
+				if value == "" {
+					if err := keyring.Delete(KeyringServiceKey, configKey); err != nil && !errors.Is(err, keyring.ErrNotFound) {
+						return err
+					}
+					cmd.Println("Cleared", configKey)
+					return nil
+				}
+				parsed, err := url.Parse(value)
+				if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil {
+					return fmt.Errorf("invalid openapi-url: expected an absolute HTTP or HTTPS URL")
+				}
+				if err := Set(configKey, value); err != nil {
+					return err
+				}
+				cmd.Println("Set", configKey, "=", value)
 				return nil
 			case "endpoint":
 				configKey := configKeyPrefix + ConfigEndpointKey
@@ -204,7 +276,7 @@ Examples:
 				fmt.Println("Set", configKey, "=", value)
 				return nil
 			default:
-				return fmt.Errorf("invalid configuration key '%s'. Available keys: token, endpoint, storage-id, delete", key)
+				return fmt.Errorf("invalid configuration key '%s'. Available keys: token, team-token, endpoint, openapi-url, storage-id, delete", key)
 			}
 		},
 	}
@@ -212,4 +284,11 @@ Examples:
 	cmd.Flags().StringVar(&profile, "profile", "", "Use a specific profile. When not set, the default profile is used.")
 
 	return cmd
+}
+
+func maskToken(token string) string {
+	if len(token) <= 4 {
+		return "****"
+	}
+	return "****" + token[len(token)-4:]
 }
