@@ -1,6 +1,6 @@
 {
   "name": "@chunkify/cli",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Chunkify CLI for video transcoding and local webhook forwarding",
   "license": "MIT",
   "repository": {
