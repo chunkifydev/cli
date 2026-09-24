@@ -14,6 +14,7 @@ import (
 	"github.com/chunkifydev/chunkify-go/option"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/spf13/cobra"
+	"github.com/zalando/go-keyring"
 )
 
 const testSpec = `{"paths":{
@@ -105,6 +106,9 @@ func TestAPIEmptyAndNonJSONResponsesStayJSON(t *testing.T) {
 }
 
 func TestAPIRequiresOnlyRelevantToken(t *testing.T) {
+	keyring.MockInit()
+	t.Setenv("CHUNKIFY_TEAM_TOKEN", "")
+	t.Setenv("CHUNKIFY_TOKEN", "")
 	client := chunkify.NewClient()
 	cfg := &config.Config{Client: &client}
 	cmd := testCommand(cfg)
