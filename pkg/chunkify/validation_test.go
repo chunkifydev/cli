@@ -24,9 +24,9 @@ func resetGlobalVars() {
 	x265KeyInt = nil
 	quality = nil
 	cpuUsed = nil
-	hlsTime = nil
-	hlsSegmentType = nil
-	interval = nil
+	audioSamplerate = nil
+	duration = nil
+	seek = nil
 }
 
 func TestValidateCommonVideoFlags(t *testing.T) {
@@ -53,7 +53,7 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 				width = &val
 			},
 			expectError: true,
-			errorMsg:    "--resolution width must be between 0 and 8192",
+			errorMsg:    "--resolution width must be between 0 and 7680",
 		},
 		{
 			name: "invalid_width_too_large",
@@ -63,7 +63,7 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 				width = &val
 			},
 			expectError: true,
-			errorMsg:    "--resolution width must be between 0 and 8192",
+			errorMsg:    "--resolution width must be between 0 and 7680",
 		},
 		{
 			name: "valid_height",
@@ -82,7 +82,7 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 				height = &val
 			},
 			expectError: true,
-			errorMsg:    "--resolution height must be between 0 and 8192",
+			errorMsg:    "--resolution height must be between 0 and 7680",
 		},
 		{
 			name: "valid_video_bitrate",
@@ -155,21 +155,21 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 			name: "invalid_framerate_too_low",
 			setup: func() {
 				resetGlobalVars()
-				val := float64(10.0)
+				val := float64(-1.0)
 				framerate = &val
 			},
 			expectError: true,
-			errorMsg:    "--framerate must be between 15 and 120",
+			errorMsg:    "--framerate must be between 0.001 and 240",
 		},
 		{
 			name: "invalid_framerate_too_high",
 			setup: func() {
 				resetGlobalVars()
-				val := float64(150.0)
+				val := float64(300.0)
 				framerate = &val
 			},
 			expectError: true,
-			errorMsg:    "--framerate must be between 15 and 120",
+			errorMsg:    "--framerate must be between 0.001 and 240",
 		},
 		{
 			name: "valid_gop",
@@ -188,17 +188,17 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 				gop = &val
 			},
 			expectError: true,
-			errorMsg:    "--gop must be between 1 and 30",
+			errorMsg:    "--gop must be between 1 and 960",
 		},
 		{
 			name: "invalid_gop_too_high",
 			setup: func() {
 				resetGlobalVars()
-				val := int64(400)
+				val := int64(1000)
 				gop = &val
 			},
 			expectError: true,
-			errorMsg:    "--gop must be between 1 and 30",
+			errorMsg:    "--gop must be between 1 and 960",
 		},
 		{
 			name: "valid_channels",
@@ -210,33 +210,52 @@ func TestValidateCommonVideoFlags(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "invalid_channels_valid_value",
+			name: "valid_channels_stereo",
 			setup: func() {
 				resetGlobalVars()
 				val := int64(2)
 				channels = &val
 			},
-			expectError: true,
-			errorMsg:    "--channels must be one of 1, 2, 5, 7",
+			expectError: false,
 		},
 		{
-			name: "valid_pixfmt",
+			name: "invalid_channels",
 			setup: func() {
 				resetGlobalVars()
-				val := "yuv420p"
-				pixfmt = &val
+				val := int64(5)
+				channels = &val
+			},
+			expectError: true,
+			errorMsg:    "--channels must be one of 1, 2, 6, 8",
+		},
+		{
+			name: "valid_audio_samplerate",
+			setup: func() {
+				resetGlobalVars()
+				val := int64(44100)
+				audioSamplerate = &val
 			},
 			expectError: false,
 		},
 		{
-			name: "invalid_pixfmt",
+			name: "invalid_audio_samplerate",
 			setup: func() {
 				resetGlobalVars()
-				val := "invalid_format"
-				pixfmt = &val
+				val := int64(44000)
+				audioSamplerate = &val
 			},
 			expectError: true,
-			errorMsg:    "--pixfmt must be one of yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv440p12be, yuv444p12be",
+			errorMsg:    "--ar must be one of 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000",
+		},
+		{
+			name: "invalid_negative_seek",
+			setup: func() {
+				resetGlobalVars()
+				val := -1.5
+				seek = &val
+			},
+			expectError: true,
+			errorMsg:    "--seek must be positive",
 		},
 		{
 			name: "all_valid_values",
@@ -341,7 +360,7 @@ func TestValidateH264Flags(t *testing.T) {
 				preset = &val
 			},
 			expectError: true,
-			errorMsg:    "--preset must be one of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow",
+			errorMsg:    "--preset must be one of ultrafast, superfast, veryfast, faster, fast, medium",
 		},
 		{
 			name: "valid_profilev",
@@ -398,17 +417,36 @@ func TestValidateH264Flags(t *testing.T) {
 				x264KeyInt = &val
 			},
 			expectError: true,
-			errorMsg:    "--x264keyint must be between 1 and 30",
+			errorMsg:    "--x264keyint must be between 1 and 960",
 		},
 		{
 			name: "invalid_x264keyint_too_high",
 			setup: func() {
 				resetGlobalVars()
-				val := int64(400)
+				val := int64(1000)
 				x264KeyInt = &val
 			},
 			expectError: true,
-			errorMsg:    "--x264keyint must be between 1 and 30",
+			errorMsg:    "--x264keyint must be between 1 and 960",
+		},
+		{
+			name: "valid_h264_pixfmt",
+			setup: func() {
+				resetGlobalVars()
+				val := "yuv420p10le"
+				pixfmt = &val
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid_h264_pixfmt",
+			setup: func() {
+				resetGlobalVars()
+				val := "yuv420p12le"
+				pixfmt = &val
+			},
+			expectError: true,
+			errorMsg:    "--pixfmt must be one of yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le",
 		},
 	}
 
@@ -456,7 +494,7 @@ func TestValidateH265Flags(t *testing.T) {
 				profilev = &val
 			},
 			expectError: true,
-			errorMsg:    "--profilev must be one of baseline, main, high, high10, high422, high444",
+			errorMsg:    "--profilev must be one of main, main10, main12, main422-10, main422-12, main444-8, main444-10, main444-12",
 		},
 		{
 			name: "valid_h265_level",
@@ -494,7 +532,7 @@ func TestValidateH265Flags(t *testing.T) {
 				x265KeyInt = &val
 			},
 			expectError: true,
-			errorMsg:    "--x265keyint must be between 1 and 30",
+			errorMsg:    "--x265keyint must be between 1 and 300",
 		},
 	}
 
@@ -580,7 +618,7 @@ func TestValidateAv1Flags(t *testing.T) {
 				profilev = &val
 			},
 			expectError: true,
-			errorMsg:    "--profilev must be one of main, main10, mainstillpicture",
+			errorMsg:    "--profilev must be one of main",
 		},
 	}
 
@@ -690,235 +728,27 @@ func TestValidateWebmVp9Flags(t *testing.T) {
 	}
 }
 
-func TestValidateHlsFlags(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func()
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name: "valid_with_video_bitrate",
-			setup: func() {
-				resetGlobalVars()
-				val := int64(2000000)
-				videoBitrate = &val
-			},
-			expectError: false,
-		},
-		{
-			name: "valid_with_audio_bitrate",
-			setup: func() {
-				resetGlobalVars()
-				val := int64(128000)
-				audioBitrate = &val
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid_no_bitrates",
-			setup: func() {
-				resetGlobalVars()
-			},
-			expectError: true,
-			errorMsg:    "--vb (video bitrate) or --ab (audio bitrate) are required when format is hls",
-		},
-		{
-			name: "valid_hls_time",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				hlsTimeVal := int64(5)
-				videoBitrate = &videoBitrateVal
-				hlsTime = &hlsTimeVal
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid_hls_time_too_low",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				hlsTimeVal := int64(-1)
-				videoBitrate = &videoBitrateVal
-				hlsTime = &hlsTimeVal
-			},
-			expectError: true,
-			errorMsg:    "--hls-time must be between 1 and 10",
-		},
-		{
-			name: "invalid_hls_time_too_high",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				hlsTimeVal := int64(15)
-				videoBitrate = &videoBitrateVal
-				hlsTime = &hlsTimeVal
-			},
-			expectError: true,
-			errorMsg:    "--hls-time must be between 1 and 10",
-		},
-		{
-			name: "valid_hls_segment_type",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				segmentTypeVal := "mpegts"
-				videoBitrate = &videoBitrateVal
-				hlsSegmentType = &segmentTypeVal
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid_hls_segment_type",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				segmentTypeVal := "invalid"
-				videoBitrate = &videoBitrateVal
-				hlsSegmentType = &segmentTypeVal
-			},
-			expectError: true,
-			errorMsg:    "--hls-segment-type must be one of mpegts, fmp4",
-		},
+func TestValidateM4aAacFlags(t *testing.T) {
+	t.Cleanup(resetGlobalVars)
+
+	resetGlobalVars()
+	ab, sr := int64(192000), int64(44100)
+	audioBitrate, audioSamplerate = &ab, &sr
+	if err := validateM4aAacFlags(); err != nil {
+		t.Fatalf("audio settings should be accepted: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := validateHlsFlags()
-
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error but got none")
-				} else if tt.errorMsg != "" && err.Error() != tt.errorMsg {
-					t.Errorf("Expected error message %q, got %q", tt.errorMsg, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-			}
-		})
-	}
-}
-
-func TestValidateJpgFlags(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func()
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name: "valid_interval",
-			setup: func() {
-				resetGlobalVars()
-				val := int64(5)
-				interval = &val
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid_interval_negative",
-			setup: func() {
-				resetGlobalVars()
-				val := int64(-1)
-				interval = &val
-			},
-			expectError: true,
-			errorMsg:    "--interval must be between 0 and 60",
-		},
-		{
-			name: "invalid_interval_too_high",
-			setup: func() {
-				resetGlobalVars()
-				val := int64(70)
-				interval = &val
-			},
-			expectError: true,
-			errorMsg:    "--interval must be between 0 and 60",
-		},
+	resetGlobalVars()
+	w := int64(1280)
+	width = &w
+	if err := validateM4aAacFlags(); err == nil || err.Error() != "--resolution is not supported for m4a_aac" {
+		t.Fatalf("expected resolution error, got %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := validateJpgFlags()
-
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error but got none")
-				} else if tt.errorMsg != "" && err.Error() != tt.errorMsg {
-					t.Errorf("Expected error message %q, got %q", tt.errorMsg, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-			}
-		})
-	}
-}
-
-func TestValidateHlsH264Flags(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func()
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name: "valid_hls_h264",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				crfVal := int64(23)
-				videoBitrate = &videoBitrateVal
-				crf = &crfVal
-			},
-			expectError: false,
-		},
-		{
-			name: "invalid_hls_h264_no_bitrate",
-			setup: func() {
-				resetGlobalVars()
-				crfVal := int64(23)
-				crf = &crfVal
-			},
-			expectError: true,
-			errorMsg:    "--vb (video bitrate) or --ab (audio bitrate) are required when format is hls",
-		},
-		{
-			name: "invalid_hls_h264_invalid_crf",
-			setup: func() {
-				resetGlobalVars()
-				videoBitrateVal := int64(2000000)
-				crfVal := int64(10)
-				videoBitrate = &videoBitrateVal
-				crf = &crfVal
-			},
-			expectError: true,
-			errorMsg:    "--crf must be between 16 and 35",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := validateHlsH264Flags()
-
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("Expected error but got none")
-				} else if tt.errorMsg != "" && err.Error() != tt.errorMsg {
-					t.Errorf("Expected error message %q, got %q", tt.errorMsg, err.Error())
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Unexpected error: %v", err)
-				}
-			}
-		})
+	resetGlobalVars()
+	vn := true
+	disableVideo = &vn
+	if err := validateM4aAacFlags(); err == nil {
+		t.Fatal("expected --vn error")
 	}
 }

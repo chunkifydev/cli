@@ -56,19 +56,19 @@ func (a *App) configureStorage(storageID string) error {
 		a.Command.UploadStoragePath = uploadPath
 	}
 	if a.Command.Format != "" {
-		outputPath, err := a.storageObjectPath(storageID, a.Command.JobCreateStorageParams.Path.Value, "jobs", a.jobOutputFilename(), "--output-storage-path")
+		outputPath, err := a.storageObjectPath(storageID, a.Command.TranscodingStorageParams.Path.Value, "transcodings", a.outputFilename(), "--output-storage-path")
 		if err != nil {
 			return err
 		}
-		a.Command.JobCreateStorageParams = chunkify.JobNewParamsStorage{ID: chunkify.String(storageID)}
+		a.Command.TranscodingStorageParams = chunkify.TranscodingNewParamsStorage{ID: chunkify.String(storageID)}
 		if outputPath != "" {
-			a.Command.JobCreateStorageParams.Path = chunkify.String(outputPath)
+			a.Command.TranscodingStorageParams.Path = chunkify.String(outputPath)
 		}
 	}
 	return nil
 }
 
-func (a *App) jobOutputFilename() string {
+func (a *App) outputFilename() string {
 	if a.Command.Output != "" {
 		return filepath.Base(a.Command.Output)
 	}
@@ -76,10 +76,8 @@ func (a *App) jobOutputFilename() string {
 	switch a.Command.Format {
 	case FormatWebmVp9:
 		ext = ".webm"
-	case FormatHlsH264, FormatHlsH265, FormatHlsAv1:
-		ext = ".m3u8"
-	case FormatJpg:
-		ext = ".jpg"
+	case FormatM4aAac:
+		ext = ".m4a"
 	}
 	return "output" + ext
 }

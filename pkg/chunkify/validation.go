@@ -8,13 +8,13 @@ import (
 
 func validateCommonVideoFlags() error {
 	if width != nil && *width != 0 {
-		if *width < 0 || *width > 8192 {
-			return fmt.Errorf("--resolution width must be between 0 and 8192")
+		if *width < 0 || *width > 7680 {
+			return fmt.Errorf("--resolution width must be between 0 and 7680")
 		}
 	}
 	if height != nil && *height != 0 {
-		if *height < 0 || *height > 8192 {
-			return fmt.Errorf("--resolution height must be between 0 and 8192")
+		if *height < 0 || *height > 7680 {
+			return fmt.Errorf("--resolution height must be between 0 and 7680")
 		}
 	}
 
@@ -30,19 +30,30 @@ func validateCommonVideoFlags() error {
 	}
 
 	if framerate != nil && *framerate != 0 {
-		if *framerate < 15 || *framerate > 120 {
-			return fmt.Errorf("--framerate must be between 15 and 120")
+		if *framerate < 0.001 || *framerate > 240 {
+			return fmt.Errorf("--framerate must be between 0.001 and 240")
 		}
 	}
 	if gop != nil && *gop != 0 {
-		if *gop < 1 || *gop > 300 {
-			return fmt.Errorf("--gop must be between 1 and 30")
+		if *gop < 1 || *gop > 960 {
+			return fmt.Errorf("--gop must be between 1 and 960")
 		}
 	}
 	if channels != nil && *channels != 0 {
-		if slices.Contains([]int64{1, 2, 5, 7}, *channels) {
-			return fmt.Errorf("--channels must be one of 1, 2, 5, 7")
+		if !slices.Contains([]int64{1, 2, 6, 8}, *channels) {
+			return fmt.Errorf("--channels must be one of 1, 2, 6, 8")
 		}
+	}
+	if audioSamplerate != nil && *audioSamplerate != 0 {
+		if !slices.Contains(validAudioSamplerates, *audioSamplerate) {
+			return fmt.Errorf("--ar must be one of 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000")
+		}
+	}
+	if duration != nil && *duration < 0 {
+		return fmt.Errorf("--duration must be positive")
+	}
+	if seek != nil && *seek < 0 {
+		return fmt.Errorf("--seek must be positive")
 	}
 	if maxrate != nil && *maxrate != 0 {
 		if *maxrate < 100000 || *maxrate > 50000000 {
@@ -54,22 +65,23 @@ func validateCommonVideoFlags() error {
 			return fmt.Errorf("--bufsize must be between 100000 and 50000000")
 		}
 	}
-	if pixfmt != nil && *pixfmt != "" {
-		validPixFmts := []string{"yuv410p", "yuv411p", "yuv420p", "yuv422p", "yuv440p", "yuv444p", "yuvJ411p", "yuvJ420p", "yuvJ422p", "yuvJ440p", "yuvJ444p", "yuv420p10le", "yuv422p10le", "yuv440p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le", "yuv440p12le", "yuv444p12le", "yuv420p10be", "yuv422p10be", "yuv440p10be", "yuv444p10be", "yuv420p12be", "yuv422p12be", "yuv440p12be", "yuv444p12be"}
-
-		if !slices.Contains(validPixFmts, *pixfmt) {
-			return fmt.Errorf("--pixfmt must be one of %s", strings.Join(validPixFmts, ", "))
-		}
-	}
-
 	return nil
+}
+
+var validAudioSamplerates = []int64{8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000}
+
+func validateOneOf(flag string, value *string, valid []string) error {
+	if value == nil || *value == "" || slices.Contains(valid, *value) {
+		return nil
+	}
+	return fmt.Errorf("--%s must be one of %s", flag, strings.Join(valid, ", "))
 }
 
 func validatePerTitleFlags(format string) error {
 	if perTitle == nil || !*perTitle {
 		return nil
 	}
-	if format == FormatJpg {
+	if format == FormatM4aAac {
 		return fmt.Errorf("--per-title is only supported for video formats")
 	}
 	for _, flag := range []struct {
@@ -92,15 +104,14 @@ func validateH264Flags() error {
 	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 35) {
 		return fmt.Errorf("--crf must be between 16 and 35")
 	}
-	if preset != nil && *preset != "" {
-		if !slices.Contains([]string{"ultrafast", "superfast", "veryfast", "faster", "fast", "medium"}, *preset) {
-			return fmt.Errorf("--preset must be one of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow")
-		}
+	if err := validateOneOf("preset", preset, x26xPresets); err != nil {
+		return err
 	}
-	if profilev != nil && *profilev != "" {
-		if !slices.Contains([]string{"baseline", "main", "high", "high10", "high422", "high444"}, *profilev) {
-			return fmt.Errorf("--profilev must be one of baseline, main, high, high10, high422, high444")
-		}
+	if err := validateOneOf("profilev", profilev, []string{"baseline", "main", "high", "high10", "high422", "high444"}); err != nil {
+		return err
+	}
+	if err := validateOneOf("pixfmt", pixfmt, []string{"yuv420p", "yuv422p", "yuv444p", "yuv420p10le", "yuv422p10le", "yuv444p10le"}); err != nil {
+		return err
 	}
 
 	if level != nil && *level != 0 {
@@ -109,8 +120,8 @@ func validateH264Flags() error {
 		}
 	}
 	if x264KeyInt != nil && *x264KeyInt != 0 {
-		if *x264KeyInt < 1 || *x264KeyInt > 300 {
-			return fmt.Errorf("--x264keyint must be between 1 and 30")
+		if *x264KeyInt < 1 || *x264KeyInt > 960 {
+			return fmt.Errorf("--x264keyint must be between 1 and 960")
 		}
 	}
 
@@ -121,15 +132,14 @@ func validateH265Flags() error {
 	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 35) {
 		return fmt.Errorf("--crf must be between 16 and 35")
 	}
-	if preset != nil && *preset != "" {
-		if !slices.Contains([]string{"ultrafast", "superfast", "veryfast", "faster", "fast", "medium"}, *preset) {
-			return fmt.Errorf("--preset must be one of ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow")
-		}
+	if err := validateOneOf("preset", preset, x26xPresets); err != nil {
+		return err
 	}
-	if profilev != nil && *profilev != "" {
-		if !slices.Contains([]string{"main", "main10", "mainstillpicture"}, *profilev) {
-			return fmt.Errorf("--profilev must be one of baseline, main, high, high10, high422, high444")
-		}
+	if err := validateOneOf("profilev", profilev, []string{"main", "main10", "main12", "main422-10", "main422-12", "main444-8", "main444-10", "main444-12"}); err != nil {
+		return err
+	}
+	if err := validateOneOf("pixfmt", pixfmt, []string{"yuv420p", "yuv422p", "yuv444p", "yuv420p10le", "yuv422p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le", "yuv444p12le"}); err != nil {
+		return err
 	}
 	if level != nil && *level != 0 {
 		if !slices.Contains([]int64{30, 31, 41}, *level) {
@@ -138,7 +148,7 @@ func validateH265Flags() error {
 	}
 	if x265KeyInt != nil && *x265KeyInt != 0 {
 		if *x265KeyInt < 1 || *x265KeyInt > 300 {
-			return fmt.Errorf("--x265keyint must be between 1 and 30")
+			return fmt.Errorf("--x265keyint must be between 1 and 300")
 		}
 	}
 
@@ -149,15 +159,14 @@ func validateAv1Flags() error {
 	if crf != nil && ((*crf > 0 && *crf < 16) || *crf > 63) {
 		return fmt.Errorf("--crf must be between 16 and 63")
 	}
-	if preset != nil && *preset != "" {
-		if !slices.Contains([]string{"6", "7", "8", "9", "10", "11", "12", "13"}, *preset) {
-			return fmt.Errorf("--preset must be one of 6, 7, 8, 9, 10, 11, 12, 13")
-		}
+	if err := validateOneOf("preset", preset, []string{"6", "7", "8", "9", "10", "11", "12", "13"}); err != nil {
+		return err
 	}
-	if profilev != nil && *profilev != "" {
-		if !slices.Contains([]string{"main", "main10", "mainstillpicture"}, *profilev) {
-			return fmt.Errorf("--profilev must be one of main, main10, mainstillpicture")
-		}
+	if err := validateOneOf("profilev", profilev, []string{"main"}); err != nil {
+		return err
+	}
+	if err := validateOneOf("pixfmt", pixfmt, []string{"yuv420p", "yuv420p10le"}); err != nil {
+		return err
 	}
 	if level != nil && *level != 0 {
 		if !slices.Contains([]int64{30, 31, 41}, *level) {
@@ -171,67 +180,44 @@ func validateWebmVp9Flags() error {
 	if crf != nil && !(perTitle != nil && *perTitle && *crf == 0) && (*crf < 15 || *crf > 35) {
 		return fmt.Errorf("--crf must be between 15 and 35")
 	}
-	if quality != nil && *quality != "" {
-		if !slices.Contains([]string{"good", "best", "realtime"}, *quality) {
-			return fmt.Errorf("--quality must be one of good, best, realtime")
-		}
+	if err := validateOneOf("quality", quality, []string{"good", "best", "realtime"}); err != nil {
+		return err
 	}
-	if cpuUsed != nil && *cpuUsed != "" {
-		if !slices.Contains([]string{"0", "1", "2", "3", "4", "5", "6", "7", "8"}, *cpuUsed) {
-			return fmt.Errorf("--cpu-used must be one of 0, 1, 2, 3, 4, 5, 6, 7, 8")
-		}
+	if err := validateOneOf("cpu-used", cpuUsed, []string{"0", "1", "2", "3", "4", "5", "6", "7", "8"}); err != nil {
+		return err
+	}
+	if err := validateOneOf("pixfmt", pixfmt, []string{"yuv420p", "yuv422p", "yuv440p", "yuv444p", "yuv420p10le", "yuv422p10le", "yuv440p10le", "yuv444p10le", "yuv420p12le", "yuv422p12le", "yuv440p12le", "yuv444p12le"}); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func validateJpgFlags() error {
-	if interval != nil && *interval != 0 {
-		if *interval < 0 || *interval > 60 {
-			return fmt.Errorf("--interval must be between 0 and 60")
+// validateM4aAacFlags rejects video settings, which audio-only output ignores.
+func validateM4aAacFlags() error {
+	for _, flag := range []struct {
+		name string
+		set  bool
+	}{
+		{"resolution", (width != nil && *width != 0) || (height != nil && *height != 0)},
+		{"framerate", framerate != nil && *framerate != 0},
+		{"gop", gop != nil && *gop != 0},
+		{"vb", videoBitrate != nil && *videoBitrate != 0},
+		{"maxrate", maxrate != nil && *maxrate != 0},
+		{"bufsize", bufsize != nil && *bufsize != 0},
+		{"pixfmt", pixfmt != nil && *pixfmt != ""},
+		{"crf", crf != nil && *crf != 0},
+		{"preset", preset != nil && *preset != ""},
+		{"profilev", profilev != nil && *profilev != ""},
+		{"level", level != nil && *level != 0},
+		{"an", disableAudio != nil && *disableAudio},
+		{"vn", disableVideo != nil && *disableVideo},
+	} {
+		if flag.set {
+			return fmt.Errorf("--%s is not supported for %s", flag.name, FormatM4aAac)
 		}
 	}
 	return nil
 }
 
-func validateHlsFlags() error {
-	if (perTitle == nil || !*perTitle) && (videoBitrate == nil || *videoBitrate == 0) && (audioBitrate == nil || *audioBitrate == 0) {
-		return fmt.Errorf("--vb (video bitrate) or --ab (audio bitrate) are required when format is hls")
-	}
-
-	if hlsTime != nil && *hlsTime != 0 {
-		if *hlsTime < 1 || *hlsTime > 10 {
-			return fmt.Errorf("--hls-time must be between 1 and 10")
-		}
-	}
-	if hlsSegmentType != nil && *hlsSegmentType != "" {
-		if !slices.Contains([]string{"mpegts", "fmp4"}, *hlsSegmentType) {
-			return fmt.Errorf("--hls-segment-type must be one of mpegts, fmp4")
-		}
-	}
-	return nil
-}
-
-func validateHlsH264Flags() error {
-	if err := validateHlsFlags(); err != nil {
-		return err
-	}
-
-	return validateH264Flags()
-}
-
-func validateHlsH265Flags() error {
-	if err := validateHlsFlags(); err != nil {
-		return err
-	}
-
-	return validateH265Flags()
-}
-
-func validateHlsAv1Flags() error {
-	if err := validateHlsFlags(); err != nil {
-		return err
-	}
-
-	return validateAv1Flags()
-}
+var x26xPresets = []string{"ultrafast", "superfast", "veryfast", "faster", "fast", "medium"}

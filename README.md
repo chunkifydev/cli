@@ -7,14 +7,11 @@
     </picture>
   </a>
 </p>
-<p align="center">The next generation Cloud transcoding service.</p>
+<p align="center">Chunkify is video streaming platform for developers.</p>
 
 <p align="center">
   <a href="https://github.com/chunkifydev/cli/releases"><img src="https://img.shields.io/github/release/chunkifydev/cli.svg" alt="Latest Release"></a>
   <a href="https://github.com/chunkifydev/cli/actions/workflows/test.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/chunkifydev/cli/test.yml?style=flat-square&branch=main" /></a>
-</p>
-<p align="center">
-<img src="https://github.com/user-attachments/assets/40ec208e-d416-4b08-85fb-029b0a42c191" alt="demo" width="640" />
 </p>
 
 The Chunkify CLI brings super-fast video transcoding to your terminal. With a single command, you can upload local files, transcode videos using Chunkify's parallel technology, and download the processed files to your local disk.
@@ -26,7 +23,6 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
 - [chunkify.dev](https://chunkify.dev)
 - [ CLI documentation](https://chunkify.dev/docs/cli)
 - [Documentation](https://chunkify.dev/docs)
-- [Dashboard](https://chunkify.dev/~)
 - [Sign up](https://chunkify.dev/signup)
 
 
@@ -39,15 +35,12 @@ For local development, the Chunkify CLI provides a convenient command to [forwar
   - [Transcode a Video](#transcode-a-video)
   - [Read from connected storage](#read-from-connected-storage)
   - [Per-title encoding](#per-title-encoding)
-  - [HLS Packaging](#hls-packaging)
-  - [Generate Thumbnails](#generate-thumbnails)
+  - [Extract audio](#extract-audio)
 - [Transcoding Parameters](#transcoding-parameters)
   - [Video Settings](#video-settings)
   - [Audio Settings](#audio-settings)
   - [H.264/H.265/AV1 Settings](#h264h265av1-settings)
   - [VP9 Settings](#vp9-settings)
-  - [HLS Settings](#hls-settings)
-  - [JPG Settings](#jpg-settings)
 - [JSON Output](#json-output)
 - [CLI Profiles](#cli-profiles)
 - [Direct API commands](#direct-api-commands)
@@ -120,35 +113,24 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 
 It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
 
-For local files, the CLI creates an upload session, transfers the file, and calls the completion endpoint before looking up the source. Temporary completion failures are retried without uploading the file again. Both requests must finish before the session expires. See the [video upload guide](https://chunkify.dev/docs/integration/video-upload).
+Transcoding uses the Chunkify [Transcodings API](https://chunkify.dev/docs). Each run creates one transcoding and downloads its output file.
 
-Save a storage connection for the CLI to use for both uploads and job outputs:
+For local files, the CLI creates an upload session, transfers the file, and calls the completion endpoint before looking up the source. Files over 100 MiB use a multipart transfer: the CLI uploads parts in parallel and retries a failed part without restarting the whole file. Temporary completion failures are retried without uploading the file again. Both requests must finish before the session expires. See the [video upload guide](https://chunkify.dev/docs/integration/video-upload).
+
+Save a storage connection for the CLI to use for both uploads and transcoding outputs:
 
 ```bash
 chunkify config storage-id stor_aws_example
 chunkify -i video.mp4 -o output.mp4
 ```
 
-The configured ID takes precedence over both `--upload-storage-id` and `--output-storage-id`. For external storage, the CLI generates `chunkify-cli/sources/<execution-id>/<input-filename>` for uploads and `chunkify-cli/jobs/<execution-id>/<output-filename>` for outputs. When no local output filename is supplied, it uses `output` with the format's extension. Explicit `--upload-storage-path` and `--output-storage-path` values are preserved. Chunkify-managed storage, identified by `stor_chunkify_*`, uses API-generated paths and rejects explicit path flags for the corresponding operation.
+The configured ID takes precedence over both `--upload-storage-id` and `--output-storage-id`. For external storage, the CLI generates `chunkify-cli/sources/<execution-id>/<input-filename>` for uploads and `chunkify-cli/transcodings/<execution-id>/<output-filename>` for outputs. When no local output filename is supplied, it uses `output` with the format's extension. Explicit `--upload-storage-path` and `--output-storage-path` values are preserved. Chunkify-managed storage, identified by `stor_chunkify_*`, uses API-generated paths and rejects explicit path flags for the corresponding operation.
 
 `--storage-path` remains a deprecated alias for `--output-storage-path`. Existing commands still work and print a deprecation warning.
 
-Without a configured storage ID, the CLI sends the IDs and paths supplied on the command line. Omitted IDs use the project's default storage. If that storage is external, you must supply `--upload-storage-path` for a local upload and `--output-storage-path` for job outputs. Upload paths are exact bucket keys; output paths are relative to the storage connection's `base_prefix`.
+Without a configured storage ID, the CLI sends the IDs and paths supplied on the command line. Omitted IDs use the project's default storage. If that storage is external, you must supply `--upload-storage-path` for a local upload and `--output-storage-path` for transcoding outputs. Upload paths are exact bucket keys; output paths are relative to the storage connection's `base_prefix`.
 
 Selecting upload storage through config or flags forces a new upload, even if the video was uploaded before. Generated paths use an execution ID to avoid collisions. An explicit path can overwrite an existing object.
-
-By default, the number of transcoders and their type will be selected automatically according to the input and output specifications.
-To define them yourself, use `--transcoders` and `--vcpu` like this:
-
-```
-chunkify -i video.mp4 \
-         -o video_720p.mp4 \
-         -f mp4_h264 \
-         -s 1280x720 \
-         --crf 24 \
-         --transcoders 10 \
-         --vcpu 8
-```
 
 > [!TIP]
 > When transcoding the same local video multiple times, we use the source already created on Chunkify so you won't need to upload the video more than once.
@@ -175,8 +157,7 @@ chunkify -i src_33aoGbF6fyY49qUVebIeNaxZJ34 \
 > 
 > - `.mp4` → `mp4_h264`
 > - `.webm` → `webm_vp9`
-> - `.m3u8` → `hls_h264`
-> - `.jpg` → `jpg`
+> - `.m4a` → `m4a_aac`
 
 Sometimes, it's better to know what the input specifications are before transcoding. Use `--input` without setting `--format`, and it will only upload or make available the source video:
 
@@ -225,7 +206,7 @@ The source storage must be external; `stor_chunkify_*` cannot be used for this i
 
 ### Per-title encoding
 
-Use `--per-title` to let Chunkify select video quality and bitrate settings for your source and output resolution. It supports MP4, WebM, and HLS video formats and is disabled by default.
+Use `--per-title` to let Chunkify select video quality and bitrate settings for your source and output resolution. It supports the MP4 and WebM video formats and is disabled by default.
 
 To encode a 1080p H.264 video with per-title optimization:
 
@@ -237,98 +218,17 @@ chunkify -i video.mp4 \
          --per-title
 ```
 
-For an HLS rendition, you can let Chunkify choose the video bitrate while setting the audio bitrate yourself:
+Do not combine `--per-title` with `--crf`, `--vb`, `--maxrate`, or `--bufsize`. Audio-only `m4a_aac` output does not support per-title encoding.
+
+### Extract audio
+
+Use `m4a_aac` to extract the audio track as AAC in an M4A file:
 
 ```bash
-chunkify -i video.mp4 \
-         -o video_1080p.m3u8 \
-         -f hls_h264 \
-         -s 1920x1080 \
-         -g 120 \
-         --x264keyint 120 \
-         --ab 128k \
-         --per-title
+chunkify -i video.mp4 -o audio.m4a -f m4a_aac --ab 192K --ar 48000
 ```
 
-Do not combine `--per-title` with `--crf`, `--vb`, `--maxrate`, or `--bufsize`. HLS outputs do not require a manual bitrate when `--per-title` is enabled. JPG output does not support per-title encoding.
-
-### HLS Packaging
-
-Chunkify supports 3 HLS formats: `hls_h264`, `hls_h265`, and `hls_av1`.
-
-> [!WARNING]
-> Keyframes must be aligned for all renditions, so you must use the same values for `--gop`, `--x264keyint` (H.264), and `--x265keyint` (H.265). For `hls/av1`, only `--gop` is necessary.
-
-```
-chunkify -i video.mp4 \
-         -o video_540p.m3u8 \
-         -f hls_h264 \
-         -s 540x0 \
-         -g 120 \
-         --x264keyint 120 \
-         --vb 800k \
-         --ab 128k
-```
-
-Once the video is transcoded, the CLI will return a summary including the `HLS Manifest ID`, which we will use for the next command:
-
-```
-chunkify -i video.mp4 \
-         -o video_720p.m3u8 \
-         -f hls_h264 \
-         -s 720x0 \
-         -g 120 \
-         --x264keyint 120 \
-         --vb 1200k \
-         --ab 128k \
-         --hls-manifest-id hls_33atK0NkjF3lz6qUNi3GLwYdi0m
-```
-
-> [!NOTE]
-> The video bitrate and/or audio bitrate are mandatory for HLS output unless `--per-title` is enabled.
-
-Now we have 2 renditions that belong to the same manifest:
-
-```
-manifest.m3u8
-video_540p.mp4
-video_540p.m3u8
-video_720p.mp4
-video_720p.m3u8
-```
-
-### Generate Thumbnails
-
-To generate thumbnails every 10 seconds:
-
-```
-chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
-```
-
-If many thumbnails are required, it's recommended to generate a sprite image instead of multiple individual images. A sprite image is a single image containing many thumbnails arranged in a grid, which is more efficient when there are hundreds of them to download for displaying a preview.
-
-```
-chunkify -i video.mp4 -o sprite.jpg -f jpg -s 160x0 --interval 5 --sprite
-```
-
-> [!NOTE]
-> For all JPG outputs, an `images.vtt` file is generated, which can be loaded by an HTML5 player to display a mini preview when hovering over the player progress bar
-
-The VTT filename is always `images.vtt`. Here is how it looks:
-
-```
-WEBVTT
-
-
-00:00:00.000 --> 00:00:05.000
-sprite-00000.jpg#xywh=0,0,160,160
-
-00:00:05.000 --> 00:00:10.000
-sprite-00000.jpg#xywh=160,0,160,160
-
-00:00:10.000 --> 00:00:15.000
-sprite-00000.jpg#xywh=320,0,160,160
-```
+Video settings are rejected for `m4a_aac`.
 
 ## Transcoding Parameters
 
@@ -337,11 +237,9 @@ sprite-00000.jpg#xywh=320,0,160,160
 | `-i, --input` | string | Local file, HTTP URL, source ID (`src_*`), or `store://object-key` |
 | `--source-storage-id` | string | External storage for `store://` input; takes precedence over config `storage-id` |
 | `-o, --output` | string | Output file path |
-| `-f, --format` | string | `mp4_h264`, `mp4_h265`, `mp4_av1`, `webm_vp9`, `hls_h264`, `hls_h265`, `hls_av1`, `jpg` |
-| `--transcoders` | int | Number of transcoders to use |
-| `--vcpu` | int | vCPU per transcoder (4, 8, or 16) |
+| `-f, --format` | string | `mp4_h264`, `mp4_h265`, `mp4_av1`, `webm_vp9`, `m4a_aac` |
 | `--upload-storage-id` | string | Storage for local uploads; overridden by config `storage-id` |
-| `--output-storage-id` | string | Storage for job outputs; overridden by config `storage-id` |
+| `--output-storage-id` | string | Storage for transcoding outputs; overridden by config `storage-id` |
 | `--upload-storage-path` | string | Exact upload object key; generated for external storage when config `storage-id` is set |
 | `--output-storage-path` | string | Output path relative to `base_prefix`; generated for external storage when config `storage-id` is set |
 
@@ -349,13 +247,15 @@ sprite-00000.jpg#xywh=320,0,160,160
 
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
-| `-s, --resolution` | string | Set resolution wxh | 0-8192x0-8192 |
-| `-r, --framerate` | float | Set frame rate | 15-120 |
-| `-g, --gop` | int | Set group of pictures size | 1-300 |
+| `-s, --resolution` | string | Set resolution wxh | 0-7680x0-7680 |
+| `-r, --framerate` | float | Set frame rate | 0.001-240 |
+| `-g, --gop` | int | Set group of pictures size | 1-960 |
 | `--vb` | int | Set video bitrate in bits per second | 100000-50000000. You can also use units like 2000K or 2M |
 | `--maxrate` | string | Set maximum bitrate in bits per second | 100000-50000000. You can also use units like 2000K or 2M |
 | `--bufsize` | string | Set buffer size in bits | 100000-50000000. You can also use units like 2000K or 2M |
-| `--pixfmt` | string | Set pixel format | yuv410p, yuv411p, yuv420p, yuv422p, yuv440p, yuv444p, yuvJ411p, yuvJ420p, yuvJ422p, yuvJ440p, yuvJ444p, yuv420p10le, yuv422p10le, yuv440p10le, yuv444p10le, yuv420p12le, yuv422p12le, yuv440p12le, yuv444p12le, yuv420p10be, yuv422p10be, yuv440p10be, yuv444p10be, yuv420p12be, yuv422p12be, yuv444p12be |
+| `--pixfmt` | string | Set pixel format | H.264: yuv420p, yuv422p, yuv444p, yuv420p10le, yuv422p10le, yuv444p10le. H.265: H.264 values plus yuv420p12le, yuv422p12le, yuv444p12le. AV1: yuv420p, yuv420p10le. VP9: yuv420p, yuv422p, yuv440p, yuv444p and their 10le/12le variants |
+| `-t, --duration` | float | Set output duration in seconds |
+| `--seek` | float | Start at this position in seconds |
 | `--vn` | bool | Disable video |
 | `--per-title` | bool | Automatically select video rate-control settings for each source | Disabled by default |
 
@@ -366,7 +266,8 @@ See [Per-title encoding](#per-title-encoding) for examples and compatible settin
 | Flag | Type | Description | Value |
 |------|------|-------------|-------|
 | `--ab` | int | Set audio bitrate in bits per second | 32000-512000. You can also use units like 128K |
-| `--channels` | int | Set number of audio channels | 1, 2, 5, 7 |
+| `--ar` | int | Set audio sample rate in Hz | 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000 |
+| `--channels` | int | Set number of audio channels | 1, 2, 6 (5.1), 8 (7.1) |
 | `--an` | bool | Disable audio |
 
 ### H.264/H.265/AV1 Settings
@@ -375,9 +276,9 @@ See [Per-title encoding](#per-title-encoding) for examples and compatible settin
 |------|------|-------------|-------|
 | `--crf` | int | Set constant rate factor | H.264/H.265: 16-35, AV1: 16-63, VP9: 15-35 |
 | `--preset` | string | Set encoding preset | H.264/H.265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13 |
-| `--profilev` | string | Set video profile | H.264: baseline, main, high, high10, high422, high444, H.265/AV1: main, main10, mainstillpicture |
+| `--profilev` | string | Set video profile | H.264: baseline, main, high, high10, high422, high444, H.265: main, main10, main12, main422-10, main422-12, main444-8, main444-10, main444-12, AV1: main |
 | `--level` | int | Set encoding level | H.264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H.265: 30, 31, 41, AV1: 30, 31, 41 |
-| `--x264keyint` | int | H.264 - Set x264 keyframe interval | 1-300 |
+| `--x264keyint` | int | H.264 - Set x264 keyframe interval | 1-960 |
 | `--x265keyint` | int | H.265 - Set x265 keyframe interval | 1-300 |
 
 ### VP9 Settings
@@ -386,25 +287,6 @@ See [Per-title encoding](#per-title-encoding) for examples and compatible settin
 |------|------|-------------|-------|
 | `--quality` | string | Set VP9 quality | good, best, realtime |
 | `--cpu-used` | string | Set VP9 CPU usage | 0-8 |
-
-### HLS Settings
-
-| Flag | Type | Description | Value |
-|------|------|-------------|-------|
-| `--hls-manifest-id` | string | Set HLS manifest ID |
-| `--hls-time` | int | Set HLS segment duration in seconds | 1-10 |
-| `--hls-segment-type` | string | Set HLS segment type | mpegts, fmp4 |
-| `--hls-enc` | bool | Enable HLS encryption |
-| `--hls-enc-key` | string | Set HLS encryption key |
-| `--hls-enc-key-url` | string | Set HLS encryption key URL |
-| `--hls-enc-iv` | string | Set HLS encryption IV |
-
-### JPG Settings
-
-| Flag | Type | Description | Value |
-|------|------|-------------|-------|
-| `--interval` | int | Set frame extraction interval in seconds | 1-60 |
-| `--sprite` | bool | Generate sprite sheet instead of multiple JPG files |
 
 ## JSON Output
 
@@ -415,9 +297,9 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 ```
 
 ```json
-{"status":"Queued","progress":0,"fps":0,"speed":"0.0x","out_time":0,"eta":""}
-{"status":"Queued","progress":0,"fps":0,"speed":"0.0x","out_time":3,"eta":""}
-{"status":"Ingesting","progress":20,"fps":0,"speed":"0.0x","out_time":3,"eta":""}
+{"status":"Queued","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
+{"status":"Encoding","progress":20,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
+{"status":"Ready","progress":100,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
 {"status":"Transcoding","progress":40,"fps":100,"speed":"5x","out_time":3,"eta":""}
 {"status":"Transcoding","progress":70,"fps":100,"speed":"5x","out_time":3,"eta":""}
 {"status":"Merging","progress":90,"fps":12,"speed":"1.2x","out_time":3,"eta":""}
@@ -500,7 +382,7 @@ chunkify api projects list --profile staging
 
 ### Receiving Webhook Notifications Locally
 
-When integrating Chunkify into your app, you must rely on webhooks to receive events when a job is completed or when an upload is created. We have added the `listen` command to forward webhooks to your local server URL, which is normally not available publicly.
+When integrating Chunkify into your app, you must rely on webhooks to receive events when a transcoding is ready or when an upload is created. We have added the `listen` command to forward webhooks to your local server URL, which is normally not available publicly.
 
 > [!NOTE]
 > First, you need to retrieve your webhook secret in your project settings page under the Webhooks section.
@@ -532,26 +414,21 @@ https://chunkify.dev
 [mac.home] Start forwarding to http://localhost:3000/webhooks/chunkify
 
 Events:
-- job.completed
-- job.failed
-- job.cancelled
-- upload.completed
-- upload.failed
-- upload.expired
+- all (35 events)
 
 ────────────────────────────────────────────────
 
-[200 OK] notf_33f3pVlO3782tPF9CkioGK1IKTu job.completed (job_33f3ocg9Vg0o0gDgg5JpCCR3DzX)
-[200 OK] notf_33f3tiGWDw78SLHefdswGaL7UpB job.completed (job_33f3siy9JhMrlsIY69q2gHqL3bh)
+[200 OK] notf_33f3pVlO3782tPF9CkioGK1IKTu transcoding.ready (trn_33f3ocg9Vg0o0gDgg5JpCCR3DzX)
+[200 OK] notf_33f3tiGWDw78SLHefdswGaL7UpB transcoding.ready (trn_33f3siy9JhMrlsIY69q2gHqL3bh)
 ```
 
-By default, it will forward all events, but you can specify the ones you are interested in:
+By default, it forwards every event the API delivers: `job.*`, `source.*`, `upload.*`, `asset.*`, `asset.output.*`, `workflow_run.*`, `transcoding.*` and `thumbnail.*`. Unknown event names are rejected. You can specify the ones you are interested in:
 
 ```
 chunkify listen \
   --forward-to http://localhost:3000/webhooks/chunkify \
   --webhook-secret <secret-key> \
-  --events job.completed,job.failed,job.cancelled
+  --events transcoding.ready,transcoding.failed,transcoding.cancelled
 ```
 
 What `chunkify listen` does under the hood:

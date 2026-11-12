@@ -53,13 +53,12 @@ type App struct {
 	Command          *ChunkifyCommand
 	Status           int
 	Progress         *Progress
-	Job              *chunkify.Job
+	Transcoding      *chunkify.Transcoding
 	Source           *chunkify.Source
-	Files            []chunkify.JobFile
-	Transcoders      []chunkify.JobTranscoderListResponseData
+	Files            []chunkify.TranscodingFile
 	UploadProgress   UploadProgress
 	DownloadProgress DownloadProgress
-	DownloadedFiles  map[string]chunkify.JobFile
+	DownloadedFiles  map[string]chunkify.TranscodingFile
 	Error            error
 	Done             bool
 	Ctx              context.Context
@@ -75,36 +74,34 @@ func NewApp() *App {
 	return &App{
 		Status:          Starting,
 		Progress:        NewProgress(),
-		DownloadedFiles: map[string]chunkify.JobFile{},
+		DownloadedFiles: map[string]chunkify.TranscodingFile{},
 		LastJSONOutput:  time.Now(),
 	}
 }
 
 type Progress struct {
-	Status           chan int
-	JobProgress      chan chunkify.Job
-	JobTranscoders   chan []chunkify.JobTranscoderListResponseData
-	JobCompleted     chan bool
-	UploadProgress   chan UploadProgress
-	DownloadProgress chan DownloadProgress
-	Files            chan []chunkify.JobFile
-	DownloadedFiles  chan chunkify.JobFile
-	Source           chan *chunkify.Source
-	Error            chan error
+	Status               chan int
+	TranscodingProgress  chan chunkify.Transcoding
+	TranscodingCompleted chan bool
+	UploadProgress       chan UploadProgress
+	DownloadProgress     chan DownloadProgress
+	Files                chan []chunkify.TranscodingFile
+	DownloadedFiles      chan chunkify.TranscodingFile
+	Source               chan *chunkify.Source
+	Error                chan error
 }
 
 func NewProgress() *Progress {
 	return &Progress{
-		Status:           make(chan int, 1),
-		JobProgress:      make(chan chunkify.Job, 100),
-		JobTranscoders:   make(chan []chunkify.JobTranscoderListResponseData, 100),
-		JobCompleted:     make(chan bool, 1),
-		UploadProgress:   make(chan UploadProgress, 100),
-		DownloadProgress: make(chan DownloadProgress, 100),
-		DownloadedFiles:  make(chan chunkify.JobFile, 100),
-		Source:           make(chan *chunkify.Source, 1),
-		Error:            make(chan error),
-		Files:            make(chan []chunkify.JobFile, 100),
+		Status:               make(chan int, 1),
+		TranscodingProgress:  make(chan chunkify.Transcoding, 100),
+		TranscodingCompleted: make(chan bool, 1),
+		UploadProgress:       make(chan UploadProgress, 100),
+		DownloadProgress:     make(chan DownloadProgress, 100),
+		DownloadedFiles:      make(chan chunkify.TranscodingFile, 100),
+		Source:               make(chan *chunkify.Source, 1),
+		Error:                make(chan error),
+		Files:                make(chan []chunkify.TranscodingFile, 100),
 	}
 }
 
@@ -144,9 +141,9 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			fmt.Println("\nQuitting...")
 			t.CancelFunc()
-			// Send JobCompleted to unblock the main goroutine
+			// Send TranscodingCompleted to unblock the main goroutine
 			select {
-			case t.Progress.JobCompleted <- true:
+			case t.Progress.TranscodingCompleted <- true:
 			default:
 			}
 			return t, tea.Quit
@@ -182,13 +179,9 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (t App) checkChannels() (App, bool) {
 	// Check job progress
 	select {
-	case job, ok := <-t.Progress.JobProgress:
+	case transcoding, ok := <-t.Progress.TranscodingProgress:
 		if ok {
-			t.Job = &job
-		}
-	case transcoders, ok := <-t.Progress.JobTranscoders:
-		if ok {
-			t.Transcoders = transcoders
+			t.Transcoding = &transcoding
 		}
 	case uploadProgress, ok := <-t.Progress.UploadProgress:
 		if ok {
@@ -219,7 +212,10 @@ func (t App) checkChannels() (App, bool) {
 		}
 	case err := <-t.Progress.Error:
 		t.Error = err
-		t.Progress.JobCompleted <- true
+		select {
+		case t.Progress.TranscodingCompleted <- true:
+		default:
+		}
 	case <-t.Ctx.Done():
 		t.Done = true
 	default:
@@ -239,7 +235,6 @@ type JSONOutput struct {
 
 func (t App) JSONView() string {
 	fps := 0.0
-	speed := 0.0
 	outTime := int64(0)
 	progress := 0.0
 	eta := "N/A"
@@ -260,17 +255,9 @@ func (t App) JSONView() string {
 		speedStr = formatter.Bitrate(int64(t.DownloadProgress.Speed))
 		eta = formatter.Duration(int64(t.DownloadProgress.Eta.Round(time.Second).Seconds()))
 	case Transcoding:
-		eta = "N/A"
-		if t.Job != nil {
-
-			for _, transcoder := range t.Transcoders {
-				fps += transcoder.Fps
-				speed += transcoder.Speed
-				outTime += transcoder.OutTime
-			}
-
-			speedStr = fmt.Sprintf("%.1fx", speed)
-			progress = t.Job.Progress
+		speedStr = "N/A"
+		if t.Transcoding != nil {
+			progress = t.Transcoding.Progress
 		}
 	}
 
@@ -303,15 +290,15 @@ func (t App) View() string {
 		view += v
 	}
 
-	// Display job progress
-	if t.Command.Format != "" && t.Status >= Transcoding && t.Job != nil {
+	// Display transcoding progress
+	if t.Command.Format != "" && t.Status >= Transcoding && t.Transcoding != nil {
 		view += "\n"
 		v, statusInfo = t.transcodingView()
 		view += v
 	}
 
 	// Display download progress
-	if t.Command.Output != "" && t.Job != nil && t.Job.Status == chunkify.JobStatusCompleted && t.Status >= Downloading {
+	if t.Command.Output != "" && t.Transcoding != nil && t.Transcoding.Status == chunkify.TranscodingStatusReady && t.Status >= Downloading {
 		v, statusInfo = t.downloadView()
 		view += v
 	}
@@ -391,62 +378,18 @@ func sourceName(input string) string {
 func (t App) transcodingView() (string, string) {
 	view := ""
 
-	completedTranscoders := 0
-	totalTranscoders := len(t.Transcoders)
-	totalFps := 0.0
-	totalSpeed := 0.0
-	totalOutTime := int64(0)
-
-	for _, transcoder := range t.Transcoders {
-		if transcoder.Status == "completed" {
-			completedTranscoders++
-		}
-	}
-
-	if t.Job.Status == chunkify.JobStatusCompleted {
+	if t.Transcoding.Status == chunkify.TranscodingStatusReady {
 		view += fmt.Sprintf("%s%s Transcoding completed\n", indent, completedIcon.String())
 	} else {
-		view += currentStepText(fmt.Sprintf("%s%s Transcoding (%d x %s)", indent, spin.View(), totalTranscoders, t.Job.Transcoder.Type))
-		view += " " + formatter.TimeDiff(t.Job.StartedAt, time.Now())
+		view += currentStepText(fmt.Sprintf("%s%s Transcoding", indent, spin.View()))
+		view += " " + formatter.TimeDiff(t.Transcoding.CreatedAt, time.Now())
 		view += "\n"
 	}
 
-	// start of progress bar
-	view += dblIndent
-	counter := 0
-
-	maxCharsPerLine := 60
-	progressBarWidth := 10
-	transcodersPerLine := maxCharsPerLine / progressBarWidth
-
-	if totalTranscoders > 0 && totalTranscoders/transcodersPerLine < 1 {
-		progressBarWidth = maxCharsPerLine / totalTranscoders
-		transcodersPerLine = maxCharsPerLine / progressBarWidth
-	}
-
-	for _, transcoder := range t.Transcoders {
-		view += progressBar(transcoder.Status, transcoder.Progress, progressBarWidth)
-
-		totalFps += transcoder.Fps
-		totalSpeed += transcoder.Speed
-		totalOutTime += transcoder.OutTime
-
-		// 6 transcoders per line
-		if len(t.Transcoders) > transcodersPerLine {
-			if counter == transcodersPerLine-1 {
-				view += "\n" + dblIndent
-				counter = 0
-			} else {
-				counter++
-			}
-		}
-	}
-	view += "\n"
+	view += dblIndent + progressBar(string(t.Transcoding.ProcessingStage), t.Transcoding.Progress, 60) + "\n"
 
 	statusInfo := statusOrangeText(t.Command.Format)
-	if totalOutTime > 0 {
-		statusInfo += fmt.Sprintf(" %.f%%, FPS: %.0f, Speed: %.1fx, OutTime: %s", t.Job.Progress, totalFps, totalSpeed, formatter.Duration(totalOutTime))
-	}
+	statusInfo += fmt.Sprintf(" %.f%%", t.Transcoding.Progress)
 	return view, statusInfo
 }
 
@@ -480,7 +423,7 @@ func (t App) downloadView() (string, string) {
 			currentFile = 0
 		}
 		if len(t.Files) <= 10 {
-			info := fmt.Sprintf("%s (%s)", filename(file, t.Command.Output), formatter.Size(file.Size))
+			info := fmt.Sprintf("%s (%s)", filename(file, t.Command.Output, len(t.Files)), formatter.Size(file.Size))
 			if downloaded {
 				view += dblIndent + "- " + info
 			} else {
@@ -491,7 +434,7 @@ func (t App) downloadView() (string, string) {
 	}
 
 	if len(t.Files) > 10 {
-		view += fmt.Sprintf("%s%d/%d %s", dblIndent, len(t.DownloadedFiles), len(t.Files), filename(t.Files[currentFile], t.Command.Output))
+		view += fmt.Sprintf("%s%d/%d %s", dblIndent, len(t.DownloadedFiles), len(t.Files), filename(t.Files[currentFile], t.Command.Output, len(t.Files)))
 		view += "\n"
 	}
 
@@ -514,7 +457,7 @@ func progressBar(status string, progress float64, width int) string {
 		if i < filled {
 			bar += "▮"
 		} else {
-			if status == "pending" || status == "starting" {
+			if status == "queued" || status == "starting" {
 				bar += grayText("▯")
 			} else {
 				bar += "▯"
@@ -526,12 +469,6 @@ func progressBar(status string, progress float64, width int) string {
 }
 
 func (t App) summaryView() string {
-	speed := 0.0
-
-	for _, transcoder := range t.Transcoders {
-		speed += transcoder.Speed
-	}
-
 	view := fmt.Sprintf("\n%s────────────────────────────────────────────────\n\n", indent)
 	// if format is not set, we show the source ID
 	if t.Command.Format == "" && t.Source != nil {
@@ -539,22 +476,16 @@ func (t App) summaryView() string {
 		return view
 	}
 
-	if t.Job != nil {
-		view += fmt.Sprintf("%sJob ID: %s\n", indent, t.Job.ID)
-		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Job.SourceID)
-
-		if t.Job.HlsManifestID != "" {
-			view += fmt.Sprintf("\n%sHLS Manifest: %s", indent, t.Job.HlsManifestID)
-		}
-
+	if t.Transcoding != nil {
+		view += fmt.Sprintf("%sTranscoding ID: %s\n", indent, t.Transcoding.ID)
+		view += fmt.Sprintf("%sSource ID: %s\n", indent, t.Transcoding.SourceID)
 		view += fmt.Sprintf("%sFormat: %s ", indent, t.Command.Format)
-		view += formatConfig(t.Job.Format)
+		view += formatConfig(t.Transcoding.Format)
 		view += "\n"
 
-		view += fmt.Sprintf("%sTranscoders: %d x %s\n", indent, t.Job.Transcoder.Quantity, t.Job.Transcoder.Type)
-		view += fmt.Sprintf("%sSpeed: %.1fx\n", indent, speed)
-		view += fmt.Sprintf("%sTranscoding time: %s\n", indent, formatter.TimeDiff(t.Job.StartedAt, t.Job.UpdatedAt))
-		view += fmt.Sprintf("%sBillable time: %ds\n", indent, t.Job.BillableTime)
+		if !t.Transcoding.ReadyAt.IsZero() {
+			view += fmt.Sprintf("%sTranscoding time: %s\n", indent, formatter.TimeDiff(t.Transcoding.CreatedAt, t.Transcoding.ReadyAt))
+		}
 	}
 
 	view += "\n"
@@ -575,8 +506,12 @@ func (t App) getStatusString() string {
 	case ReadingFromStorage:
 		return "Reading source"
 	case Transcoding:
-		if t.Job != nil {
-			return cases.Title(language.English).String(string(t.Job.Status))
+		if t.Transcoding != nil {
+			status := string(t.Transcoding.Status)
+			if t.Transcoding.Status == chunkify.TranscodingStatusPreparing && t.Transcoding.ProcessingStage != "" {
+				status = string(t.Transcoding.ProcessingStage)
+			}
+			return cases.Title(language.English).String(status)
 		}
 		return "Queued"
 	case Downloading:
@@ -592,7 +527,7 @@ func (t App) getStatusString() string {
 	}
 }
 
-func formatConfig(config chunkify.JobFormatUnion) string {
+func formatConfig(config chunkify.TranscodingFormat) string {
 	jsonBytes, _ := json.Marshal(config)
 	configMap := make(map[string]any)
 	err := json.Unmarshal(jsonBytes, &configMap)

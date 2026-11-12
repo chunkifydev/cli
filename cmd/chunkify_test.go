@@ -23,7 +23,7 @@ func TestOutputStorageFlags(t *testing.T) {
 			if err := command.Command.PreRunE(command.Command, nil); err != nil {
 				t.Fatal(err)
 			}
-			storage := command.App.Command.JobCreateStorageParams
+			storage := command.App.Command.TranscodingStorageParams
 			if storage.ID.Value != "stor_aws_test" || storage.Path.Value != "custom/result.mp4" {
 				t.Fatalf("incorrect storage parameters: %+v", storage)
 			}
@@ -57,14 +57,14 @@ func TestOutputStoragePathAliasesConflict(t *testing.T) {
 	}
 }
 
-func TestPerTitleHlsCommand(t *testing.T) {
+func TestPerTitleCommand(t *testing.T) {
 	if err := rootCmd.ParseFlags([]string{
-		"-i", "video.mp4", "-f", "hls_h264", "--per-title", "--ab", "128k",
+		"-i", "video.mp4", "-f", "mp4_h264", "--per-title", "--ab", "128k",
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if err := rootCmd.PreRunE(rootCmd, nil); err != nil {
-		t.Fatalf("per-title HLS command should accept an audio bitrate without a video bitrate: %v", err)
+		t.Fatalf("per-title command should accept an audio bitrate without a video bitrate: %v", err)
 	}
 	enabled, err := rootCmd.Flags().GetBool("per-title")
 	if err != nil || !enabled {

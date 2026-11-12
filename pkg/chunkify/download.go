@@ -13,7 +13,7 @@ import (
 )
 
 type DownloadProgress struct {
-	File         chunkify.JobFile
+	File         chunkify.TranscodingFile
 	Progress     float64
 	TotalBytes   int64
 	WrittenBytes int64
@@ -29,7 +29,7 @@ type progressWriter struct {
 	lastUpdate   time.Time
 	updateEvery  time.Duration
 	progressChan chan DownloadProgress
-	file         chunkify.JobFile
+	file         chunkify.TranscodingFile
 }
 
 func (pw *progressWriter) Write(p []byte) (int, error) {
@@ -71,7 +71,7 @@ func (pw *progressWriter) print(now time.Time) {
 }
 
 // DownloadFile streams a URL to `output` with console progress.
-func DownloadFile(ctx context.Context, file chunkify.JobFile, output string, progressChan chan DownloadProgress) error {
+func DownloadFile(ctx context.Context, file chunkify.TranscodingFile, output string, progressChan chan DownloadProgress) error {
 	slog.Info("Downloading file", "file", file.Path, "output", output)
 
 	slog.Info("Output changed to", "output", output)
@@ -87,7 +87,15 @@ func DownloadFile(ctx context.Context, file chunkify.JobFile, output string, pro
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, file.URL, nil)
+	fileURL := file.URL
+	if fileURL == "" {
+		fileURL = file.CdnURL
+	}
+	if fileURL == "" {
+		return fmt.Errorf("file %s has no download URL", file.ID)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fileURL, nil)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}

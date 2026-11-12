@@ -16,7 +16,6 @@ import (
 	_ "embed"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
-	"github.com/chunkifydev/cli/pkg/chunkify/hooks"
 	"github.com/chunkifydev/cli/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -27,17 +26,16 @@ const (
 )
 
 type ChunkifyCommand struct {
-	Id                     string
-	Input                  string
-	Output                 string
-	Format                 string
-	SourceStorageID        string
-	UploadStorageID        string
-	UploadStoragePath      string
-	OutputStorageID        string
-	JobFormatParams        chunkify.JobNewParamsFormatUnion
-	JobTranscoderParams    chunkify.JobNewParamsTranscoder
-	JobCreateStorageParams chunkify.JobNewParamsStorage
+	Id                       string
+	Input                    string
+	Output                   string
+	Format                   string
+	SourceStorageID          string
+	UploadStorageID          string
+	UploadStoragePath        string
+	OutputStorageID          string
+	TranscodingFormatParams  chunkify.TranscodingNewParamsFormatUnion
+	TranscodingStorageParams chunkify.TranscodingNewParamsStorage
 }
 
 // Command represents the root notifications command and configuration
@@ -71,8 +69,8 @@ chunkify -i video.mp4
 Read a video already in connected storage
 chunkify -i store://videos/input.mp4 --source-storage-id stor_aws_example -o output.mp4
 
-Generate thumbnails
-chunkify -i video.mp4 -o thumbnails.jpg -f jpg -s 320x0 --interval 10
+Extract the audio track
+chunkify -i video.mp4 -o audio.m4a -f m4a_aac --ab 192K
 
 Use specific profile to use a different project
 chunkify config token sk_project_token --profile your_profile
@@ -132,26 +130,29 @@ func (app *App) executeWorkflow(ctx context.Context) {
 
 		return
 	}
-	// Create job
-	app.Job, err = app.CreateJob(ctx, source)
+	// Create transcoding
+	app.Transcoding, err = app.CreateTranscoding(ctx, source)
 	if err != nil {
 		app.setError(err)
 		return
 	}
 
-	// Start job progress monitoring
-	go app.StartJobProgress(ctx, app.Job.ID)
+	// Start transcoding progress monitoring
+	go app.StartTranscodingProgress(ctx, app.Transcoding.ID)
 
-	// Wait for job completion
+	// Wait for the transcoding to finish
 	select {
-	case <-app.Progress.JobCompleted:
+	case <-app.Progress.TranscodingCompleted:
 	case <-ctx.Done():
 		return
 	}
 
-	// Check if job failed
-	if app.Job != nil && jobHasFailed(string(app.Job.Status)) {
-		err := fmt.Errorf("job failed with status: %s: %s", app.Job.Status, app.Job.Error.Message)
+	// Check if transcoding failed
+	if app.Transcoding != nil && transcodingHasFailed(app.Transcoding.Status) {
+		err := fmt.Errorf("transcoding %s", app.Transcoding.Status)
+		if app.Transcoding.Error.Message != "" {
+			err = fmt.Errorf("%w: %s", err, app.Transcoding.Error.Message)
+		}
 		app.setError(err)
 		return
 	}
@@ -165,25 +166,11 @@ func (app *App) executeWorkflow(ctx context.Context) {
 
 	// Download files if output is specified
 	if app.Command.Output != "" {
-		files, err := app.Client.Jobs.Files.List(ctx, app.Job.ID)
-		if err != nil {
+		files := app.Transcoding.Files
+		app.Progress.Files <- files
+		if _, err := downloadFiles(ctx, app, files); err != nil {
 			app.setError(err)
 			return
-		}
-		app.Progress.Files <- files.Data
-		downloadedFiles, err := downloadFiles(ctx, app, files.Data)
-		if err != nil {
-			app.setError(err)
-			return
-		}
-
-		// Post process files if format is jpg or hls
-		// this is to rename the paths inside m3u8 and vtt files to the correct name
-		if app.Command.Format == FormatJpg || strings.HasPrefix(app.Command.Format, "hls") {
-			if err := hooks.Process(app.Command.Format, app.Job.ID, files.Data, downloadedFiles); err != nil {
-				app.setError(err)
-				return
-			}
 		}
 	}
 
@@ -193,7 +180,7 @@ func (app *App) executeWorkflow(ctx context.Context) {
 	app.Progress.Status <- Completed
 }
 
-func downloadFiles(ctx context.Context, app *App, files []chunkify.JobFile) ([]string, error) {
+func downloadFiles(ctx context.Context, app *App, files []chunkify.TranscodingFile) ([]string, error) {
 	app.Progress.Status <- Downloading
 
 	slog.Info("Downloading files", "files", files)
@@ -207,19 +194,22 @@ func downloadFiles(ctx context.Context, app *App, files []chunkify.JobFile) ([]s
 		default:
 		}
 
-		filepath := filename(file, app.Command.Output)
+		filepath := filename(file, app.Command.Output, len(files))
 
-		if err := DownloadFile(ctx, file, filepath, app.Progress.DownloadProgress); err == nil {
-			app.Progress.DownloadedFiles <- file
-			downloadedFiles = append(downloadedFiles, filepath)
+		if err := DownloadFile(ctx, file, filepath, app.Progress.DownloadProgress); err != nil {
+			return nil, fmt.Errorf("error downloading %s: %w", path.Base(file.Path), err)
 		}
+		app.Progress.DownloadedFiles <- file
+		downloadedFiles = append(downloadedFiles, filepath)
 	}
 
 	return downloadedFiles, nil
 }
 
-func jobHasFailed(status string) bool {
-	return status == string(chunkify.JobStatusFailed) || status == string(chunkify.JobStatusCancelled)
+func transcodingHasFailed(status chunkify.TranscodingStatus) bool {
+	return status == chunkify.TranscodingStatusFailed ||
+		status == chunkify.TranscodingStatusCancelled ||
+		status == chunkify.TranscodingStatusExpired
 }
 
 func (a *App) setError(err error) {
@@ -290,6 +280,15 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	}
 	defer file.Close()
 
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("error reading file: %s", err)
+	}
+	size := info.Size()
+	if size == 0 {
+		return nil, fmt.Errorf("file is empty: %s", a.Command.Input)
+	}
+
 	md5, err := fileMD5(file)
 	if err != nil {
 		return nil, fmt.Errorf("error calculating file md5: %s", err)
@@ -303,6 +302,8 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	}
 
 	params := chunkify.UploadNewParams{
+		// The API picks a single PUT or multipart transfer from the size.
+		FileSizeBytes: chunkify.Int(size),
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
@@ -319,7 +320,9 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 	if err != nil {
 		return nil, fmt.Errorf("error creating upload: %s", err)
 	}
-	if upload.UploadURL == "" || upload.CompletionURL == "" {
+	if upload.CompletionURL == "" ||
+		(upload.UploadMode == chunkify.UploadUploadModeMultipart && len(upload.Multipart.Parts) == 0) ||
+		(upload.UploadMode != chunkify.UploadUploadModeMultipart && upload.UploadURL == "") {
 		return nil, fmt.Errorf("missing upload session URLs")
 	}
 	completionURL, err := url.Parse(upload.CompletionURL)
@@ -338,18 +341,14 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 		defer cancel()
 	}
 
-	// Reset file pointer to the beginning
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("error rewinding upload file: %w", err)
-	}
-
-	if err := UploadBlobWithProgress(uploadCtx, file, upload, a.Progress.UploadProgress); err != nil {
+	completion, err := UploadFileWithProgress(uploadCtx, file, size, upload, a.Progress.UploadProgress)
+	if err != nil {
 		return nil, fmt.Errorf("error uploading blob: %s", err)
 	}
 
 	// The SDK omits project authentication and retries transient completion errors
 	// without repeating the file transfer.
-	if err := a.Client.Uploads.Complete(uploadCtx, token); err != nil {
+	if err := a.Client.Uploads.Complete(uploadCtx, token, completion); err != nil {
 		// SDK errors include the request URL, whose token must stay private.
 		return nil, fmt.Errorf("error completing upload: %s", strings.ReplaceAll(err.Error(), token, "[redacted]"))
 	}
@@ -392,61 +391,55 @@ func (a *App) GetSourceByMd5(ctx context.Context, md5 string) (*chunkify.Source,
 	return nil, fmt.Errorf("source not found")
 }
 
-func (a *App) CreateJob(ctx context.Context, source *chunkify.Source) (*chunkify.Job, error) {
+func (a *App) CreateTranscoding(ctx context.Context, source *chunkify.Source) (*chunkify.Transcoding, error) {
 	a.Progress.Status <- Transcoding
 
-	job, err := a.Client.Jobs.New(ctx, chunkify.JobNewParams{
-		SourceID:      source.ID,
-		Format:        a.Command.JobFormatParams,
-		Transcoder:    a.Command.JobTranscoderParams,
-		Storage:       a.Command.JobCreateStorageParams,
-		HlsManifestID: chunkify.String(*hlsManifestId),
+	return a.Client.Transcodings.New(ctx, chunkify.TranscodingNewParams{
+		SourceID: source.ID,
+		Format:   a.Command.TranscodingFormatParams,
+		Storage:  a.Command.TranscodingStorageParams,
 		Metadata: map[string]string{
 			"origin":           MetadataOrigin,
 			"cli_execution_id": a.Command.Id,
 		},
 	})
-
-	if err != nil {
-		return nil, err
-	}
-	return job, nil
 }
 
-func (a *App) StartJobProgress(ctx context.Context, jobId string) {
+func (a *App) StartTranscodingProgress(ctx context.Context, transcodingID string) {
 	ticker := time.NewTicker(ProgressUpdateInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			a.Progress.JobCompleted <- true
+			a.Progress.TranscodingCompleted <- true
 			return
 		case <-ticker.C:
-			job, err := a.Client.Jobs.Get(ctx, jobId)
+			transcoding, err := a.Client.Transcodings.Get(ctx, transcodingID)
 			if err != nil {
+				slog.Error("Error retrieving transcoding", "id", transcodingID, "error", err)
+				continue
+			}
+			a.Transcoding = transcoding
+			a.Progress.TranscodingProgress <- *transcoding
+
+			if transcoding.Status == chunkify.TranscodingStatusReady || transcodingHasFailed(transcoding.Status) {
+				a.Progress.TranscodingCompleted <- true
 				return
 			}
-			a.Job = job
-			a.Progress.JobProgress <- *job
-
-			if job.Status == chunkify.JobStatusCompleted || jobHasFailed(string(job.Status)) {
-				a.Progress.JobCompleted <- true
-				break
-			}
-
-			transcoders, err := a.Client.Jobs.Transcoders.List(ctx, job.ID)
-			if err != nil {
-				return
-			}
-			a.Progress.JobTranscoders <- transcoders.Data
 		}
 	}
 }
 
-func filename(file chunkify.JobFile, output string) string {
+// filename returns the local path for a transcoded file. A single output is
+// saved at the requested path; multiple outputs replace the transcoding ID in
+// their remote names with the requested base name.
+func filename(file chunkify.TranscodingFile, output string, count int) string {
+	if count <= 1 {
+		return output
+	}
 	fileBase := strings.Replace(path.Base(output), path.Ext(output), "", 1)
-	newFilename := strings.Replace(path.Base(file.Path), file.JobID, fileBase, 1)
+	newFilename := strings.Replace(path.Base(file.Path), file.TranscodingID, fileBase, 1)
 	return path.Join(path.Dir(output), newFilename)
 }
 

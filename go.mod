@@ -4,8 +4,9 @@ go 1.23.0
 
 require (
 	github.com/charmbracelet/bubbletea v1.1.1
-	github.com/chunkifydev/chunkify-go v0.16.3
+	github.com/chunkifydev/chunkify-go v0.17.0
 	github.com/spf13/cobra v1.8.1
+	golang.org/x/sync v0.8.0
 	golang.org/x/text v0.18.0
 )
 
@@ -30,7 +31,6 @@ require (
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
 )
 
