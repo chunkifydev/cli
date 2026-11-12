@@ -17,7 +17,7 @@ func TestConfigureStorage(t *testing.T) {
 		{name: "project default remains implicit"},
 		{name: "manual flags preserved", uploadID: "stor_aws_input", outputID: "stor_aws_output", uploadPath: "in/video.mp4", outputPath: "out/result.mp4", wantUploadID: "stor_aws_input", wantOutputID: "stor_aws_output", wantUploadPath: "in/video.mp4", wantOutputPath: "out/result.mp4"},
 		{name: "manual IDs do not generate paths", uploadID: "stor_aws_input", outputID: "stor_aws_output", wantUploadID: "stor_aws_input", wantOutputID: "stor_aws_output"},
-		{name: "configured external overrides flags", configured: "stor_aws_config", uploadID: "stor_chunkify_input", outputID: "stor_chunkify_output", wantUploadID: "stor_aws_config", wantOutputID: "stor_aws_config", wantUploadPath: "chunkify-cli/sources/run-123/video.mp4", wantOutputPath: "chunkify-cli/jobs/run-123/result.mp4"},
+		{name: "configured external overrides flags", configured: "stor_aws_config", uploadID: "stor_chunkify_input", outputID: "stor_chunkify_output", wantUploadID: "stor_aws_config", wantOutputID: "stor_aws_config", wantUploadPath: "chunkify-cli/sources/run-123/video.mp4", wantOutputPath: "chunkify-cli/transcodings/run-123/result.mp4"},
 		{name: "configured managed overrides flags", configured: "stor_chunkify_config", uploadID: "stor_aws_input", outputID: "stor_aws_output", wantUploadID: "stor_chunkify_config", wantOutputID: "stor_chunkify_config"},
 		{name: "configured external preserves paths", configured: "stor_aws_config", uploadPath: "custom/input.mp4", outputPath: "custom/output.mp4", wantUploadID: "stor_aws_config", wantOutputID: "stor_aws_config", wantUploadPath: "custom/input.mp4", wantOutputPath: "custom/output.mp4"},
 		{name: "managed rejects upload path", configured: "stor_chunkify_config", uploadPath: "video.mp4", wantError: "--upload-storage-path"},
@@ -26,10 +26,10 @@ func TestConfigureStorage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			app := &App{Command: &ChunkifyCommand{Id: "run-123", Input: "/tmp/video.mp4", Output: "/tmp/result.mp4", Format: FormatMp4H264, UploadStorageID: tt.uploadID, OutputStorageID: tt.outputID, UploadStoragePath: tt.uploadPath}}
 			if tt.outputID != "" {
-				app.Command.JobCreateStorageParams.ID = chunkify.String(tt.outputID)
+				app.Command.TranscodingStorageParams.ID = chunkify.String(tt.outputID)
 			}
 			if tt.outputPath != "" {
-				app.Command.JobCreateStorageParams.Path = chunkify.String(tt.outputPath)
+				app.Command.TranscodingStorageParams.Path = chunkify.String(tt.outputPath)
 			}
 			err := app.configureStorage(tt.configured)
 			if tt.wantError != "" {
@@ -44,7 +44,7 @@ func TestConfigureStorage(t *testing.T) {
 			if app.Command.UploadStorageID != tt.wantUploadID || app.Command.UploadStoragePath != tt.wantUploadPath || app.Command.OutputStorageID != tt.wantOutputID {
 				t.Fatalf("unexpected storage config: %+v", app.Command)
 			}
-			data, err := json.Marshal(app.Command.JobCreateStorageParams)
+			data, err := json.Marshal(app.Command.TranscodingStorageParams)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -53,7 +53,7 @@ func TestConfigureStorage(t *testing.T) {
 				t.Fatal(err)
 			}
 			if payload["id"] != tt.wantOutputID || payload["path"] != tt.wantOutputPath {
-				t.Fatalf("unexpected job storage payload: %s", data)
+				t.Fatalf("unexpected transcoding storage payload: %s", data)
 			}
 			if tt.wantOutputPath == "" {
 				if _, exists := payload["path"]; exists {
@@ -69,7 +69,7 @@ func TestConfigureStorageSkipsUnusedPaths(t *testing.T) {
 	if err := app.configureStorage("stor_chunkify_test"); err != nil {
 		t.Fatal(err)
 	}
-	app = &App{Command: &ChunkifyCommand{Input: "video.mp4", JobCreateStorageParams: chunkify.JobNewParamsStorage{Path: chunkify.String("unused")}}}
+	app = &App{Command: &ChunkifyCommand{Input: "video.mp4", TranscodingStorageParams: chunkify.TranscodingNewParamsStorage{Path: chunkify.String("unused")}}}
 	if err := app.configureStorage("stor_chunkify_test"); err != nil {
 		t.Fatal(err)
 	}
@@ -112,16 +112,15 @@ func TestGeneratedStoragePathsUseExecutionID(t *testing.T) {
 	}
 }
 
-func TestJobOutputFilename(t *testing.T) {
+func TestOutputFilename(t *testing.T) {
 	for _, tt := range []struct{ format, output, want string }{
 		{FormatMp4H264, "/tmp/custom.mp4", "custom.mp4"},
 		{FormatMp4H264, "", "output.mp4"},
 		{FormatWebmVp9, "", "output.webm"},
-		{FormatHlsH264, "", "output.m3u8"},
-		{FormatJpg, "", "output.jpg"},
+		{FormatM4aAac, "", "output.m4a"},
 	} {
 		app := &App{Command: &ChunkifyCommand{Format: tt.format, Output: tt.output}}
-		if got := app.jobOutputFilename(); got != tt.want {
+		if got := app.outputFilename(); got != tt.want {
 			t.Errorf("format %s: filename = %q, want %q", tt.format, got, tt.want)
 		}
 	}

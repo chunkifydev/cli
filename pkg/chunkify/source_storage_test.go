@@ -27,7 +27,7 @@ func TestCreateSourceFromStorage(t *testing.T) {
 			requests := 0
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				requests++
-				if r.Method != http.MethodPost || r.URL.Path != "/api/sources" {
+				if r.Method != http.MethodPost || r.URL.Path != "/sources" {
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 				}
 				if r.Header.Get("Authorization") != "Bearer project-secret" {
@@ -87,7 +87,7 @@ func TestCreateSourceFromStorage(t *testing.T) {
 			if status := <-app.Progress.Status; status != ReadingFromStorage {
 				t.Errorf("unexpected status %d", status)
 			}
-			if app.Command.JobCreateStorageParams.ID.Value != tt.configured {
+			if app.Command.TranscodingStorageParams.ID.Value != tt.configured {
 				t.Error("source selection changed output storage")
 			}
 		})

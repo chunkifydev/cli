@@ -22,6 +22,59 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// notificationPageSize is the number of notifications fetched per poll. It is
+// the API maximum, so bursts of related events are not dropped.
+const notificationPageSize = 100
+
+// SupportedEvents lists every notification event the API can deliver.
+var SupportedEvents = []string{
+	string(chunkify.NotificationEventJobCreated),
+	string(chunkify.NotificationEventJobCompleted),
+	string(chunkify.NotificationEventJobFailed),
+	string(chunkify.NotificationEventJobCancelled),
+	string(chunkify.NotificationEventSourceCreated),
+	string(chunkify.NotificationEventSourceDeleted),
+	string(chunkify.NotificationEventUploadCreated),
+	string(chunkify.NotificationEventUploadCompleted),
+	string(chunkify.NotificationEventUploadFailed),
+	string(chunkify.NotificationEventUploadExpired),
+	string(chunkify.NotificationEventAssetCreated),
+	string(chunkify.NotificationEventAssetReady),
+	string(chunkify.NotificationEventAssetPlaybackReady),
+	string(chunkify.NotificationEventAssetFailed),
+	string(chunkify.NotificationEventAssetExpired),
+	string(chunkify.NotificationEventAssetDeleted),
+	string(chunkify.NotificationEventAssetOutputCreated),
+	string(chunkify.NotificationEventAssetOutputReady),
+	string(chunkify.NotificationEventAssetOutputFailed),
+	string(chunkify.NotificationEventAssetOutputDeleted),
+	string(chunkify.NotificationEventWorkflowRunCreated),
+	string(chunkify.NotificationEventWorkflowRunCompleted),
+	string(chunkify.NotificationEventWorkflowRunFailed),
+	string(chunkify.NotificationEventWorkflowRunCancelled),
+	string(chunkify.NotificationEventTranscodingCreated),
+	string(chunkify.NotificationEventTranscodingReady),
+	string(chunkify.NotificationEventTranscodingFailed),
+	string(chunkify.NotificationEventTranscodingCancelled),
+	string(chunkify.NotificationEventTranscodingExpired),
+	string(chunkify.NotificationEventTranscodingDeleted),
+	string(chunkify.NotificationEventThumbnailCreated),
+	string(chunkify.NotificationEventThumbnailReady),
+	string(chunkify.NotificationEventThumbnailFailed),
+	string(chunkify.NotificationEventThumbnailExpired),
+	string(chunkify.NotificationEventThumbnailDeleted),
+}
+
+// validateEvents rejects event names the API does not deliver.
+func validateEvents(events []string) error {
+	for _, event := range events {
+		if !slices.Contains(SupportedEvents, event) {
+			return fmt.Errorf("unknown event %q. Supported events: %s", event, strings.Join(SupportedEvents, ", "))
+		}
+	}
+	return nil
+}
+
 // Command represents the root notifications command and configuration
 type Command struct {
 	Command *cobra.Command // The root cobra command for notifications
@@ -66,6 +119,9 @@ func NewCommand(config *config.Config) *Command {
 			Short:   "Forward webhook notifications to local HTTP URL",
 			Long:    "Forward webhook notifications to local HTTP URL for local development",
 			Example: "chunkify listen --forward-to http://localhost:3000/webhooks/chunkify --webhook-secret <ws_secret>",
+			PreRunE: func(_ *cobra.Command, _ []string) error {
+				return validateEvents(req.Events)
+			},
 			Run: func(_ *cobra.Command, args []string) {
 				if hostname == "" {
 					hostname, _ = os.Hostname()
@@ -91,10 +147,14 @@ func NewCommand(config *config.Config) *Command {
 
 				req.WebhookId = webhook.ID
 
+				events := strings.Join(req.Events, "\n  - ")
+				if slices.Equal(req.Events, SupportedEvents) {
+					events = fmt.Sprintf("all (%d events)", len(SupportedEvents))
+				}
 				fmt.Printf("  [%s] Start forwarding to %s\n\n  Events:\n  - %s",
 					hostname,
 					req.localUrl,
-					strings.Join(req.Events, "\n  - "))
+					events)
 
 				fmt.Printf("\n\n  ────────────────────────────────────────────────\n\n")
 
@@ -116,16 +176,8 @@ func NewCommand(config *config.Config) *Command {
 		},
 	}
 
-	allEvents := []string{
-		string(chunkify.NotificationEventJobCompleted),
-		string(chunkify.NotificationEventJobFailed),
-		string(chunkify.NotificationEventUploadCompleted),
-		string(chunkify.NotificationEventUploadFailed),
-		string(chunkify.NotificationEventUploadExpired),
-	}
-
 	cmd.Command.Flags().StringVar(&req.localUrl, "forward-to", "", "The URL to forward webhook notifications to")
-	cmd.Command.Flags().StringSliceVar(&req.Events, "events", allEvents, "Proxy all notifications with the given event. By default, all events are proxied. Event can be job.completed, job.failed, upload.completed, upload.failed, upload.expired")
+	cmd.Command.Flags().StringSliceVar(&req.Events, "events", SupportedEvents, "Comma-separated events to forward. By default, all events are forwarded")
 	cmd.Command.Flags().StringVar(&req.webhookSecret, "webhook-secret", "", "Use your project's webhook secret key to sign the notifications.")
 	cmd.Command.Flags().StringVar(&hostname, "hostname", "", "Use the given hostname for the localdev webhook. If not provided, we use the hostname of the machine. It's purely visual, it will just appear on Chunkify")
 
@@ -143,7 +195,7 @@ type WebhookProxy struct {
 	Events                   []string                // List of event types to proxy
 	CreatedGte               time.Time               // Filter for notifications created after this time
 	mut                      sync.Mutex              // Mutex for thread-safe access to shared resources
-	lastProxiedNotifications []chunkify.Notification // Tracks the 10 last proxied notifications
+	lastProxiedNotifications []chunkify.Notification // Tracks the last proxied notifications, up to one page
 }
 
 // Update handles incoming messages and updates the model state
@@ -172,10 +224,9 @@ func (r *WebhookProxy) Run(ctx context.Context) error {
 
 // toParams converts ProxyCmd fields to NotificationListParams
 func (r *WebhookProxy) toParams() chunkify.NotificationListParams {
-	limit := int64(10)
 	params := chunkify.NotificationListParams{
 		WebhookID: chunkify.String(r.WebhookId),
-		Limit:     chunkify.Int(limit),
+		Limit:     chunkify.Int(notificationPageSize),
 	}
 
 	if len(r.lastProxiedNotifications) > 0 {
@@ -279,7 +330,7 @@ func (r *WebhookProxy) shouldProxy(notif chunkify.Notification) bool {
 
 	// Add this notification to the list
 	r.lastProxiedNotifications = append(r.lastProxiedNotifications, notif)
-	if len(r.lastProxiedNotifications) > 10 {
+	if len(r.lastProxiedNotifications) > notificationPageSize {
 		r.lastProxiedNotifications = r.lastProxiedNotifications[1:]
 	}
 	return true
