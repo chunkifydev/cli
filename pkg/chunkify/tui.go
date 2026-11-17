@@ -260,15 +260,11 @@ func (t App) checkChannels() (App, bool) {
 type JSONOutput struct {
 	Status   string  `json:"status"`
 	Progress float64 `json:"progress"`
-	Fps      float64 `json:"fps"`
 	Speed    string  `json:"speed"`
-	OutTime  int64   `json:"out_time"`
 	Eta      string  `json:"eta"`
 }
 
 func (t App) JSONView() string {
-	fps := 0.0
-	outTime := int64(0)
 	progress := 0.0
 	eta := "N/A"
 
@@ -297,9 +293,7 @@ func (t App) JSONView() string {
 	out := JSONOutput{
 		Status:   t.getStatusString(),
 		Progress: progress,
-		Fps:      fps,
 		Speed:    speedStr,
-		OutTime:  outTime,
 		Eta:      eta,
 	}
 	j, _ := json.Marshal(out)

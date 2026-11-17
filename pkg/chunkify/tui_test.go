@@ -53,9 +53,14 @@ func TestJSONViewProgress(t *testing.T) {
 			if got, ok := out["progress"]; !ok || got != tt.want {
 				t.Fatalf("progress = %v (present %v), want %v", got, ok, tt.want)
 			}
-			for _, key := range []string{"status", "progress", "fps", "speed", "out_time", "eta"} {
+			for _, key := range []string{"status", "progress", "speed", "eta"} {
 				if _, ok := out[key]; !ok {
 					t.Errorf("missing key %q in %v", key, out)
+				}
+			}
+			for _, key := range []string{"fps", "out_time"} {
+				if _, ok := out[key]; ok {
+					t.Errorf("unexpected key %q in %v", key, out)
 				}
 			}
 		})
