@@ -1,13 +1,13 @@
 package chunkify
 
 import (
+	"encoding/json"
+	"reflect"
 	"testing"
 )
 
 // Helper function to reset all global variables to nil
 func resetGlobalFlags() {
-	transcoders = nil
-	transcoderVcpu = nil
 	storagePath = nil
 	resolution = nil
 	width = nil
@@ -29,6 +29,7 @@ func resetGlobalFlags() {
 	bufsizeStr = nil
 	videoBitrateStr = nil
 	audioBitrateStr = nil
+	audioSamplerate = nil
 	crf = nil
 	preset = nil
 	profilev = nil
@@ -37,9 +38,6 @@ func resetGlobalFlags() {
 	x265KeyInt = nil
 	quality = nil
 	cpuUsed = nil
-	hlsTime = nil
-	hlsSegmentType = nil
-	interval = nil
 }
 
 func TestSetupCommand_NoFormatOrOutput(t *testing.T) {
@@ -67,7 +65,7 @@ func TestSetupCommandOutputStorage(t *testing.T) {
 	if err := setupCommand(app); err != nil {
 		t.Fatal(err)
 	}
-	if got := app.Command.JobCreateStorageParams; got.ID.Value != "stor_aws_output" || got.Path.Value != value {
+	if got := app.Command.TranscodingStorageParams; got.ID.Value != "stor_aws_output" || got.Path.Value != value {
 		t.Fatalf("output storage flags were not mapped to job parameters: %+v", got)
 	}
 }
@@ -89,14 +87,9 @@ func TestSetupCommand_FormatFromOutputExtension(t *testing.T) {
 			expectedFormat: string(FormatWebmVp9),
 		},
 		{
-			name:           "m3u8_extension",
-			output:         "playlist.m3u8",
-			expectedFormat: string(FormatHlsH264),
-		},
-		{
-			name:           "jpg_extension",
-			output:         "image.jpg",
-			expectedFormat: string(FormatJpg),
+			name:           "m4a_extension",
+			output:         "audio.m4a",
+			expectedFormat: string(FormatM4aAac),
 		},
 	}
 
@@ -160,7 +153,7 @@ func TestSetupCommand_InvalidFormat(t *testing.T) {
 		t.Errorf("Expected error for invalid format, got: %v", err)
 	}
 
-	expectedError := "invalid format: invalid_format"
+	expectedError := "invalid format: invalid_format. Supported formats: mp4_h264, mp4_h265, mp4_av1, webm_vp9, m4a_aac"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error %q, got %q", expectedError, err.Error())
 	}
@@ -172,10 +165,7 @@ func TestSetupCommand_ValidFormats(t *testing.T) {
 		FormatMp4H265,
 		FormatMp4Av1,
 		FormatWebmVp9,
-		FormatHlsH264,
-		FormatHlsH265,
-		FormatHlsAv1,
-		FormatJpg,
+		FormatM4aAac,
 	}
 
 	for _, format := range validFormats {
@@ -333,33 +323,148 @@ func TestSetupCommand_BitrateParsing(t *testing.T) {
 	}
 }
 
-func TestSetupCommand_TranscoderParams(t *testing.T) {
-	resetGlobalFlags()
-
-	// Set transcoder flags
-	transcoderVal := int64(2)
-	vcpuVal := int64(4)
-	transcoders = &transcoderVal
-	transcoderVcpu = &vcpuVal
-
-	app := &App{
-		Command: &ChunkifyCommand{
-			Format: FormatMp4H264,
-			Output: "output.mp4",
-		},
+func TestSetupCommand_RemovedFormatsFromExtension(t *testing.T) {
+	for _, output := range []string{"playlist.m3u8", "image.jpg"} {
+		resetGlobalFlags()
+		app := &App{Command: &ChunkifyCommand{Output: output}}
+		if err := setupCommand(app); err == nil {
+			t.Errorf("%s: expected unsupported extension error", output)
+		}
 	}
+}
 
-	err := setupCommand(app)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+func TestSetupCommand_RemovedFormats(t *testing.T) {
+	for _, format := range []string{"hls_h264", "hls_h265", "hls_av1", "jpg"} {
+		resetGlobalFlags()
+		app := &App{Command: &ChunkifyCommand{Format: format, Output: "output.mp4"}}
+		if err := validateTranscodeSettings(app); err == nil {
+			t.Errorf("%s: expected invalid format error", format)
+		}
 	}
+}
 
-	if app.Command.JobTranscoderParams.Quantity.Value != 2 {
-		t.Errorf("Expected Quantity 2, got %d", app.Command.JobTranscoderParams.Quantity)
+func TestSetTranscodingFormatParams(t *testing.T) {
+	t.Cleanup(resetGlobalFlags)
+	for _, tt := range []struct {
+		format string
+		want   string
+	}{
+		{FormatMp4H264, `{"crf":21,"duration":12.5,"preset":"fast","seek":1.5,"width":1280,"x264_keyint":48,"audio_samplerate":44100,"channels":2,"id":"mp4_h264"}`},
+		{FormatWebmVp9, `{"crf":21,"duration":12.5,"seek":1.5,"width":1280,"audio_samplerate":44100,"channels":2,"cpu_used":"4","id":"webm_vp9"}`},
+		{FormatM4aAac, `{"audio_bitrate":192000,"duration":12.5,"seek":1.5,"audio_samplerate":44100,"channels":2,"id":"m4a_aac"}`},
+	} {
+		t.Run(tt.format, func(t *testing.T) {
+			resetGlobalFlags()
+			w, c, k, ch, sr := int64(1280), int64(21), int64(48), int64(2), int64(44100)
+			d, sk := 12.5, 1.5
+			p, cu := "fast", "4"
+			width, crf, x264KeyInt, channels, audioSamplerate = &w, &c, &k, &ch, &sr
+			duration, seek = &d, &sk
+			preset, cpuUsed = &p, &cu
+			if tt.format == FormatM4aAac {
+				ab := int64(192000)
+				width, crf, preset, audioBitrate = nil, nil, nil, &ab
+			} else if tt.format == FormatWebmVp9 {
+				preset = nil
+			}
+			app := &App{Command: &ChunkifyCommand{Format: tt.format}}
+			setTranscodingFormatParams(app)
+			data, err := json.Marshal(app.Command.TranscodingFormatParams)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got, want map[string]any
+			if err := json.Unmarshal(data, &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("payload = %s\nwant      %s", data, tt.want)
+			}
+		})
 	}
+}
 
-	if app.Command.JobTranscoderParams.Type != "4vCPU" {
-		t.Errorf("Expected Type '4vCPU', got %s", app.Command.JobTranscoderParams.Type)
+// Every codec-specific flag is set at once: each format must send exactly its
+// own settings and ignore the other codecs' flags.
+func TestSetTranscodingFormatParamsCodecSettings(t *testing.T) {
+	t.Cleanup(resetGlobalFlags)
+	for _, tt := range []struct {
+		format, preset, profile string
+		level                   int64
+		want                    string
+	}{
+		{FormatMp4H264, "fast", "high", 41, `{"crf":23,"preset":"fast","profilev":"high","level":41,"x264_keyint":48,"id":"mp4_h264"}`},
+		{FormatMp4H265, "medium", "main10", 41, `{"crf":23,"preset":"medium","profilev":"main10","level":41,"x265_keyint":96,"id":"mp4_h265"}`},
+		{FormatMp4Av1, "8", "main", 31, `{"crf":23,"preset":"8","profilev":"main","level":31,"id":"mp4_av1"}`},
+		{FormatWebmVp9, "fast", "high", 41, `{"crf":23,"quality":"good","cpu_used":"4","id":"webm_vp9"}`},
+	} {
+		t.Run(tt.format, func(t *testing.T) {
+			resetGlobalFlags()
+			c, lv, k264, k265 := int64(23), tt.level, int64(48), int64(96)
+			p, pv, q, cu := tt.preset, tt.profile, "good", "4"
+			crf, level, x264KeyInt, x265KeyInt = &c, &lv, &k264, &k265
+			preset, profilev, quality, cpuUsed = &p, &pv, &q, &cu
+
+			app := &App{Command: &ChunkifyCommand{Format: tt.format}}
+			setTranscodingFormatParams(app)
+			data, err := json.Marshal(app.Command.TranscodingFormatParams)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got, want map[string]any
+			if err := json.Unmarshal(data, &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("payload = %s\nwant      %s", data, tt.want)
+			}
+		})
+	}
+}
+
+// setVideoParams maps flags to SDK fields by name, so a renamed SDK field would
+// silently drop a flag. Every shared flag must reach every video format.
+func TestSetTranscodingFormatParamsSendsEveryVideoFlag(t *testing.T) {
+	t.Cleanup(resetGlobalFlags)
+	wantKeys := []string{
+		"width", "height", "framerate", "gop", "channels", "maxrate", "bufsize", "pixfmt",
+		"disable_audio", "disable_video", "per_title", "duration", "seek",
+		"video_bitrate", "audio_bitrate", "audio_samplerate",
+	}
+	for _, format := range []string{FormatMp4H264, FormatMp4H265, FormatMp4Av1, FormatWebmVp9} {
+		t.Run(format, func(t *testing.T) {
+			resetGlobalFlags()
+			w, h, g, ch, mr, bs, vb, ab, sr := int64(1280), int64(720), int64(48), int64(2), int64(4000000), int64(8000000), int64(3000000), int64(128000), int64(48000)
+			fr, d, sk := 29.97, 12.5, 1.5
+			px := "yuv420p"
+			yes := true
+			width, height, gop, channels, maxrate, bufsize, videoBitrate, audioBitrate, audioSamplerate = &w, &h, &g, &ch, &mr, &bs, &vb, &ab, &sr
+			framerate, duration, seek = &fr, &d, &sk
+			pixfmt = &px
+			disableAudio, disableVideo, perTitle = &yes, &yes, &yes
+
+			app := &App{Command: &ChunkifyCommand{Format: format}}
+			setTranscodingFormatParams(app)
+			data, err := json.Marshal(app.Command.TranscodingFormatParams)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got map[string]any
+			if err := json.Unmarshal(data, &got); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range wantKeys {
+				if _, ok := got[key]; !ok {
+					t.Errorf("%s payload is missing %q: %s", format, key, data)
+				}
+			}
+		})
 	}
 }
 
@@ -382,7 +487,7 @@ func TestSetupCommand_StorageParams(t *testing.T) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
-	if app.Command.JobCreateStorageParams.Path.Value != storageVal {
-		t.Errorf("Expected Path %s, got %v", storageVal, app.Command.JobCreateStorageParams.Path.Value)
+	if app.Command.TranscodingStorageParams.Path.Value != storageVal {
+		t.Errorf("Expected Path %s, got %v", storageVal, app.Command.TranscodingStorageParams.Path.Value)
 	}
 }

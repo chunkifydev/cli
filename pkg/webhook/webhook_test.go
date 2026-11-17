@@ -11,6 +11,7 @@ import (
 	"time"
 
 	chunkify "github.com/chunkifydev/chunkify-go"
+	"github.com/chunkifydev/cli/pkg/config"
 )
 
 // Mock client for testing
@@ -61,8 +62,8 @@ func TestWebhookProxy_ToParams(t *testing.T) {
 		t.Errorf("Expected WebhookId to be 'wh_webhookid', got %v", params.WebhookID.Value)
 	}
 
-	if params.Limit.Value != 10 {
-		t.Errorf("Expected Limit to be 10, got %v", params.Limit.Value)
+	if params.Limit.Value != notificationPageSize {
+		t.Errorf("Expected Limit to be %d, got %v", notificationPageSize, params.Limit.Value)
 	}
 }
 
@@ -162,18 +163,16 @@ func TestWebhookProxy_ShouldProxy_MaxNotifications(t *testing.T) {
 		lastProxiedNotifications: []chunkify.Notification{},
 	}
 
-	// Add 10 notifications
-	for i := 0; i < 10; i++ {
-		notif := chunkify.Notification{ID: "notif_notifid" + string(rune(i))}
-		proxy.shouldProxy(notif)
+	// Fill the tracked window
+	for i := 0; i < notificationPageSize; i++ {
+		proxy.shouldProxy(chunkify.Notification{ID: fmt.Sprintf("notif_notifid%d", i)})
 	}
 
-	// Add 11th notification - should remove the first one
-	notif11 := chunkify.Notification{ID: "notif_notifid11"}
-	proxy.shouldProxy(notif11)
+	// One more notification should remove the first one
+	proxy.shouldProxy(chunkify.Notification{ID: "notif_overflow"})
 
-	if len(proxy.lastProxiedNotifications) != 10 {
-		t.Errorf("Expected 10 notifications in list, got %d", len(proxy.lastProxiedNotifications))
+	if len(proxy.lastProxiedNotifications) != notificationPageSize {
+		t.Errorf("Expected %d notifications in list, got %d", notificationPageSize, len(proxy.lastProxiedNotifications))
 	}
 
 	// First notification should be gone
@@ -361,4 +360,34 @@ func TestWebhookProxy_HttpProxy_ShouldNotProxy(t *testing.T) {
 	proxy.httpProxy(notif)
 
 	// The test will fail if the HTTP handler is called due to the t.Error() in the handler
+}
+
+func TestSupportedEventsMatchAPI(t *testing.T) {
+	if len(SupportedEvents) != 35 {
+		t.Errorf("expected 35 events, got %d", len(SupportedEvents))
+	}
+	for _, event := range []string{"transcoding.ready", "thumbnail.ready", "asset.output.ready", "workflow_run.completed", "job.completed"} {
+		if err := validateEvents([]string{event}); err != nil {
+			t.Errorf("%s: %v", event, err)
+		}
+	}
+}
+
+func TestListenRejectsUnknownEvents(t *testing.T) {
+	cmd := NewCommand(&config.Config{}).Command
+	if err := cmd.ParseFlags([]string{"--webhook-secret", "whsec_test", "--events", "transcoding.ready,transcoding.done"}); err != nil {
+		t.Fatal(err)
+	}
+	err := cmd.PreRunE(cmd, nil)
+	if err == nil || !strings.Contains(err.Error(), `unknown event "transcoding.done"`) {
+		t.Fatalf("expected unknown event error, got %v", err)
+	}
+
+	cmd = NewCommand(&config.Config{}).Command
+	if err := cmd.ParseFlags([]string{"--webhook-secret", "whsec_test"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.PreRunE(cmd, nil); err != nil {
+		t.Fatalf("default events should be valid: %v", err)
+	}
 }

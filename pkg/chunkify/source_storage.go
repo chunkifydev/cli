@@ -23,17 +23,17 @@ func (a *App) validateSourceInput() error {
 	return err
 }
 
-func (a *App) sourceStorageParams() (chunkify.SourceNewParamsStorage, error) {
+func (a *App) sourceStorageParams() (chunkify.SourceCreateStorageParams, error) {
 	// This is an exact object key, not a URL: preserve slashes, escapes, and
 	// characters such as ? and # without decoding or path normalization.
 	key, storedSource := strings.CutPrefix(a.Command.Input, "store://")
 	if !storedSource || len(key) == 0 || len(key) > 1024 || !utf8.ValidString(key) {
-		return chunkify.SourceNewParamsStorage{}, fmt.Errorf("store:// input requires an object key of 1 to 1024 UTF-8 bytes")
+		return chunkify.SourceCreateStorageParams{}, fmt.Errorf("store:// input requires an object key of 1 to 1024 UTF-8 bytes")
 	}
 	if strings.HasPrefix(a.Command.SourceStorageID, "stor_chunkify_") {
-		return chunkify.SourceNewParamsStorage{}, fmt.Errorf("store:// requires external storage; choose --source-storage-id with an external storage ID")
+		return chunkify.SourceCreateStorageParams{}, fmt.Errorf("store:// requires external storage; choose --source-storage-id with an external storage ID")
 	}
-	params := chunkify.SourceNewParamsStorage{Path: key}
+	params := chunkify.SourceCreateStorageParams{Path: key}
 	if a.Command.SourceStorageID != "" {
 		params.ID = chunkify.String(a.Command.SourceStorageID)
 	}

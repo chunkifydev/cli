@@ -28,9 +28,18 @@ func (a *App) storageObjectPath(storageID, explicitPath, category, filename, fla
 	return path.Join("chunkify-cli", category, a.Command.Id, filepath.Base(filename)), nil
 }
 
-// configureStorage applies only the saved CLI storage override. With no config,
-// IDs and paths stay as supplied and the API resolves omitted IDs.
+// configureStorage applies the saved storage override, then checks that the
+// output object path ends in the format's extension, which the API requires.
 func (a *App) configureStorage(storageID string) error {
+	if err := a.applyStorageConfig(storageID); err != nil {
+		return err
+	}
+	return a.validateOutputPathExtension()
+}
+
+// applyStorageConfig applies only the saved CLI storage override. With no
+// config, IDs and paths stay as supplied and the API resolves omitted IDs.
+func (a *App) applyStorageConfig(storageID string) error {
 	storedSource := strings.HasPrefix(a.Command.Input, "store://")
 	if storedSource {
 		if a.Command.SourceStorageID == "" {
@@ -56,30 +65,49 @@ func (a *App) configureStorage(storageID string) error {
 		a.Command.UploadStoragePath = uploadPath
 	}
 	if a.Command.Format != "" {
-		outputPath, err := a.storageObjectPath(storageID, a.Command.JobCreateStorageParams.Path.Value, "jobs", a.jobOutputFilename(), "--output-storage-path")
+		outputPath, err := a.storageObjectPath(storageID, a.Command.TranscodingStorageParams.Path.Value, "transcodings", a.outputFilename(), "--output-storage-path")
 		if err != nil {
 			return err
 		}
-		a.Command.JobCreateStorageParams = chunkify.JobNewParamsStorage{ID: chunkify.String(storageID)}
+		a.Command.TranscodingStorageParams = chunkify.TranscodingCreateStorageParams{ID: chunkify.String(storageID)}
 		if outputPath != "" {
-			a.Command.JobCreateStorageParams.Path = chunkify.String(outputPath)
+			a.Command.TranscodingStorageParams.Path = chunkify.String(outputPath)
 		}
 	}
 	return nil
 }
 
-func (a *App) jobOutputFilename() string {
+// validateOutputPathExtension rejects an output object path whose extension
+// doesn't match the format, for example -f m4a_aac with -o result.mp4 on
+// external storage. Without an object path (local output only, or
+// Chunkify-managed storage), the API names the file and nothing is checked.
+func (a *App) validateOutputPathExtension() error {
+	objectPath := a.Command.TranscodingStorageParams.Path.Value
+	if a.Command.Format == "" || objectPath == "" {
+		return nil
+	}
+	want := formatExtension(a.Command.Format)
+	if !strings.EqualFold(path.Ext(objectPath), want) {
+		return fmt.Errorf("output object path %q must end in %s for %s; change --output or --output-storage-path", objectPath, want, a.Command.Format)
+	}
+	return nil
+}
+
+// formatExtension returns the file extension the API expects for a format.
+func formatExtension(format string) string {
+	switch format {
+	case FormatWebmVp9:
+		return ".webm"
+	case FormatM4aAac:
+		return ".m4a"
+	default:
+		return ".mp4"
+	}
+}
+
+func (a *App) outputFilename() string {
 	if a.Command.Output != "" {
 		return filepath.Base(a.Command.Output)
 	}
-	ext := ".mp4"
-	switch a.Command.Format {
-	case FormatWebmVp9:
-		ext = ".webm"
-	case FormatHlsH264, FormatHlsH265, FormatHlsAv1:
-		ext = ".m3u8"
-	case FormatJpg:
-		ext = ".jpg"
-	}
-	return "output" + ext
+	return "output" + formatExtension(a.Command.Format)
 }

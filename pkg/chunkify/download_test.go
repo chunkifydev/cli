@@ -22,7 +22,7 @@ func TestProgressWriter_Write(t *testing.T) {
 	progressChan := make(chan DownloadProgress, 10)
 
 	// Create a test file
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_123",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -77,7 +77,7 @@ func TestProgressWriter_Write_NoTotal(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_456",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -124,7 +124,7 @@ func TestProgressWriter_Write_ProgressCalculation(t *testing.T) {
 	var buf bytes.Buffer
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_789",
 		Path: "test.txt",
 		URL:  "http://example.com/test.txt",
@@ -192,7 +192,7 @@ func TestDownloadFile_Success(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -244,7 +244,7 @@ func TestDownloadFile_BadStatus(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -281,7 +281,7 @@ func TestDownloadFile_ContextCancellation(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 10)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -326,7 +326,7 @@ func TestDownloadFile_ProgressUpdates(t *testing.T) {
 	outputFile := filepath.Join(tempDir, "downloaded.txt")
 	progressChan := make(chan DownloadProgress, 100)
 
-	file := chunkify.JobFile{
+	file := chunkify.TranscodingFile{
 		ID:   "file_test",
 		Path: "test.txt",
 		URL:  server.URL,
@@ -361,5 +361,59 @@ func TestDownloadFile_ProgressUpdates(t *testing.T) {
 		if finalProgress.Progress < 99.0 {
 			t.Errorf("Expected final Progress >= 99.0, got %f", finalProgress.Progress)
 		}
+	}
+}
+
+// DownloadFile prefers URL, falls back to CdnURL, and fails when both are empty.
+func TestDownloadFile_URLFallback(t *testing.T) {
+	var hits []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits = append(hits, r.URL.Path)
+		fmt.Fprint(w, "from "+r.URL.Path)
+	}))
+	defer server.Close()
+
+	for _, tt := range []struct {
+		name, url, cdnURL string
+		wantPath          string
+		wantError         string
+	}{
+		{name: "URL is preferred", url: server.URL + "/primary", cdnURL: server.URL + "/cdn", wantPath: "/primary"},
+		{name: "falls back to CdnURL", cdnURL: server.URL + "/cdn", wantPath: "/cdn"},
+		{name: "no URL at all", wantError: "file file_test has no download URL"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hits = nil
+			output := filepath.Join(t.TempDir(), "out.mp4")
+			file := chunkify.TranscodingFile{ID: "file_test", Path: "out.mp4", URL: tt.url, CdnURL: tt.cdnURL}
+
+			err := DownloadFile(context.Background(), file, output, make(chan DownloadProgress, 10))
+
+			if tt.wantError != "" {
+				if err == nil || err.Error() != tt.wantError {
+					t.Fatalf("want error %q, got %v", tt.wantError, err)
+				}
+				if len(hits) != 0 {
+					t.Errorf("no request expected, got %v", hits)
+				}
+				if _, statErr := os.Stat(output); !os.IsNotExist(statErr) {
+					t.Error("no output file expected")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(hits) != 1 || hits[0] != tt.wantPath {
+				t.Fatalf("requests = %v, want [%s]", hits, tt.wantPath)
+			}
+			content, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "from "+tt.wantPath {
+				t.Errorf("content = %q, want %q", content, "from "+tt.wantPath)
+			}
+		})
 	}
 }
