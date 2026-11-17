@@ -210,6 +210,10 @@ func validateM4aAacFlags() error {
 		{"preset", preset != nil && *preset != ""},
 		{"profilev", profilev != nil && *profilev != ""},
 		{"level", level != nil && *level != 0},
+		{"x264keyint", x264KeyInt != nil && *x264KeyInt != 0},
+		{"x265keyint", x265KeyInt != nil && *x265KeyInt != 0},
+		{"quality", quality != nil && *quality != ""},
+		{"cpu-used", cpuUsed != nil && *cpuUsed != ""},
 		{"an", disableAudio != nil && *disableAudio},
 		{"vn", disableVideo != nil && *disableVideo},
 	} {

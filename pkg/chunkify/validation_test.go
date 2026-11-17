@@ -751,4 +751,18 @@ func TestValidateM4aAacFlags(t *testing.T) {
 	if err := validateM4aAacFlags(); err == nil {
 		t.Fatal("expected --vn error")
 	}
+
+	// Codec-specific video flags are rejected too, not silently ignored.
+	for name, set := range map[string]func(){
+		"x264keyint": func() { v := int64(48); x264KeyInt = &v },
+		"x265keyint": func() { v := int64(48); x265KeyInt = &v },
+		"quality":    func() { v := "good"; quality = &v },
+		"cpu-used":   func() { v := "4"; cpuUsed = &v },
+	} {
+		resetGlobalVars()
+		set()
+		if err := validateM4aAacFlags(); err == nil || err.Error() != "--"+name+" is not supported for m4a_aac" {
+			t.Errorf("expected --%s error, got %v", name, err)
+		}
+	}
 }

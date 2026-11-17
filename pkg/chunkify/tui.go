@@ -82,7 +82,7 @@ func NewApp() *App {
 type Progress struct {
 	Status               chan int
 	TranscodingProgress  chan chunkify.Transcoding
-	TranscodingCompleted chan bool
+	TranscodingCompleted chan error // nil when polling ends normally
 	UploadProgress       chan UploadProgress
 	DownloadProgress     chan DownloadProgress
 	Files                chan []chunkify.TranscodingFile
@@ -95,13 +95,22 @@ func NewProgress() *Progress {
 	return &Progress{
 		Status:               make(chan int, 1),
 		TranscodingProgress:  make(chan chunkify.Transcoding, 100),
-		TranscodingCompleted: make(chan bool, 1),
+		TranscodingCompleted: make(chan error, 1),
 		UploadProgress:       make(chan UploadProgress, 100),
 		DownloadProgress:     make(chan DownloadProgress, 100),
 		DownloadedFiles:      make(chan chunkify.TranscodingFile, 100),
 		Source:               make(chan *chunkify.Source, 1),
 		Error:                make(chan error),
 		Files:                make(chan []chunkify.TranscodingFile, 100),
+	}
+}
+
+// finishTranscoding unblocks the workflow waiting for the transcoding. Only the
+// first signal matters, so later ones are dropped instead of blocking.
+func (p *Progress) finishTranscoding(err error) {
+	select {
+	case p.TranscodingCompleted <- err:
+	default:
 	}
 }
 
@@ -141,11 +150,8 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			fmt.Println("\nQuitting...")
 			t.CancelFunc()
-			// Send TranscodingCompleted to unblock the main goroutine
-			select {
-			case t.Progress.TranscodingCompleted <- true:
-			default:
-			}
+			// Unblock the main goroutine
+			t.Progress.finishTranscoding(nil)
 			return t, tea.Quit
 		}
 	case tickMsg:
@@ -212,10 +218,7 @@ func (t App) checkChannels() (App, bool) {
 		}
 	case err := <-t.Progress.Error:
 		t.Error = err
-		select {
-		case t.Progress.TranscodingCompleted <- true:
-		default:
-		}
+		t.Progress.finishTranscoding(nil)
 	case <-t.Ctx.Done():
 		t.Done = true
 	default:

@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -142,7 +144,11 @@ func (app *App) executeWorkflow(ctx context.Context) {
 
 	// Wait for the transcoding to finish
 	select {
-	case <-app.Progress.TranscodingCompleted:
+	case err := <-app.Progress.TranscodingCompleted:
+		if err != nil {
+			app.setError(err)
+			return
+		}
 	case <-ctx.Done():
 		return
 	}
@@ -404,30 +410,57 @@ func (a *App) CreateTranscoding(ctx context.Context, source *chunkify.Source) (*
 	})
 }
 
+// maxPollFailures is how many consecutive transient errors polling tolerates
+// before giving up. The SDK already retries each request.
+const maxPollFailures = 10
+
+// StartTranscodingProgress polls the transcoding until it finishes. It stops
+// with an error on a permanent API error, such as a revoked token or a deleted
+// transcoding, or after maxPollFailures consecutive transient errors.
 func (a *App) StartTranscodingProgress(ctx context.Context, transcodingID string) {
 	ticker := time.NewTicker(ProgressUpdateInterval)
 	defer ticker.Stop()
 
+	failures := 0
 	for {
 		select {
 		case <-ctx.Done():
-			a.Progress.TranscodingCompleted <- true
+			a.Progress.finishTranscoding(nil)
 			return
 		case <-ticker.C:
 			transcoding, err := a.Client.Transcodings.Get(ctx, transcodingID)
 			if err != nil {
-				slog.Error("Error retrieving transcoding", "id", transcodingID, "error", err)
+				if ctx.Err() != nil {
+					continue
+				}
+				failures++
+				slog.Error("Error retrieving transcoding", "id", transcodingID, "error", err, "failures", failures)
+				if isPermanentAPIError(err) || failures >= maxPollFailures {
+					a.Progress.finishTranscoding(fmt.Errorf("error retrieving transcoding %s: %w", transcodingID, err))
+					return
+				}
 				continue
 			}
+			failures = 0
 			a.Transcoding = transcoding
 			a.Progress.TranscodingProgress <- *transcoding
 
 			if transcoding.Status == chunkify.TranscodingStatusReady || transcodingHasFailed(transcoding.Status) {
-				a.Progress.TranscodingCompleted <- true
+				a.Progress.finishTranscoding(nil)
 				return
 			}
 		}
 	}
+}
+
+// isPermanentAPIError reports whether retrying the request cannot succeed.
+func isPermanentAPIError(err error) bool {
+	var apiErr *chunkify.Error
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	code := apiErr.StatusCode
+	return code >= 400 && code < 500 && code != http.StatusRequestTimeout && code != http.StatusTooManyRequests
 }
 
 // filename returns the local path for a transcoded file. A single output is

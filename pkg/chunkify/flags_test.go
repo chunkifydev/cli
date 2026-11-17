@@ -387,6 +387,46 @@ func TestSetTranscodingFormatParams(t *testing.T) {
 	}
 }
 
+// setVideoParams maps flags to SDK fields by name, so a renamed SDK field would
+// silently drop a flag. Every shared flag must reach every video format.
+func TestSetTranscodingFormatParamsSendsEveryVideoFlag(t *testing.T) {
+	t.Cleanup(resetGlobalFlags)
+	wantKeys := []string{
+		"width", "height", "framerate", "gop", "channels", "maxrate", "bufsize", "pixfmt",
+		"disable_audio", "disable_video", "per_title", "duration", "seek",
+		"video_bitrate", "audio_bitrate", "audio_samplerate",
+	}
+	for _, format := range []string{FormatMp4H264, FormatMp4H265, FormatMp4Av1, FormatWebmVp9} {
+		t.Run(format, func(t *testing.T) {
+			resetGlobalFlags()
+			w, h, g, ch, mr, bs, vb, ab, sr := int64(1280), int64(720), int64(48), int64(2), int64(4000000), int64(8000000), int64(3000000), int64(128000), int64(48000)
+			fr, d, sk := 29.97, 12.5, 1.5
+			px := "yuv420p"
+			yes := true
+			width, height, gop, channels, maxrate, bufsize, videoBitrate, audioBitrate, audioSamplerate = &w, &h, &g, &ch, &mr, &bs, &vb, &ab, &sr
+			framerate, duration, seek = &fr, &d, &sk
+			pixfmt = &px
+			disableAudio, disableVideo, perTitle = &yes, &yes, &yes
+
+			app := &App{Command: &ChunkifyCommand{Format: format}}
+			setTranscodingFormatParams(app)
+			data, err := json.Marshal(app.Command.TranscodingFormatParams)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got map[string]any
+			if err := json.Unmarshal(data, &got); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range wantKeys {
+				if _, ok := got[key]; !ok {
+					t.Errorf("%s payload is missing %q: %s", format, key, data)
+				}
+			}
+		})
+	}
+}
+
 func TestSetupCommand_StorageParams(t *testing.T) {
 	resetGlobalFlags()
 

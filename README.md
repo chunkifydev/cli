@@ -7,7 +7,7 @@
     </picture>
   </a>
 </p>
-<p align="center">Chunkify is video streaming platform for developers.</p>
+<p align="center">Chunkify is a video streaming platform for developers.</p>
 
 <p align="center">
   <a href="https://github.com/chunkifydev/cli/releases"><img src="https://img.shields.io/github/release/chunkifydev/cli.svg" alt="Latest Release"></a>
@@ -298,15 +298,15 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 
 ```json
 {"status":"Queued","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
+{"status":"Starting","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
 {"status":"Encoding","progress":20,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Ready","progress":100,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Transcoding","progress":40,"fps":100,"speed":"5x","out_time":3,"eta":""}
-{"status":"Transcoding","progress":70,"fps":100,"speed":"5x","out_time":3,"eta":""}
-{"status":"Merging","progress":90,"fps":12,"speed":"1.2x","out_time":3,"eta":""}
-{"status":"Merging","progress":100,"fps":12,"speed":"1.2x","out_time":3,"eta":""}
-{"status":"Downloading","progress":100,"fps":0,"speed":"105MB/s","out_time":0,"eta":"0s"}
-{"status":"Completed","progress":0,"fps":0,"speed":"","out_time":0,"eta":""}
+{"status":"Encoding","progress":62,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
+{"status":"Downloading","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"00:00"}
+{"status":"Downloading","progress":100,"fps":0,"speed":"108MB/s","out_time":0,"eta":"00:00"}
+{"status":"Completed","progress":0,"fps":0,"speed":"","out_time":0,"eta":"N/A"}
 ```
+
+During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The Transcodings API does not report encoder speed, so `fps` and `out_time` are `0` and `speed` is `N/A` until the download starts.
 
 ## CLI Profiles
 
@@ -418,8 +418,8 @@ Events:
 
 ────────────────────────────────────────────────
 
-[200 OK] notf_33f3pVlO3782tPF9CkioGK1IKTu transcoding.ready (trn_33f3ocg9Vg0o0gDgg5JpCCR3DzX)
-[200 OK] notf_33f3tiGWDw78SLHefdswGaL7UpB transcoding.ready (trn_33f3siy9JhMrlsIY69q2gHqL3bh)
+[200 OK] notf_33f3pVlO3782tPF9CkioGK1IKTu transcoding.ready (tcg_33f3ocg9Vg0o0gDgg5JpCCR3DzX)
+[200 OK] notf_33f3tiGWDw78SLHefdswGaL7UpB transcoding.ready (tcg_33f3siy9JhMrlsIY69q2gHqL3bh)
 ```
 
 By default, it forwards every event the API delivers: `job.*`, `source.*`, `upload.*`, `asset.*`, `asset.output.*`, `workflow_run.*`, `transcoding.*` and `thumbnail.*`. Unknown event names are rejected. You can specify the ones you are interested in:

@@ -92,10 +92,10 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.Flags().StringVar(&app.Command.UploadStoragePath, "upload-storage-path", "", "Exact object key for uploads to external storage, including the filename")
 
 	// Common video settings
-	cmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-8192x0-8192)")
-	cmd.Flags().Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (15-120)")
-	cmd.Flags().Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-300)")
-	cmd.Flags().Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 5, 7)")
+	cmd.Flags().StringVarP(resolution, "resolution", "s", "", "Set resolution wxh (0-7680x0-7680)")
+	cmd.Flags().Float64VarP(framerate, "framerate", "r", 0, "Set frame rate (0.001-240)")
+	cmd.Flags().Int64VarP(gop, "gop", "g", 0, "Set group of pictures size (1-960)")
+	cmd.Flags().Int64Var(channels, "channels", 0, "Set number of audio channels (1, 2, 6 for 5.1, 8 for 7.1)")
 	cmd.Flags().StringVar(maxrateStr, "maxrate", "", "Set maximum bitrate in bits per second (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
 	cmd.Flags().StringVar(bufsizeStr, "bufsize", "", "Set buffer size in bits (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
 	cmd.Flags().StringVar(pixfmt, "pixfmt", "", "Set pixel format (H264: yuv420p, yuv422p, yuv444p and their 10le variants, H265: adds 12le variants, AV1: yuv420p, yuv420p10le, VP9: yuv420p, yuv422p, yuv440p, yuv444p and their 10le/12le variants)")
@@ -106,15 +106,15 @@ func BindFlags(app *App, cmd *cobra.Command) {
 	cmd.Flags().Float64Var(seek, "seek", 0, "Seek to position in seconds")
 	cmd.Flags().StringVar(videoBitrateStr, "vb", "", "Set video bitrate in bits per second (100000-50000000). You can use units like K, M (e.g. 1200K, 2M)")
 	cmd.Flags().StringVar(audioBitrateStr, "ab", "", "Set audio bitrate in bits per second (32000-512000). You can use units like K, M (e.g. 1200K, 2M)")
-	cmd.Flags().Int64Var(audioSamplerate, "ar", 0, "Set audio sample rate in Hz (8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000)")
+	cmd.Flags().Int64Var(audioSamplerate, "ar", 0, "Set audio sample rate in Hz (8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000, 88200, 96000)")
 
 	// H264, H265 and AV1 flags
 	cmd.Flags().Int64Var(crf, "crf", 0, "Set constant rate factor (H264/H265: 16-35, AV1: 16-63, VP9: 15-35)")
 	cmd.Flags().StringVar(preset, "preset", "", "Set encoding preset (H264/H265: ultrafast, superfast, veryfast, faster, fast, medium, AV1: 6-13)")
 	cmd.Flags().StringVar(profilev, "profilev", "", "Set video profile (H264: baseline, main, high, high10, high422, high444, H265: main, main10, main12, main422-10, main422-12, main444-8, main444-10, main444-12, AV1: main)")
 	cmd.Flags().Int64Var(level, "level", 0, "Set encoding level (H264: 10, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51, H265: 30, 31, 41, AV1: 30, 31, 41)")
-	cmd.Flags().Int64Var(x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval")
-	cmd.Flags().Int64Var(x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval")
+	cmd.Flags().Int64Var(x264KeyInt, "x264keyint", 0, "H264 - Set x264 keyframe interval (1-960)")
+	cmd.Flags().Int64Var(x265KeyInt, "x265keyint", 0, "H265 - Set x265 keyframe interval (1-300)")
 
 	// VP9 flags
 	cmd.Flags().StringVar(quality, "quality", "", "Set VP9 quality (good, best, realtime)")
