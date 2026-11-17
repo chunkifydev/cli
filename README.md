@@ -299,16 +299,16 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 ```
 
 ```json
-{"status":"Queued","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Starting","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Encoding","progress":20,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Encoding","progress":62,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
-{"status":"Downloading","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"00:00"}
-{"status":"Downloading","progress":100,"fps":0,"speed":"108MB/s","out_time":0,"eta":"00:00"}
-{"status":"Completed","progress":100,"fps":0,"speed":"","out_time":0,"eta":"N/A"}
+{"status":"Queued","progress":0,"speed":"N/A","eta":"N/A"}
+{"status":"Starting","progress":0,"speed":"N/A","eta":"N/A"}
+{"status":"Encoding","progress":20,"speed":"N/A","eta":"N/A"}
+{"status":"Encoding","progress":62,"speed":"N/A","eta":"N/A"}
+{"status":"Downloading","progress":0,"speed":"N/A","eta":"00:00"}
+{"status":"Downloading","progress":100,"speed":"108MB/s","eta":"00:00"}
+{"status":"Completed","progress":100,"speed":"","eta":"N/A"}
 ```
 
-During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The API doesn't report progress for audio-only output such as `m4a_aac`, so `progress` stays at `0` until the transcoding is ready. The Transcodings API does not report encoder speed, so `fps` and `out_time` are `0` and `speed` is `N/A` until the download starts.
+During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The API doesn't report progress for audio-only output such as `m4a_aac`, so `progress` stays at `0` until the transcoding is ready. `speed` is the transfer rate while the CLI uploads a local source file or downloads the output, and `N/A` while transcoding, since the Transcodings API doesn't report encoder speed.
 
 JSON output works without a terminal, so you can use it in scripts, CI, cron jobs and containers started without `-t`. Set `CHUNKIFY_TOKEN` there, since those machines often have no system keyring for saved settings. If the CLI can't read the saved `storage-id` config, it uses the project's default storage and warns on stderr; set `CHUNKIFY_STORAGE_ID` to choose the storage instead.
 
