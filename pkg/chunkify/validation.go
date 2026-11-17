@@ -177,7 +177,8 @@ func validateAv1Flags() error {
 }
 
 func validateWebmVp9Flags() error {
-	if crf != nil && !(perTitle != nil && *perTitle && *crf == 0) && (*crf < 15 || *crf > 35) {
+	// --crf is optional: the API defaults VP9 to 24.
+	if crf != nil && *crf != 0 && (*crf < 15 || *crf > 35) {
 		return fmt.Errorf("--crf must be between 15 and 35")
 	}
 	if err := validateOneOf("quality", quality, []string{"good", "best", "realtime"}); err != nil {

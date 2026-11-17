@@ -662,10 +662,40 @@ func TestValidateWebmVp9Flags(t *testing.T) {
 			expectError: false,
 		},
 		{
+			// The CLI always binds crf to the flag, so an omitted --crf is 0, not nil.
+			name: "omitted_vp9_crf_uses_api_default",
+			setup: func() {
+				resetGlobalVars()
+				val := int64(0)
+				crf = &val
+			},
+			expectError: false,
+		},
+		{
 			name: "invalid_vp9_crf_too_low",
 			setup: func() {
 				resetGlobalVars()
 				val := int64(10)
+				crf = &val
+			},
+			expectError: true,
+			errorMsg:    "--crf must be between 15 and 35",
+		},
+		{
+			name: "invalid_vp9_crf_too_high",
+			setup: func() {
+				resetGlobalVars()
+				val := int64(36)
+				crf = &val
+			},
+			expectError: true,
+			errorMsg:    "--crf must be between 15 and 35",
+		},
+		{
+			name: "invalid_vp9_crf_negative",
+			setup: func() {
+				resetGlobalVars()
+				val := int64(-1)
 				crf = &val
 			},
 			expectError: true,
