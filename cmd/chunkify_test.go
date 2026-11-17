@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -101,5 +103,30 @@ func TestTeamAPICommandDoesNotRequireProjectToken(t *testing.T) {
 	}
 	if cfg.Profile != "staging" {
 		t.Fatalf("profile after api command was not selected: %q", cfg.Profile)
+	}
+}
+
+func TestExitCode(t *testing.T) {
+	if got := exitCode(fmt.Errorf("run: %w", chunkifyCmd.ErrCancelled)); got != 130 {
+		t.Fatalf("cancelled run exit code = %d, want 130", got)
+	}
+	if got := exitCode(errors.New("source not found")); got != 1 {
+		t.Fatalf("failed run exit code = %d, want 1", got)
+	}
+}
+
+func TestJSONRequested(t *testing.T) {
+	for args, want := range map[string]bool{
+		"-i video.mp4 --json":              true,
+		"-i video.mp4 --json=true":         true,
+		"-i video.mp4 --json=1":            true,
+		"-i video.mp4 --json=false":        false,
+		"-i video.mp4 --json --json=false": false,
+		"-i video.mp4":                     false,
+		"-i --jsonish.mp4":                 false,
+	} {
+		if got := jsonRequested(append([]string{"chunkify"}, strings.Fields(args)...)); got != want {
+			t.Errorf("jsonRequested(%q) = %v, want %v", args, got, want)
+		}
 	}
 }

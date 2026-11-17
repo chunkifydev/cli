@@ -3,9 +3,9 @@ package chunkify
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path"
 	"sort"
 	"time"
@@ -119,17 +119,47 @@ func (t App) Init() tea.Cmd {
 	return tea.Batch(tickCmd(), spin.Tick)
 }
 
-func (t App) Run() {
-	var p *tea.Program
+// Run shows the progress until the workflow ends or the user cancels it, and
+// returns the final state.
+func (t App) Run() (App, error) {
+	var opts []tea.ProgramOption
 	if t.JSON {
-		// Disable Bubble Tea renderer in JSON mode to avoid whitespace artifacts
-		p = tea.NewProgram(t, tea.WithoutRenderer())
-	} else {
-		p = tea.NewProgram(t)
+		// JSON mode must work without a terminal (CI, cron, Docker without -t):
+		// skip the renderer, which would also leave whitespace artifacts, and the
+		// keyboard, which needs /dev/tty when stdin is not a terminal. SIGINT and
+		// SIGTERM still quit the program.
+		opts = append(opts, tea.WithoutRenderer(), tea.WithInput(nil))
 	}
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
+	model, err := tea.NewProgram(t, opts...).Run()
+	if err != nil {
+		return t, err
+	}
+	final := model.(App)
+	if !final.Done || final.Ctx.Err() != nil {
+		// A key or a signal quit the program before the workflow ended.
+		final.Status = Cancelled
+		final.Done = true
+		if final.JSON {
+			fmt.Println(final.JSONView())
+		}
+	}
+	return final, nil
+}
+
+// ErrCancelled reports a run the user stopped with q, Ctrl+C or a signal.
+var ErrCancelled = errors.New("cancelled")
+
+// Err returns nil when the workflow completed, and otherwise why it did not.
+func (t App) Err() error {
+	switch {
+	case t.Status == Completed:
+		return nil
+	case t.Error != nil:
+		return t.Error
+	case t.Status == Cancelled:
+		return ErrCancelled
+	default:
+		return fmt.Errorf("stopped while %s", t.getStatusString())
 	}
 }
 
@@ -259,9 +289,9 @@ func (t App) JSONView() string {
 		eta = formatter.Duration(int64(t.DownloadProgress.Eta.Round(time.Second).Seconds()))
 	case Transcoding:
 		speedStr = "N/A"
-		if t.Transcoding != nil {
-			progress = t.Transcoding.Progress
-		}
+		progress = transcodingProgress(t.Transcoding)
+	case Completed:
+		progress = 100.0
 	}
 
 	out := JSONOutput{
@@ -274,6 +304,19 @@ func (t App) JSONView() string {
 	}
 	j, _ := json.Marshal(out)
 	return string(j)
+}
+
+// transcodingProgress returns the transcoding progress percentage. The API
+// omits it for audio-only output, so a ready transcoding counts as 100.
+func transcodingProgress(transcoding *chunkify.Transcoding) float64 {
+	switch {
+	case transcoding == nil:
+		return 0
+	case transcoding.Status == chunkify.TranscodingStatusReady && !transcoding.JSON.Progress.Valid():
+		return 100
+	default:
+		return transcoding.Progress
+	}
 }
 
 func (t App) View() string {
@@ -389,10 +432,11 @@ func (t App) transcodingView() (string, string) {
 		view += "\n"
 	}
 
-	view += dblIndent + progressBar(string(t.Transcoding.ProcessingStage), t.Transcoding.Progress, 60) + "\n"
+	progress := transcodingProgress(t.Transcoding)
+	view += dblIndent + progressBar(string(t.Transcoding.ProcessingStage), progress, 60) + "\n"
 
 	statusInfo := statusOrangeText(t.Command.Format)
-	statusInfo += fmt.Sprintf(" %.f%%", t.Transcoding.Progress)
+	statusInfo += fmt.Sprintf(" %.f%%", progress)
 	return view, statusInfo
 }
 
