@@ -69,7 +69,7 @@ func TestConfigureStorageSkipsUnusedPaths(t *testing.T) {
 	if err := app.configureStorage("stor_chunkify_test"); err != nil {
 		t.Fatal(err)
 	}
-	app = &App{Command: &ChunkifyCommand{Input: "video.mp4", TranscodingStorageParams: chunkify.TranscodingNewParamsStorage{Path: chunkify.String("unused")}}}
+	app = &App{Command: &ChunkifyCommand{Input: "video.mp4", TranscodingStorageParams: chunkify.TranscodingCreateStorageParams{Path: chunkify.String("unused")}}}
 	if err := app.configureStorage("stor_chunkify_test"); err != nil {
 		t.Fatal(err)
 	}

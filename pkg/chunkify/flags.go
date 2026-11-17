@@ -277,7 +277,7 @@ func validateTranscodeSettings(app *App) error {
 }
 
 func setTranscodingFormatParams(app *App) {
-	app.Command.TranscodingFormatParams = chunkify.TranscodingNewParamsFormatUnion{}
+	app.Command.TranscodingFormatParams = chunkify.TranscodingCreateFormatParamsUnion{}
 
 	switch app.Command.Format {
 	case FormatMp4H264:

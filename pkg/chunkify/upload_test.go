@@ -2,6 +2,8 @@ package chunkify
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -66,6 +68,11 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 				switch r.Method + " " + r.URL.Path {
 				case "GET /sources":
 					requests = append(requests, "lookup")
+					// The API rejects anything but key:value metadata filters with 400.
+					sum := md5.Sum([]byte(content))
+					if got, want := r.URL.Query()["metadata"], []string{"md5:" + hex.EncodeToString(sum[:])}; !reflect.DeepEqual(got, want) {
+						t.Errorf("lookup metadata filter = %q, want %q", got, want)
+					}
 					fmt.Fprint(w, `{"data":[]}`)
 				case "GET /uploads/upl_test":
 					requests = append(requests, "upload")
@@ -177,6 +184,63 @@ func TestCreateSourceFromFileCompletesUpload(t *testing.T) {
 			}
 			if metadata["cli_execution_id"] != executionID || metadata["origin"] != MetadataOrigin || metadata["md5"] == "" {
 				t.Errorf("upload metadata was not preserved: %v", metadata)
+			}
+		})
+	}
+}
+
+func TestCreateSourceFromFileReusesSourceByMd5(t *testing.T) {
+	const content = "test video bytes"
+	sum := md5.Sum([]byte(content))
+	hash := hex.EncodeToString(sum[:])
+
+	for _, tt := range []struct {
+		name       string
+		createdAt  time.Time
+		wantReused bool
+	}{
+		{name: "recent source is reused", createdAt: time.Now().Add(-time.Hour), wantReused: true},
+		{name: "old source is uploaded again", createdAt: time.Now().Add(-13 * time.Hour), wantReused: false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			uploaded := false
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.Method + " " + r.URL.Path {
+				case "GET /sources":
+					json.NewEncoder(w).Encode(map[string]any{"data": []map[string]any{
+						{"id": "src_existing", "created_at": tt.createdAt, "metadata": map[string]string{"md5": hash}},
+					}})
+				case "POST /uploads":
+					// Stop after the decision to upload; the transfer is covered elsewhere.
+					uploaded = true
+					w.WriteHeader(http.StatusBadRequest)
+					fmt.Fprint(w, `{"status":"error"}`)
+				default:
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+					w.WriteHeader(http.StatusNotFound)
+				}
+			}))
+			defer server.Close()
+
+			file := filepath.Join(t.TempDir(), "video.mp4")
+			if err := os.WriteFile(file, []byte(content), 0600); err != nil {
+				t.Fatal(err)
+			}
+			client := chunkify.NewClient(option.WithBaseURL(server.URL), option.WithProjectAccessToken("project-secret"), option.WithMaxRetries(0))
+			app := NewApp()
+			app.Client = &client
+			app.Command = &ChunkifyCommand{Input: file}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			source, err := app.CreateSourceFromFile(ctx)
+			if tt.wantReused {
+				if err != nil || source == nil || source.ID != "src_existing" || uploaded {
+					t.Fatalf("want reused src_existing without upload, got %v, %v (uploaded=%v)", source, err, uploaded)
+				}
+			} else if !uploaded {
+				t.Fatalf("want a new upload for an old source, got %v, %v", source, err)
 			}
 		})
 	}
@@ -326,13 +390,13 @@ func TestUploadMultipartRetriesAndErrors(t *testing.T) {
 			}))
 			defer server.Close()
 
-			parts := []chunkify.UploadMultipartPart{}
+			parts := []chunkify.UploadMultipartSignedPart{}
 			for i := 1; i <= tt.parts; i++ {
-				parts = append(parts, chunkify.UploadMultipartPart{PartNumber: int64(i), UploadURL: server.URL})
+				parts = append(parts, chunkify.UploadMultipartSignedPart{PartNumber: int64(i), UploadURL: server.URL})
 			}
 			progress := make(chan UploadProgress, 100)
 			result, err := UploadMultipartWithProgress(context.Background(), strings.NewReader("data"), 4,
-				chunkify.UploadMultipart{PartSizeBytes: 4, Parts: parts}, progress)
+				chunkify.UploadMultipartSession{PartSizeBytes: 4, Parts: parts}, progress)
 			if tt.wantError == "" {
 				if err != nil || len(result) != 1 || result[0].Etag != `"ok"` {
 					t.Fatalf("unexpected result %+v, %v", result, err)

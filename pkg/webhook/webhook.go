@@ -28,41 +28,41 @@ const notificationPageSize = 100
 
 // SupportedEvents lists every notification event the API can deliver.
 var SupportedEvents = []string{
-	string(chunkify.NotificationEventJobCreated),
-	string(chunkify.NotificationEventJobCompleted),
-	string(chunkify.NotificationEventJobFailed),
-	string(chunkify.NotificationEventJobCancelled),
-	string(chunkify.NotificationEventSourceCreated),
-	string(chunkify.NotificationEventSourceDeleted),
-	string(chunkify.NotificationEventUploadCreated),
-	string(chunkify.NotificationEventUploadCompleted),
-	string(chunkify.NotificationEventUploadFailed),
-	string(chunkify.NotificationEventUploadExpired),
-	string(chunkify.NotificationEventAssetCreated),
-	string(chunkify.NotificationEventAssetReady),
-	string(chunkify.NotificationEventAssetPlaybackReady),
-	string(chunkify.NotificationEventAssetFailed),
-	string(chunkify.NotificationEventAssetExpired),
-	string(chunkify.NotificationEventAssetDeleted),
-	string(chunkify.NotificationEventAssetOutputCreated),
-	string(chunkify.NotificationEventAssetOutputReady),
-	string(chunkify.NotificationEventAssetOutputFailed),
-	string(chunkify.NotificationEventAssetOutputDeleted),
-	string(chunkify.NotificationEventWorkflowRunCreated),
-	string(chunkify.NotificationEventWorkflowRunCompleted),
-	string(chunkify.NotificationEventWorkflowRunFailed),
-	string(chunkify.NotificationEventWorkflowRunCancelled),
-	string(chunkify.NotificationEventTranscodingCreated),
-	string(chunkify.NotificationEventTranscodingReady),
-	string(chunkify.NotificationEventTranscodingFailed),
-	string(chunkify.NotificationEventTranscodingCancelled),
-	string(chunkify.NotificationEventTranscodingExpired),
-	string(chunkify.NotificationEventTranscodingDeleted),
-	string(chunkify.NotificationEventThumbnailCreated),
-	string(chunkify.NotificationEventThumbnailReady),
-	string(chunkify.NotificationEventThumbnailFailed),
-	string(chunkify.NotificationEventThumbnailExpired),
-	string(chunkify.NotificationEventThumbnailDeleted),
+	string(chunkify.WebhookEventJobCreated),
+	string(chunkify.WebhookEventJobCompleted),
+	string(chunkify.WebhookEventJobFailed),
+	string(chunkify.WebhookEventJobCancelled),
+	string(chunkify.WebhookEventSourceCreated),
+	string(chunkify.WebhookEventSourceDeleted),
+	string(chunkify.WebhookEventUploadCreated),
+	string(chunkify.WebhookEventUploadCompleted),
+	string(chunkify.WebhookEventUploadFailed),
+	string(chunkify.WebhookEventUploadExpired),
+	string(chunkify.WebhookEventAssetCreated),
+	string(chunkify.WebhookEventAssetReady),
+	string(chunkify.WebhookEventAssetPlaybackReady),
+	string(chunkify.WebhookEventAssetFailed),
+	string(chunkify.WebhookEventAssetExpired),
+	string(chunkify.WebhookEventAssetDeleted),
+	string(chunkify.WebhookEventAssetOutputCreated),
+	string(chunkify.WebhookEventAssetOutputReady),
+	string(chunkify.WebhookEventAssetOutputFailed),
+	string(chunkify.WebhookEventAssetOutputDeleted),
+	string(chunkify.WebhookEventWorkflowRunCreated),
+	string(chunkify.WebhookEventWorkflowRunCompleted),
+	string(chunkify.WebhookEventWorkflowRunFailed),
+	string(chunkify.WebhookEventWorkflowRunCancelled),
+	string(chunkify.WebhookEventTranscodingCreated),
+	string(chunkify.WebhookEventTranscodingReady),
+	string(chunkify.WebhookEventTranscodingFailed),
+	string(chunkify.WebhookEventTranscodingCancelled),
+	string(chunkify.WebhookEventTranscodingExpired),
+	string(chunkify.WebhookEventTranscodingDeleted),
+	string(chunkify.WebhookEventThumbnailCreated),
+	string(chunkify.WebhookEventThumbnailReady),
+	string(chunkify.WebhookEventThumbnailFailed),
+	string(chunkify.WebhookEventThumbnailExpired),
+	string(chunkify.WebhookEventThumbnailDeleted),
 }
 
 // validateEvents rejects event names the API does not deliver.
@@ -299,7 +299,11 @@ func (r *WebhookProxy) httpProxy(notif chunkify.Notification) {
 // createLocaldevWebhook sets up a webhook for local development
 func (r *WebhookProxy) createLocaldevWebhook(ctx context.Context, webhookUrl string) (chunkify.Webhook, error) {
 	enabled := true
-	wh, err := r.Client.WebhookCreate(ctx, chunkify.WebhookNewParams{URL: webhookUrl, Events: r.Events, Enabled: chunkify.Bool(enabled)})
+	events := make([]chunkify.WebhookEvent, len(r.Events))
+	for i, event := range r.Events {
+		events[i] = chunkify.WebhookEvent(event)
+	}
+	wh, err := r.Client.WebhookCreate(ctx, chunkify.WebhookNewParams{URL: webhookUrl, Events: events, Enabled: chunkify.Bool(enabled)})
 	if err != nil {
 		fmt.Printf("Couldn't create localdev webhook for proxying: %s\n", err)
 		return chunkify.Webhook{}, err

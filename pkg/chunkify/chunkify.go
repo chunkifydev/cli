@@ -34,8 +34,8 @@ type ChunkifyCommand struct {
 	UploadStorageID          string
 	UploadStoragePath        string
 	OutputStorageID          string
-	TranscodingFormatParams  chunkify.TranscodingNewParamsFormatUnion
-	TranscodingStorageParams chunkify.TranscodingNewParamsStorage
+	TranscodingFormatParams  chunkify.TranscodingCreateFormatParamsUnion
+	TranscodingStorageParams chunkify.TranscodingCreateStorageParams
 }
 
 // Command represents the root notifications command and configuration
@@ -371,9 +371,8 @@ func (a *App) CreateSourceFromFile(ctx context.Context) (*chunkify.Source, error
 
 func (a *App) GetSourceByMd5(ctx context.Context, md5 string) (*chunkify.Source, error) {
 	sources, err := a.Client.Sources.List(ctx, chunkify.SourceListParams{
-		Metadata: [][]string{
-			{"md5", md5},
-		},
+		// The API matches repeated key:value pairs.
+		Metadata: []string{"md5:" + md5},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error listing sources: %s", err)

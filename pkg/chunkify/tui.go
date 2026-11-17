@@ -177,7 +177,7 @@ func (t App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // checkChannels performs non-blocking reads from all channels
 // Returns the updated app and whether the TUI should quit
 func (t App) checkChannels() (App, bool) {
-	// Check job progress
+	// Check transcoding progress
 	select {
 	case transcoding, ok := <-t.Progress.TranscodingProgress:
 		if ok {

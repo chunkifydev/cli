@@ -233,7 +233,7 @@ func (c *countingReader) Read(p []byte) (int, error) {
 // UploadMultipartWithProgress uploads each part of r to its signed URL and
 // returns the part numbers and storage ETags in ascending order. Parts are
 // retried with their original URLs. The progress channel is closed on return.
-func UploadMultipartWithProgress(ctx context.Context, r io.ReaderAt, size int64, multipart chunkify.UploadMultipart, progress chan UploadProgress) ([]chunkify.UploadCompleteParamsPart, error) {
+func UploadMultipartWithProgress(ctx context.Context, r io.ReaderAt, size int64, multipart chunkify.UploadMultipartSession, progress chan UploadProgress) ([]chunkify.UploadMultipartPartParams, error) {
 	defer close(progress)
 
 	partSize := multipart.PartSizeBytes
@@ -257,7 +257,7 @@ func UploadMultipartWithProgress(ctx context.Context, r io.ReaderAt, size int64,
 	shared := &lockedProgress{w: &uploadProgressWriter{ch: progress, total: size, startTime: time.Now()}}
 	shared.advance(0)
 
-	results := make([]chunkify.UploadCompleteParamsPart, len(multipart.Parts))
+	results := make([]chunkify.UploadMultipartPartParams, len(multipart.Parts))
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(multipartConcurrency)
 	for i, part := range multipart.Parts {
@@ -268,7 +268,7 @@ func UploadMultipartWithProgress(ctx context.Context, r io.ReaderAt, size int64,
 			if err != nil {
 				return fmt.Errorf("part %d: %w", part.PartNumber, err)
 			}
-			results[i] = chunkify.UploadCompleteParamsPart{PartNumber: part.PartNumber, Etag: etag}
+			results[i] = chunkify.UploadMultipartPartParams{PartNumber: part.PartNumber, Etag: etag}
 			return nil
 		})
 	}

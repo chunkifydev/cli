@@ -60,7 +60,7 @@ func (a *App) configureStorage(storageID string) error {
 		if err != nil {
 			return err
 		}
-		a.Command.TranscodingStorageParams = chunkify.TranscodingNewParamsStorage{ID: chunkify.String(storageID)}
+		a.Command.TranscodingStorageParams = chunkify.TranscodingCreateStorageParams{ID: chunkify.String(storageID)}
 		if outputPath != "" {
 			a.Command.TranscodingStorageParams.Path = chunkify.String(outputPath)
 		}

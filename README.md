@@ -344,11 +344,11 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --profile testing
 
 Use `chunkify api <resource> <action>` to call the Chunkify API. These commands print JSON to standard output by default, with no banner or update notice. The CLI reads the [production OpenAPI definition](https://chunkify.dev/docs/openapi.json) to discover resources and actions, and caches it for one hour. If the docs site is unavailable, the last cached definition is used. Use `chunkify api --help` to list resources and `chunkify api projects --help` to list a resource's actions.
 
-Command names follow OpenAPI `operationId` values: `updateProject` becomes `projects update`, and `getJobFiles` becomes `job-files list` because its route returns a collection. New action verbs follow the same rule.
+Command names follow OpenAPI `operationId` values: `updateProject` becomes `projects update`, and `getTranscoding` becomes `transcodings get`. A `get` operation whose route returns a collection becomes `list`. New action verbs follow the same rule.
 
 ```bash
-chunkify api jobs list --query limit=10 | jq '.data'
-chunkify api jobs get job_123
+chunkify api transcodings list --query limit=10 | jq '.data'
+chunkify api transcodings get tcg_123
 chunkify api projects update my-project --data '{"name":"New name"}'
 chunkify api projects update my-project --data '{"storage_id":"stor_aws_example"}'
 chunkify api storages create --data @storage.json
