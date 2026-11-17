@@ -218,9 +218,11 @@ func transcodingHasFailed(status chunkify.TranscodingStatus) bool {
 		status == chunkify.TranscodingStatusExpired
 }
 
+// setError reports err, then the Failed status. The TUI quits as soon as it
+// reads Failed, so the error must reach it first or the message is lost.
 func (a *App) setError(err error) {
-	a.Progress.Status <- Failed
 	a.Progress.Error <- err
+	a.Progress.Status <- Failed
 	// give time to display the error message before tea quit
 	time.Sleep(1 * time.Second)
 }

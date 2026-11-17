@@ -113,7 +113,9 @@ chunkify -i video.mp4 -o video_1080p.mp4 -f mp4_h264 -s 1920x1080 --crf 21
 
 It will upload the video to Chunkify, transcode it to MP4 H.264, and download it to your local disk.
 
-Transcoding uses the Chunkify [Transcodings API](https://chunkify.dev/docs). Each run creates one transcoding and downloads its output file.
+Transcoding uses the Chunkify [Transcodings API](https://chunkify.dev/docs). Each run creates one transcoding. The output file is downloaded only when you pass `-o`; without it, the file stays in storage.
+
+When the output goes to external storage, its object path must use the format's extension: `.mp4` for `mp4_*`, `.webm` for `webm_vp9` and `.m4a` for `m4a_aac`. The CLI rejects a mismatch, such as `-f m4a_aac -o result.mp4`, before creating the transcoding.
 
 For local files, the CLI creates an upload session, transfers the file, and calls the completion endpoint before looking up the source. Files over 100 MiB use a multipart transfer: the CLI uploads parts in parallel and retries a failed part without restarting the whole file. Temporary completion failures are retried without uploading the file again. Both requests must finish before the session expires. See the [video upload guide](https://chunkify.dev/docs/integration/video-upload).
 

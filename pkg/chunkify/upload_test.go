@@ -420,3 +420,27 @@ func drain(ch chan UploadProgress) chan UploadProgress {
 	}
 	return ch
 }
+
+// Storage URLs are signed; a network failure must not print the signature.
+func TestTransferErrorsHideSignedURLs(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	signedURL := server.URL + "/bucket/video.mp4?X-Amz-Signature=secret-signature"
+	server.Close() // every request now fails at the network layer
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	errs := map[string]error{}
+
+	_, errs["part"] = putPart(ctx, signedURL, strings.NewReader("data"), 4)
+	errs["single"] = UploadBlobWithProgress(ctx, strings.NewReader("data"), &chunkify.Upload{UploadURL: signedURL}, make(chan UploadProgress, 10))
+	errs["blob"] = UploadBlob(ctx, strings.NewReader("data"), &chunkify.Upload{UploadURL: signedURL})
+	errs["download"] = DownloadFile(ctx, chunkify.TranscodingFile{ID: "file_1", URL: signedURL}, filepath.Join(t.TempDir(), "out.mp4"), make(chan DownloadProgress, 10))
+
+	for name, err := range errs {
+		if err == nil {
+			t.Errorf("%s: want a network error", name)
+		} else if strings.Contains(err.Error(), "secret-signature") || strings.Contains(err.Error(), "X-Amz") {
+			t.Errorf("%s: error exposes the signed URL: %v", name, err)
+		}
+	}
+}

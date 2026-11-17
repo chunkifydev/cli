@@ -27,6 +27,9 @@ func resetGlobalVars() {
 	audioSamplerate = nil
 	duration = nil
 	seek = nil
+	disableAudio = nil
+	disableVideo = nil
+	perTitle = nil
 }
 
 func TestValidateCommonVideoFlags(t *testing.T) {

@@ -97,12 +97,12 @@ func DownloadFile(ctx context.Context, file chunkify.TranscodingFile, output str
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fileURL, nil)
 	if err != nil {
-		return fmt.Errorf("build request: %w", err)
+		return fmt.Errorf("build request: %w", withoutURL(err))
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("request: %w", err)
+		return withoutURL(err)
 	}
 	defer resp.Body.Close()
 

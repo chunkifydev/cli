@@ -6,12 +6,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/chunkifydev/chunkify-go"
 	"golang.org/x/sync/errgroup"
 )
+
+// withoutURL removes the request URL from an HTTP client error. Upload and
+// download URLs are signed, and their query string grants temporary access, so
+// they must not appear in messages or logs. The underlying cause is kept for
+// errors.Is and errors.As.
+func withoutURL(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return fmt.Errorf("%s request failed: %w", urlErr.Op, urlErr.Err)
+	}
+	return err
+}
 
 const (
 	// multipartConcurrency is the number of parts transferred at once.
@@ -31,14 +44,14 @@ func UploadBlob(ctx context.Context, r io.Reader, uploadResponse *chunkify.Uploa
 	// http put request with reader
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadResponse.UploadURL, r)
 	if err != nil {
-		return err
+		return withoutURL(err)
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return withoutURL(err)
 	}
 
 	defer resp.Body.Close()
@@ -144,7 +157,7 @@ func UploadBlobWithProgress(ctx context.Context, r io.Reader, uploadResponse *ch
 	// http put request with reader
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadResponse.UploadURL, body)
 	if err != nil {
-		return err
+		return withoutURL(err)
 	}
 
 	req.Header.Set("Content-Type", "application/octet-stream")
@@ -165,7 +178,7 @@ func UploadBlobWithProgress(ctx context.Context, r io.Reader, uploadResponse *ch
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return withoutURL(err)
 	}
 
 	defer resp.Body.Close()
@@ -281,7 +294,7 @@ func UploadMultipartWithProgress(ctx context.Context, r io.ReaderAt, size int64,
 // errPermanent marks a storage response that retrying cannot fix.
 var errPermanent = errors.New("permanent failure")
 
-func uploadPart(ctx context.Context, url string, part *io.SectionReader, length int64, progress *lockedProgress) (string, error) {
+func uploadPart(ctx context.Context, partURL string, part *io.SectionReader, length int64, progress *lockedProgress) (string, error) {
 	var lastErr error
 	for attempt := range multipartAttempts {
 		if attempt > 0 {
@@ -295,7 +308,7 @@ func uploadPart(ctx context.Context, url string, part *io.SectionReader, length 
 			return "", err
 		}
 		body := &countingReader{r: part, progress: progress}
-		etag, err := putPart(ctx, url, body, length)
+		etag, err := putPart(ctx, partURL, body, length)
 		if err == nil {
 			return etag, nil
 		}
@@ -309,16 +322,16 @@ func uploadPart(ctx context.Context, url string, part *io.SectionReader, length 
 	return "", lastErr
 }
 
-func putPart(ctx context.Context, url string, body io.Reader, length int64) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
+func putPart(ctx context.Context, partURL string, body io.Reader, length int64) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, partURL, body)
 	if err != nil {
-		return "", fmt.Errorf("%w: %v", errPermanent, err)
+		return "", fmt.Errorf("%w: %v", errPermanent, withoutURL(err))
 	}
 	req.ContentLength = length
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", withoutURL(err)
 	}
 	defer resp.Body.Close()
 	io.Copy(io.Discard, resp.Body)

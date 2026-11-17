@@ -71,6 +71,32 @@ func TestStartTranscodingProgress(t *testing.T) {
 	}
 }
 
+// The TUI quits when it reads Failed, so the error must arrive first.
+func TestSetErrorDeliversErrorBeforeFailedStatus(t *testing.T) {
+	app := NewApp()
+	want := fmt.Errorf("source not found")
+	go app.setError(want)
+
+	select {
+	case status := <-app.Progress.Status:
+		t.Fatalf("got status %d before the error", status)
+	case got := <-app.Progress.Error:
+		if got != want {
+			t.Fatalf("error = %v, want %v", got, want)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("setError sent nothing")
+	}
+	select {
+	case status := <-app.Progress.Status:
+		if status != Failed {
+			t.Fatalf("status = %d, want Failed", status)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("setError did not send Failed")
+	}
+}
+
 func TestIsPermanentAPIError(t *testing.T) {
 	for code, want := range map[int]bool{400: true, 401: true, 403: true, 404: true, 408: false, 429: false, 500: false, 503: false} {
 		err := fmt.Errorf("wrapped: %w", &chunkify.Error{StatusCode: code})

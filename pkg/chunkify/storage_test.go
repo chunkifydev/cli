@@ -125,3 +125,33 @@ func TestOutputFilename(t *testing.T) {
 		}
 	}
 }
+
+// The API requires the output object path's extension to match the format.
+func TestConfigureStorageChecksOutputExtension(t *testing.T) {
+	for _, tt := range []struct {
+		name, format, output, explicitPath, configured string
+		wantError                                      string
+	}{
+		{name: "generated path matches", format: FormatM4aAac, output: "/tmp/audio.m4a", configured: "stor_aws_config"},
+		{name: "generated path mismatch", format: FormatM4aAac, output: "/tmp/result.mp4", configured: "stor_aws_config", wantError: `"chunkify-cli/transcodings/run-123/result.mp4" must end in .m4a for m4a_aac`},
+		{name: "explicit path mismatch without config", format: FormatWebmVp9, output: "/tmp/out.webm", explicitPath: "out/video.mp4", wantError: "must end in .webm for webm_vp9"},
+		{name: "explicit path matches, any case", format: FormatMp4H265, output: "/tmp/out.mp4", explicitPath: "out/VIDEO.MP4"},
+		{name: "local output only is not checked", format: FormatM4aAac, output: "/tmp/result.mp4"},
+		{name: "managed storage is not checked", format: FormatM4aAac, output: "/tmp/result.mp4", configured: "stor_chunkify_config"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			app := &App{Command: &ChunkifyCommand{Id: "run-123", Input: "src_existing", Output: tt.output, Format: tt.format}}
+			if tt.explicitPath != "" {
+				app.Command.TranscodingStorageParams.Path = chunkify.String(tt.explicitPath)
+			}
+			err := app.configureStorage(tt.configured)
+			if tt.wantError == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("want error containing %q, got %v", tt.wantError, err)
+			}
+		})
+	}
+}
