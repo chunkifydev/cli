@@ -363,3 +363,57 @@ func TestDownloadFile_ProgressUpdates(t *testing.T) {
 		}
 	}
 }
+
+// DownloadFile prefers URL, falls back to CdnURL, and fails when both are empty.
+func TestDownloadFile_URLFallback(t *testing.T) {
+	var hits []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits = append(hits, r.URL.Path)
+		fmt.Fprint(w, "from "+r.URL.Path)
+	}))
+	defer server.Close()
+
+	for _, tt := range []struct {
+		name, url, cdnURL string
+		wantPath          string
+		wantError         string
+	}{
+		{name: "URL is preferred", url: server.URL + "/primary", cdnURL: server.URL + "/cdn", wantPath: "/primary"},
+		{name: "falls back to CdnURL", cdnURL: server.URL + "/cdn", wantPath: "/cdn"},
+		{name: "no URL at all", wantError: "file file_test has no download URL"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hits = nil
+			output := filepath.Join(t.TempDir(), "out.mp4")
+			file := chunkify.TranscodingFile{ID: "file_test", Path: "out.mp4", URL: tt.url, CdnURL: tt.cdnURL}
+
+			err := DownloadFile(context.Background(), file, output, make(chan DownloadProgress, 10))
+
+			if tt.wantError != "" {
+				if err == nil || err.Error() != tt.wantError {
+					t.Fatalf("want error %q, got %v", tt.wantError, err)
+				}
+				if len(hits) != 0 {
+					t.Errorf("no request expected, got %v", hits)
+				}
+				if _, statErr := os.Stat(output); !os.IsNotExist(statErr) {
+					t.Error("no output file expected")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(hits) != 1 || hits[0] != tt.wantPath {
+				t.Fatalf("requests = %v, want [%s]", hits, tt.wantPath)
+			}
+			content, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "from "+tt.wantPath {
+				t.Errorf("content = %q, want %q", content, "from "+tt.wantPath)
+			}
+		})
+	}
+}

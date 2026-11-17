@@ -387,6 +387,47 @@ func TestSetTranscodingFormatParams(t *testing.T) {
 	}
 }
 
+// Every codec-specific flag is set at once: each format must send exactly its
+// own settings and ignore the other codecs' flags.
+func TestSetTranscodingFormatParamsCodecSettings(t *testing.T) {
+	t.Cleanup(resetGlobalFlags)
+	for _, tt := range []struct {
+		format, preset, profile string
+		level                   int64
+		want                    string
+	}{
+		{FormatMp4H264, "fast", "high", 41, `{"crf":23,"preset":"fast","profilev":"high","level":41,"x264_keyint":48,"id":"mp4_h264"}`},
+		{FormatMp4H265, "medium", "main10", 41, `{"crf":23,"preset":"medium","profilev":"main10","level":41,"x265_keyint":96,"id":"mp4_h265"}`},
+		{FormatMp4Av1, "8", "main", 31, `{"crf":23,"preset":"8","profilev":"main","level":31,"id":"mp4_av1"}`},
+		{FormatWebmVp9, "fast", "high", 41, `{"crf":23,"quality":"good","cpu_used":"4","id":"webm_vp9"}`},
+	} {
+		t.Run(tt.format, func(t *testing.T) {
+			resetGlobalFlags()
+			c, lv, k264, k265 := int64(23), tt.level, int64(48), int64(96)
+			p, pv, q, cu := tt.preset, tt.profile, "good", "4"
+			crf, level, x264KeyInt, x265KeyInt = &c, &lv, &k264, &k265
+			preset, profilev, quality, cpuUsed = &p, &pv, &q, &cu
+
+			app := &App{Command: &ChunkifyCommand{Format: tt.format}}
+			setTranscodingFormatParams(app)
+			data, err := json.Marshal(app.Command.TranscodingFormatParams)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got, want map[string]any
+			if err := json.Unmarshal(data, &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("payload = %s\nwant      %s", data, tt.want)
+			}
+		})
+	}
+}
+
 // setVideoParams maps flags to SDK fields by name, so a renamed SDK field would
 // silently drop a flag. Every shared flag must reach every video format.
 func TestSetTranscodingFormatParamsSendsEveryVideoFlag(t *testing.T) {
