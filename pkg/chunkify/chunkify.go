@@ -82,16 +82,9 @@ chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_pr
 `,
 			RunE: func(cmd *cobra.Command, args []string) error {
 				cmd.SilenceUsage = true
-				err := app.transcode(cfg)
-				if err == nil {
-					return nil
-				}
+				err := app.transcode(cfg, cmd.ErrOrStderr())
 				// Exit non-zero without repeating an error the TUI already showed.
-				// JSON output has no error field, so report it on stderr.
-				if app.JSON {
-					cmd.SilenceErrors = true
-					_ = json.NewEncoder(cmd.ErrOrStderr()).Encode(map[string]string{"error": err.Error()})
-				} else if errors.As(err, new(shownError)) {
+				if errors.As(err, new(shownError)) {
 					cmd.SilenceErrors = true
 				}
 				return err
@@ -109,9 +102,16 @@ type shownError struct{ error }
 func (e shownError) Unwrap() error { return e.error }
 
 // transcode runs the workflow and returns why it did not complete, if it did not.
-func (app *App) transcode(cfg *config.Config) error {
+func (app *App) transcode(cfg *config.Config, stderr io.Writer) error {
 	if err := cfg.LoadStorageID(); err != nil {
 		return err
+	}
+	if cfg.StorageIDWarning != "" {
+		if app.JSON {
+			_ = json.NewEncoder(stderr).Encode(map[string]string{"warning": cfg.StorageIDWarning})
+		} else {
+			fmt.Fprintln(stderr, "Warning:", cfg.StorageIDWarning)
+		}
 	}
 	if err := app.configureStorage(cfg.StorageID); err != nil {
 		return err

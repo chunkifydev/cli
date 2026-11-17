@@ -114,3 +114,19 @@ func TestExitCode(t *testing.T) {
 		t.Fatalf("failed run exit code = %d, want 1", got)
 	}
 }
+
+func TestJSONRequested(t *testing.T) {
+	for args, want := range map[string]bool{
+		"-i video.mp4 --json":              true,
+		"-i video.mp4 --json=true":         true,
+		"-i video.mp4 --json=1":            true,
+		"-i video.mp4 --json=false":        false,
+		"-i video.mp4 --json --json=false": false,
+		"-i video.mp4":                     false,
+		"-i --jsonish.mp4":                 false,
+	} {
+		if got := jsonRequested(append([]string{"chunkify"}, strings.Fields(args)...)); got != want {
+			t.Errorf("jsonRequested(%q) = %v, want %v", args, got, want)
+		}
+	}
+}

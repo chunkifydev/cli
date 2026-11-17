@@ -21,6 +21,8 @@ type Config struct {
 	Client    *chunkify.Client
 	Profile   string
 	StorageID string
+	// StorageIDWarning explains why LoadStorageID skipped the saved storage ID.
+	StorageIDWarning string
 }
 
 func (cfg *Config) ConfigKey(key string) string {
@@ -40,11 +42,23 @@ const (
 	ConfigOpenAPIURLKey = "config.openapi-url"
 )
 
-// LoadStorageID reads the selected profile's optional storage override.
+// LoadStorageID reads the optional storage override from CHUNKIFY_STORAGE_ID,
+// or else from the selected profile's config.
 func (cfg *Config) LoadStorageID() error {
 	cfg.StorageID = ""
+	cfg.StorageIDWarning = ""
+	if value, ok := os.LookupEnv("CHUNKIFY_STORAGE_ID"); ok {
+		cfg.StorageID = value
+		return nil
+	}
 	value, err := Get(cfg.ConfigKey(ConfigStorageIDKey))
 	if errors.Is(err, keyring.ErrNotFound) {
+		return nil
+	}
+	if err != nil && os.Getenv("CHUNKIFY_TOKEN") != "" {
+		// Linux servers, CI and containers often have no keyring. With the token
+		// in the environment the run doesn't need it, so go on without the saved ID.
+		cfg.StorageIDWarning = fmt.Sprintf("can't read the saved storage-id config (%v); using the default storage. Set CHUNKIFY_STORAGE_ID to choose one", err)
 		return nil
 	}
 	if err != nil {

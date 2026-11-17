@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -13,6 +14,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/zalando/go-keyring"
 )
@@ -25,7 +27,11 @@ func TestHelperProcess(t *testing.T) {
 	if os.Getenv(helperEnv) == "" {
 		t.Skip("helper process")
 	}
-	keyring.MockInit()
+	if os.Getenv("CHUNKIFY_TEST_NO_KEYRING") != "" {
+		keyring.MockInitWithError(errors.New("no session bus"))
+	} else {
+		keyring.MockInit()
+	}
 	os.Args = append([]string{"chunkify"}, flag.Args()...)
 	Execute()
 	os.Exit(0)
@@ -41,6 +47,13 @@ type cliResult struct {
 // controlling terminal, like CI, cron or Docker without -t. The fake API knows
 // src_test, never answers for src_hang, and returns 404 for anything else.
 func startCLI(t *testing.T, args ...string) *exec.Cmd {
+	t.Helper()
+	return startCLIWithEnv(t, nil, args...)
+}
+
+// startCLIWithEnv is startCLI with extra environment variables, which override
+// the defaults.
+func startCLIWithEnv(t *testing.T, env []string, args ...string) *exec.Cmd {
 	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -59,7 +72,10 @@ func startCLI(t *testing.T, args ...string) *exec.Cmd {
 	home := t.TempDir()
 	// The CLI checks os.Args for --json before parsing flags, so pass the
 	// arguments on the command line rather than in the environment.
-	cmd := exec.Command(os.Args[0], append([]string{"-test.run=^TestHelperProcess$", "--"}, args...)...)
+	// Kill the CLI if it hangs, so a regression fails here instead of at the
+	// global test timeout.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	cmd := exec.CommandContext(ctx, os.Args[0], append([]string{"-test.run=^TestHelperProcess$", "--"}, args...)...)
 	cmd.Env = append(os.Environ(),
 		helperEnv+"=1",
 		"CHUNKIFY_TOKEN=sk_project_test",
@@ -67,15 +83,30 @@ func startCLI(t *testing.T, args ...string) *exec.Cmd {
 		// Keep the debug log out of the real cache directory.
 		"HOME="+home, "XDG_CACHE_HOME="+home, "LocalAppData="+home,
 	)
+	cmd.Env = append(cmd.Env, env...)
 	cmd.Stdin = nil // reads from the null device
 	detachFromTerminal(cmd)
+	// Cleanups run last-registered first: stop the CLI before closing the server.
+	t.Cleanup(cancel)
+	t.Cleanup(func() {
+		if cmd.Process != nil && cmd.ProcessState == nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+		}
+	})
 	return cmd
 }
 
 // runCLI runs the CLI to completion; see startCLI.
 func runCLI(t *testing.T, args ...string) cliResult {
 	t.Helper()
-	cmd := startCLI(t, args...)
+	return runCLIWithEnv(t, nil, args...)
+}
+
+// runCLIWithEnv runs the CLI to completion; see startCLIWithEnv.
+func runCLIWithEnv(t *testing.T, env []string, args ...string) cliResult {
+	t.Helper()
+	cmd := startCLIWithEnv(t, env, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -116,15 +147,69 @@ func jsonLines(t *testing.T, stdout string) []map[string]any {
 }
 
 func TestJSONWithoutTerminal(t *testing.T) {
-	result := runCLI(t, "-i", "src_test", "--json")
+	for _, flag := range []string{"--json", "--json=true"} {
+		t.Run(flag, func(t *testing.T) {
+			result := runCLI(t, "-i", "src_test", flag)
+			if result.exitCode != 0 {
+				t.Fatalf("exit code %d, stdout:\n%s\nstderr:\n%s", result.exitCode, result.stdout, result.stderr)
+			}
+			lines := jsonLines(t, result.stdout) // also fails on the banner
+			last := lines[len(lines)-1]
+			if last["status"] != "Completed" || last["progress"] != 100.0 {
+				t.Fatalf("last line = %v, want Completed with progress 100", last)
+			}
+		})
+	}
+}
+
+// Linux servers, CI and containers often have no keyring; CHUNKIFY_TOKEN is enough.
+func TestJSONWithoutKeyring(t *testing.T) {
+	result := runCLIWithEnv(t, []string{"CHUNKIFY_TEST_NO_KEYRING=1"}, "-i", "src_test", "--json")
 	if result.exitCode != 0 {
-		t.Fatalf("exit code %d, stdout:\n%s\nstderr:\n%s", result.exitCode, result.stdout, result.stderr)
+		t.Fatalf("exit code %d, stderr:\n%s", result.exitCode, result.stderr)
 	}
-	lines := jsonLines(t, result.stdout)
-	last := lines[len(lines)-1]
-	if last["status"] != "Completed" || last["progress"] != 100.0 {
-		t.Fatalf("last line = %v, want Completed with progress 100", last)
+	if last := jsonLines(t, result.stdout); last[len(last)-1]["status"] != "Completed" {
+		t.Fatalf("last line = %v, want Completed", last[len(last)-1])
 	}
+	if report := stderrJSON(t, result.stderr); !strings.Contains(report["warning"], "CHUNKIFY_STORAGE_ID") {
+		t.Fatalf("stderr must warn about the skipped storage-id config, got %q", result.stderr)
+	}
+}
+
+// Errors before the run starts are JSON too, and stdout stays empty.
+func TestJSONErrorsBeforeRun(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		env  []string
+		args []string
+		want string
+	}{
+		{name: "invalid flag value", args: []string{"-i", "src_test", "-f", "not_a_format", "--json"}, want: "not_a_format"},
+		{name: "missing token", env: []string{"CHUNKIFY_TOKEN="}, args: []string{"-i", "src_test", "--json"}, want: "CHUNKIFY_TOKEN"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result := runCLIWithEnv(t, tt.env, tt.args...)
+			if result.exitCode != 1 {
+				t.Fatalf("exit code %d, want 1", result.exitCode)
+			}
+			if result.stdout != "" {
+				t.Fatalf("stdout must stay empty, got %q", result.stdout)
+			}
+			if report := stderrJSON(t, result.stderr); !strings.Contains(report["error"], tt.want) {
+				t.Fatalf("error must mention %q, got %q", tt.want, report["error"])
+			}
+		})
+	}
+}
+
+// stderrJSON decodes stderr, which must hold one JSON object.
+func stderrJSON(t *testing.T, stderr string) map[string]string {
+	t.Helper()
+	var report map[string]string
+	if err := json.Unmarshal([]byte(stderr), &report); err != nil {
+		t.Fatalf("stderr is not one JSON object: %q", stderr)
+	}
+	return report
 }
 
 func TestFailedRunExitsNonZero(t *testing.T) {
@@ -136,8 +221,7 @@ func TestFailedRunExitsNonZero(t *testing.T) {
 	if last := lines[len(lines)-1]; last["status"] != "Failed" {
 		t.Fatalf("last line = %v, want Failed", last)
 	}
-	var report map[string]string
-	if err := json.Unmarshal([]byte(result.stderr), &report); err != nil || !strings.Contains(report["error"], "source not found") {
-		t.Fatalf("stderr must hold one JSON error, got %q", result.stderr)
+	if report := stderrJSON(t, result.stderr); !strings.Contains(report["error"], "source not found") {
+		t.Fatalf("stderr must report the error, got %q", result.stderr)
 	}
 }

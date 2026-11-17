@@ -64,11 +64,38 @@ func TestStorageConfigRejectsInvalidID(t *testing.T) {
 }
 
 func TestLoadStorageIDReportsKeyringFailure(t *testing.T) {
+	t.Setenv("CHUNKIFY_TOKEN", "")
 	want := errors.New("keyring unavailable")
 	keyring.MockInitWithError(want)
 	t.Cleanup(keyring.MockInit)
 	if err := (&Config{}).LoadStorageID(); !errors.Is(err, want) {
 		t.Fatalf("expected keyring error, got %v", err)
+	}
+}
+
+// Headless runs authenticate with CHUNKIFY_TOKEN and often have no keyring.
+func TestLoadStorageIDWithoutKeyring(t *testing.T) {
+	t.Setenv("CHUNKIFY_TOKEN", "sk_project_test")
+	keyring.MockInitWithError(errors.New("no session bus"))
+	t.Cleanup(keyring.MockInit)
+	cfg := &Config{}
+	if err := cfg.LoadStorageID(); err != nil || cfg.StorageID != "" {
+		t.Fatalf("want the default storage, got %q, %v", cfg.StorageID, err)
+	}
+	if !strings.Contains(cfg.StorageIDWarning, "no session bus") || !strings.Contains(cfg.StorageIDWarning, "CHUNKIFY_STORAGE_ID") {
+		t.Fatalf("warning must give the cause and the way out: %q", cfg.StorageIDWarning)
+	}
+}
+
+func TestLoadStorageIDFromEnvironment(t *testing.T) {
+	keyring.MockInitWithError(errors.New("must not be read"))
+	t.Cleanup(keyring.MockInit)
+	for _, want := range []string{"stor_aws_ci", ""} {
+		t.Setenv("CHUNKIFY_STORAGE_ID", want)
+		cfg := &Config{}
+		if err := cfg.LoadStorageID(); err != nil || cfg.StorageID != want || cfg.StorageIDWarning != "" {
+			t.Fatalf("CHUNKIFY_STORAGE_ID=%q: got %q, %q, %v", want, cfg.StorageID, cfg.StorageIDWarning, err)
+		}
 	}
 }
 

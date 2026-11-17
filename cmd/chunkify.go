@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"slices"
+	"strconv"
 	"strings"
 
 	_ "embed"
@@ -43,7 +43,9 @@ var rootCmd = &cobra.Command{}
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if isAPIInvocation(os.Args) {
+	// API commands and JSON output report errors as JSON on stderr.
+	jsonErrors := isAPIInvocation(os.Args) || jsonRequested(os.Args)
+	if jsonErrors {
 		rootCmd.SilenceErrors = true
 		rootCmd.SilenceUsage = true
 	}
@@ -64,8 +66,8 @@ func Execute() {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
-		if isAPIInvocation(os.Args) {
-			_ = json.NewEncoder(os.Stderr).Encode(map[string]string{"error": err.Error()})
+		if jsonErrors {
+			writeJSONError(err)
 		}
 		os.Exit(exitCode(err))
 	}
@@ -91,11 +93,15 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 	if cmd.Name() != "config" && !isAPICommand(cmd) {
 		if cfg.Token == "" {
 			if err := cfg.SetToken(); err != nil {
-				fmt.Printf("Authentication issue\n\n")
+				help := "You haven't set your project token yet.\nRun `chunkify config token <sk_project_token>` or set CHUNKIFY_TOKEN."
 				if cfg.Profile != "" {
-					fmt.Printf("Profile '%s' doesn't exist.\nRun `chunkify config token <sk_project_token> --profile %s` to link a project token to it.\n", cfg.Profile, cfg.Profile)
+					help = fmt.Sprintf("Profile '%s' doesn't exist.\nRun `chunkify config token <sk_project_token> --profile %s` to link a project token to it.", cfg.Profile, cfg.Profile)
+				}
+				// Keep stdout free for command output, such as JSON progress.
+				if jsonRequested(os.Args) {
+					writeJSONError(fmt.Errorf("authentication issue: %s", strings.ReplaceAll(help, "\n", " ")))
 				} else {
-					fmt.Printf("You haven't set your project token yet.\nRun `chunkify config token <sk_project_token>`\n")
+					fmt.Fprintf(os.Stderr, "Authentication issue\n\n%s\n", help)
 				}
 				os.Exit(1)
 			}
@@ -125,7 +131,7 @@ func initChunkifyClient(cmd *cobra.Command, args []string) {
 
 // init initializes the CLI by setting up configuration and registering all available commands
 func init() {
-	if !slices.Contains(os.Args, "--json") && !isAPIInvocation(os.Args) {
+	if !jsonRequested(os.Args) && !isAPIInvocation(os.Args) {
 		chunkifyBanner = strings.Replace(chunkifyBanner, "{version}", version.Version, 1)
 		fmt.Println("\n" + chunkifyBanner + "\n")
 	}
@@ -151,8 +157,27 @@ func exitCode(err error) int {
 
 // jsonOutput reports whether the command prints JSON progress, so nothing else may go to stdout.
 func jsonOutput(cmd *cobra.Command) bool {
-	flag := cmd.Flags().Lookup("json")
-	return flag != nil && flag.Value.String() == "true"
+	enabled, err := cmd.Flags().GetBool("json")
+	return err == nil && enabled
+}
+
+// jsonRequested reports whether the arguments turn on --json. It reads them
+// before cobra parses flags, for output that happens earlier, like the banner.
+func jsonRequested(args []string) bool {
+	enabled := false
+	for _, arg := range args {
+		if arg == "--json" {
+			enabled = true
+		} else if value, ok := strings.CutPrefix(arg, "--json="); ok {
+			enabled, _ = strconv.ParseBool(value)
+		}
+	}
+	return enabled
+}
+
+// writeJSONError reports err on stderr as {"error": "..."}.
+func writeJSONError(err error) {
+	_ = json.NewEncoder(os.Stderr).Encode(map[string]string{"error": err.Error()})
 }
 
 func isAPICommand(cmd *cobra.Command) bool {

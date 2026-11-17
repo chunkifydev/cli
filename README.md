@@ -310,9 +310,11 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 
 During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The API doesn't report progress for audio-only output such as `m4a_aac`, so `progress` stays at `0` until the transcoding is ready. The Transcodings API does not report encoder speed, so `fps` and `out_time` are `0` and `speed` is `N/A` until the download starts.
 
-JSON output works without a terminal, so you can use it in scripts, CI, cron jobs and containers started without `-t`. Press Ctrl+C or send `SIGINT`/`SIGTERM` to cancel.
+JSON output works without a terminal, so you can use it in scripts, CI, cron jobs and containers started without `-t`. Set `CHUNKIFY_TOKEN` there, since those machines often have no system keyring for saved settings. If the CLI can't read the saved `storage-id` config, it uses the project's default storage and warns on stderr; set `CHUNKIFY_STORAGE_ID` to choose the storage instead.
 
-The last line's `status` is `Completed`, `Failed` or `Cancelled`. The command exits with code `0` when it completes, `1` when it fails and `130` when it is cancelled. In JSON mode, it also writes the reason to stderr:
+Press Ctrl+C or send `SIGINT`/`SIGTERM` to stop the CLI. This doesn't cancel the transcoding: it keeps running in Chunkify.
+
+The last line's `status` is `Completed`, `Failed` or `Cancelled`. The command exits with code `0` when it completes, `1` when it fails and `130` when you stop it. In JSON mode, errors, including invalid flags and missing tokens, go to stderr as JSON, like the storage warning (`{"warning":…}`):
 
 ```json
 {"error":"file not found: video.mp4"}
@@ -331,7 +333,7 @@ chunkify -i video.mp4 -o output.mp4 --profile testing
 chunkify config storage-id "" --profile testing    # Clear the saved ID
 ```
 
-This setting selects storage for CLI requests; it does not follow later changes to the project's default storage in the dashboard. Clear it to use the storage ID flags or the API default again.
+This setting selects storage for CLI requests; it does not follow later changes to the project's default storage in the dashboard. Clear it to use the storage ID flags or the API default again. The `CHUNKIFY_STORAGE_ID` environment variable takes precedence over the saved ID; set it to an empty value to use the storage ID flags or the API default.
 
 You may have multiple projects and want to use different project tokens for different tasks, or simply to differentiate between different environments.
 
