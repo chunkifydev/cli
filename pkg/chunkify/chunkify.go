@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -79,25 +81,20 @@ chunkify config token sk_project_token --profile your_profile
 chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_profile
 `,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				if err := cfg.LoadStorageID(); err != nil {
-					return err
+				cmd.SilenceUsage = true
+				err := app.transcode(cfg)
+				if err == nil {
+					return nil
 				}
-				if err := app.configureStorage(cfg.StorageID); err != nil {
-					return err
+				// Exit non-zero without repeating an error the TUI already showed.
+				// JSON output has no error field, so report it on stderr.
+				if app.JSON {
+					cmd.SilenceErrors = true
+					_ = json.NewEncoder(cmd.ErrOrStderr()).Encode(map[string]string{"error": err.Error()})
+				} else if errors.As(err, new(shownError)) {
+					cmd.SilenceErrors = true
 				}
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				app.Ctx = ctx
-				app.CancelFunc = cancel
-				app.Client = cfg.Client
-
-				// Start all background work in a goroutine
-				go app.executeWorkflow(app.Ctx)
-
-				// Run TUI synchronously - this will block until the TUI exits
-				app.Run()
-				return nil
+				return err
 			},
 		},
 	}
@@ -106,13 +103,72 @@ chunkify -i video.mp4 -f mp4_av1 --preset 7 -o video_1080p.mp4 --profile your_pr
 	return cmd
 }
 
-func init() {
-	logFile, err := os.Create("chunkify.log")
+// shownError is an error the TUI already displayed.
+type shownError struct{ error }
+
+func (e shownError) Unwrap() error { return e.error }
+
+// transcode runs the workflow and returns why it did not complete, if it did not.
+func (app *App) transcode(cfg *config.Config) error {
+	if err := cfg.LoadStorageID(); err != nil {
+		return err
+	}
+	if err := app.configureStorage(cfg.StorageID); err != nil {
+		return err
+	}
+	setupLogging()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	app.Ctx = ctx
+	app.CancelFunc = cancel
+	app.Client = cfg.Client
+
+	// Start all background work in a goroutine
+	go app.executeWorkflow(app.Ctx)
+
+	// Run TUI synchronously - this will block until the TUI exits
+	final, err := app.Run()
 	if err != nil {
-		fmt.Println("error creating log file", err)
+		return err
+	}
+	err = final.Err()
+	if final.Error != nil || errors.Is(err, ErrCancelled) {
+		// The TUI showed the error, or the user cancelled.
+		return shownError{err}
+	}
+	return err
+}
+
+func init() {
+	// Discard logs until a transcode run opens the log file.
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
+}
+
+// maxLogSize is the size above which a run starts the debug log over.
+const maxLogSize = 10 << 20
+
+// setupLogging appends the debug log to chunkify-cli/chunkify.log in the user
+// cache directory, and discards it if the file cannot be opened. Runs share the
+// file, so each line names its process.
+func setupLogging() {
+	dir, err := os.UserCacheDir()
+	if err != nil {
 		return
 	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, nil)))
+	dir = filepath.Join(dir, "chunkify-cli")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+	logFile, err := os.OpenFile(filepath.Join(dir, "chunkify.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		return
+	}
+	if info, err := logFile.Stat(); err == nil && info.Size() > maxLogSize {
+		_ = logFile.Truncate(0)
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(logFile, nil)).With("pid", os.Getpid()))
 }
 
 // executeWorkflow runs all the background work and communicates with the TUI via channels

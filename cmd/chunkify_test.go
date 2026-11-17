@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -101,5 +103,14 @@ func TestTeamAPICommandDoesNotRequireProjectToken(t *testing.T) {
 	}
 	if cfg.Profile != "staging" {
 		t.Fatalf("profile after api command was not selected: %q", cfg.Profile)
+	}
+}
+
+func TestExitCode(t *testing.T) {
+	if got := exitCode(fmt.Errorf("run: %w", chunkifyCmd.ErrCancelled)); got != 130 {
+		t.Fatalf("cancelled run exit code = %d, want 130", got)
+	}
+	if got := exitCode(errors.New("source not found")); got != 1 {
+		t.Fatalf("failed run exit code = %d, want 1", got)
 	}
 }

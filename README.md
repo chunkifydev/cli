@@ -292,7 +292,7 @@ See [Per-title encoding](#per-title-encoding) for examples and compatible settin
 
 ## JSON Output
 
-It's possible to output the progress in JSON format by passing the `--json` flag.
+It's possible to output the progress in JSON format by passing the `--json` flag. The CLI prints one JSON object per line on stdout, about every second.
 
 ```
 chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
@@ -305,10 +305,20 @@ chunkify -i video.mp4 -o video_1080p.mp4 -s 1920x1080 --crf 21 --json
 {"status":"Encoding","progress":62,"fps":0,"speed":"N/A","out_time":0,"eta":"N/A"}
 {"status":"Downloading","progress":0,"fps":0,"speed":"N/A","out_time":0,"eta":"00:00"}
 {"status":"Downloading","progress":100,"fps":0,"speed":"108MB/s","out_time":0,"eta":"00:00"}
-{"status":"Completed","progress":0,"fps":0,"speed":"","out_time":0,"eta":"N/A"}
+{"status":"Completed","progress":100,"fps":0,"speed":"","out_time":0,"eta":"N/A"}
 ```
 
-During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The Transcodings API does not report encoder speed, so `fps` and `out_time` are `0` and `speed` is `N/A` until the download starts.
+During transcoding, `status` follows the processing stage (`Queued`, `Starting`, `Encoding`, `Finalizing`, `Uploading`) and `progress` is the transcoding's overall progress. The API doesn't report progress for audio-only output such as `m4a_aac`, so `progress` stays at `0` until the transcoding is ready. The Transcodings API does not report encoder speed, so `fps` and `out_time` are `0` and `speed` is `N/A` until the download starts.
+
+JSON output works without a terminal, so you can use it in scripts, CI, cron jobs and containers started without `-t`. Press Ctrl+C or send `SIGINT`/`SIGTERM` to cancel.
+
+The last line's `status` is `Completed`, `Failed` or `Cancelled`. The command exits with code `0` when it completes, `1` when it fails and `130` when it is cancelled. In JSON mode, it also writes the reason to stderr:
+
+```json
+{"error":"file not found: video.mp4"}
+```
+
+The CLI appends a debug log to `chunkify-cli/chunkify.log` in your user cache directory (for example `~/Library/Caches` on macOS or `~/.cache` on Linux).
 
 ## CLI Profiles
 

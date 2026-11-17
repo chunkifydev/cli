@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -51,7 +52,7 @@ func Execute() {
 	// Check for updates after each command
 	// TODO: check updates less often
 	rootCmd.PersistentPostRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "update" || cmd.Name() == "version" || isAPICommand(cmd) {
+		if cmd.Name() == "update" || cmd.Name() == "version" || isAPICommand(cmd) || jsonOutput(cmd) {
 			return
 		}
 		upToDate, latestVersion := version.IsUpToDate()
@@ -66,7 +67,7 @@ func Execute() {
 		if isAPIInvocation(os.Args) {
 			_ = json.NewEncoder(os.Stderr).Encode(map[string]string{"error": err.Error()})
 		}
-		os.Exit(1)
+		os.Exit(exitCode(err))
 	}
 }
 
@@ -137,6 +138,21 @@ func init() {
 	rootCmd.AddCommand(api.NewCommand(cfg))
 
 	rootCmd.PersistentFlags().StringVar(&cfg.Profile, "profile", "", "Use a specific profile. When not set, the default profile is used. See config command for more details.")
+}
+
+// exitCode returns 130, like a shell after Ctrl+C, when the user cancelled,
+// and 1 for other errors.
+func exitCode(err error) int {
+	if errors.Is(err, chunkifyCmd.ErrCancelled) {
+		return 130
+	}
+	return 1
+}
+
+// jsonOutput reports whether the command prints JSON progress, so nothing else may go to stdout.
+func jsonOutput(cmd *cobra.Command) bool {
+	flag := cmd.Flags().Lookup("json")
+	return flag != nil && flag.Value.String() == "true"
 }
 
 func isAPICommand(cmd *cobra.Command) bool {
